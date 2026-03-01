@@ -14,7 +14,8 @@
       "Bash(brew install:*)",
       "Bash(gh auth:*)",
       "Bash(git remote get-url:*)",
-      "Bash(uv run:*)"
+      "Bash(uv run:*)",
+      "Bash(rsvg-convert:*)"
     ]
   }
 }
