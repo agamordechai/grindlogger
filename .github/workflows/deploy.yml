@@ -150,7 +150,7 @@ jobs:
             docker compose -f docker-compose.yml -f docker-compose.prod.yml build nginx-proxy
 
             echo "Starting rolling update..."
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-build --wait --wait-timeout 120
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-build --wait --wait-timeout 180
 
             echo "Health check (via container network)..."
             docker exec grindlogger-api curl -sf http://localhost:8000/health || exit 1

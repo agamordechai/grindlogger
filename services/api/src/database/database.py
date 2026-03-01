@@ -4,6 +4,7 @@ This module provides database connection handling using SQLModel.
 Supports both PostgreSQL and SQLite based on configuration.
 """
 
+import logging
 from collections.abc import Generator
 
 from sqlmodel import Session, SQLModel, create_engine
@@ -41,11 +42,25 @@ def init_db() -> None:
     NOTE: For production, database schema should be managed by Alembic migrations.
     To run migrations manually: cd services/api && alembic upgrade head
     """
+    import time
+
     # Import all models to ensure they're registered with SQLModel metadata
     from services.api.src.database.db_models import ExerciseTable, UserTable  # noqa: F401
 
-    # Create all tables if they don't exist
-    SQLModel.metadata.create_all(engine)
+    # Retry loop to handle Postgres being slow to accept connections after pg_isready
+    last_exc: Exception | None = None
+    for attempt in range(1, 6):
+        try:
+            SQLModel.metadata.create_all(engine)
+            return
+        except Exception as exc:
+            last_exc = exc
+            wait = 2 ** attempt  # 2, 4, 8, 16, 32s
+            logging.getLogger(__name__).warning(
+                "DB not ready (attempt %d/5), retrying in %ds: %s", attempt, wait, exc
+            )
+            time.sleep(wait)
+    raise RuntimeError("Database unavailable after 5 attempts") from last_exc
 
 
 def get_session() -> Generator[Session, None, None]:
