@@ -13,7 +13,8 @@
       "Bash(npm ci:*)",
       "Bash(brew install:*)",
       "Bash(gh auth:*)",
-      "Bash(git remote get-url:*)"
+      "Bash(git remote get-url:*)",
+      "Bash(uv run:*)"
     ]
   }
 }

@@ -55,10 +55,8 @@ def init_db() -> None:
             return
         except Exception as exc:
             last_exc = exc
-            wait = 2 ** attempt  # 2, 4, 8, 16, 32s
-            logging.getLogger(__name__).warning(
-                "DB not ready (attempt %d/5), retrying in %ds: %s", attempt, wait, exc
-            )
+            wait = 2**attempt  # 2, 4, 8, 16, 32s
+            logging.getLogger(__name__).warning("DB not ready (attempt %d/5), retrying in %ds: %s", attempt, wait, exc)
             time.sleep(wait)
     raise RuntimeError("Database unavailable after 5 attempts") from last_exc
 
