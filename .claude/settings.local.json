@@ -6,7 +6,14 @@
       "Bash(node -e \"const cp=require\\(''child_process''\\);const r=cp.spawnSync\\(''node'',[''node_modules/typescript/bin/tsc'',''--noEmit'',''--pretty'',''false''],{cwd:''C:/Users/agamm/PycharmProjects/grindlogger/services/frontend'',encoding:''utf8''}\\);console.log\\(r.stdout||''\\(no errors\\)''\\);console.log\\(''RC:'',r.status\\);\")",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(gh run list:*)",
+      "Bash(brew list:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm ci:*)",
+      "Bash(brew install:*)",
+      "Bash(gh auth:*)",
+      "Bash(git remote get-url:*)"
     ]
   }
 }
