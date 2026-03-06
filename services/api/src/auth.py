@@ -268,7 +268,9 @@ def verify_github_token(code: str, redirect_uri: str, client_id: str, client_sec
         timeout=10,
     )
     if user_response.status_code != 200:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="GitHub OAuth failed: could not fetch user")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="GitHub OAuth failed: could not fetch user"
+        )
     user_data = user_response.json()
 
     # GitHub may not expose email publicly — fetch it separately
@@ -339,7 +341,9 @@ def verify_discord_token(code: str, redirect_uri: str, client_id: str, client_se
         timeout=10,
     )
     if user_response.status_code != 200:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Discord OAuth failed: could not fetch user")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Discord OAuth failed: could not fetch user"
+        )
     user_data = user_response.json()
 
     email = user_data.get("email")
