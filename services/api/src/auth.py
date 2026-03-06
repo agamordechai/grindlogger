@@ -395,15 +395,11 @@ def verify_reddit_token(code: str, redirect_uri: str, client_id: str, client_sec
         timeout=10,
     )
     if token_response.status_code != 200:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Reddit OAuth failed: invalid code"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Reddit OAuth failed: invalid code")
     token_data = token_response.json()
     access_token = token_data.get("access_token")
     if not access_token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Reddit OAuth failed: no access token"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Reddit OAuth failed: no access token")
 
     user_response = httpx.get(
         "https://oauth.reddit.com/api/v1/me",

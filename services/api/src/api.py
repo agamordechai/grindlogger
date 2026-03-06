@@ -47,8 +47,8 @@ from services.api.src.auth import (
     verify_discord_token,
     verify_github_token,
     verify_google_token,
-    verify_reddit_token,
     verify_password,
+    verify_reddit_token,
 )
 from services.api.src.database.config import get_settings
 from services.api.src.database.database import get_session, init_db
@@ -573,9 +573,7 @@ def reddit_login(
 ) -> Token:
     """Authenticate with Reddit and return JWT tokens."""
     if not settings.reddit_client_id or not settings.reddit_client_secret:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Reddit OAuth is not configured"
-        )
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Reddit OAuth is not configured")
 
     reddit_info = verify_reddit_token(
         login_request.code, login_request.redirect_uri, settings.reddit_client_id, settings.reddit_client_secret
