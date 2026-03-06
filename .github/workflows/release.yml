@@ -116,4 +116,5 @@ jobs:
             VITE_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
             VITE_GITHUB_CLIENT_ID=${{ secrets.GH_CLIENT_ID }}
             VITE_DISCORD_CLIENT_ID=${{ secrets.DISCORD_CLIENT_ID }}
+            VITE_REDDIT_CLIENT_ID=${{ secrets.REDDIT_CLIENT_ID }}
 

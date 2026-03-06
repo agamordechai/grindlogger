@@ -75,6 +75,10 @@ services:
       - APP_DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID:-}
       - APP_DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET:-}
 
+      # Reddit OAuth
+      - APP_REDDIT_CLIENT_ID=${REDDIT_CLIENT_ID:-}
+      - APP_REDDIT_CLIENT_SECRET=${REDDIT_CLIENT_SECRET:-}
+
 
       # Auto-admin emails (comma-separated)
       - APP_ADMIN_EMAILS=${ADMIN_EMAILS:-}
@@ -203,6 +207,7 @@ services:
         - VITE_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
         - VITE_GITHUB_CLIENT_ID=${GH_CLIENT_ID:-}
         - VITE_DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID:-}
+        - VITE_REDDIT_CLIENT_ID=${REDDIT_CLIENT_ID:-}
     container_name: grindlogger-frontend
     ports:
       - "3000:80"

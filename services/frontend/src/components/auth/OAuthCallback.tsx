@@ -4,13 +4,13 @@ import { Flame } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface OAuthCallbackProps {
-  provider: 'github' | 'discord';
+  provider: 'github' | 'discord' | 'reddit';
 }
 
 export default function OAuthCallback({ provider }: OAuthCallbackProps) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { loginWithGithub, loginWithDiscord } = useAuth();
+  const { loginWithGithub, loginWithDiscord, loginWithReddit } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const called = useRef(false);
 
@@ -33,9 +33,10 @@ export default function OAuthCallback({ provider }: OAuthCallbackProps) {
 
     const redirectUri = `${window.location.origin}/auth/${provider}/callback`;
 
-    const doLogin = provider === 'github'
-      ? loginWithGithub(code, redirectUri)
-      : loginWithDiscord(code, redirectUri);
+    const doLogin =
+      provider === 'github' ? loginWithGithub(code, redirectUri) :
+      provider === 'discord' ? loginWithDiscord(code, redirectUri) :
+      loginWithReddit(code, redirectUri);
 
     doLogin
       .then(() => navigate('/', { replace: true }))

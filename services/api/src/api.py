@@ -32,6 +32,7 @@ from services.api.src.auth import (
     EmailLoginRequest,
     GitHubLoginRequest,
     GoogleLoginRequest,
+    RedditLoginRequest,
     RefreshRequest,
     RegisterRequest,
     Token,
@@ -46,6 +47,7 @@ from services.api.src.auth import (
     verify_discord_token,
     verify_github_token,
     verify_google_token,
+    verify_reddit_token,
     verify_password,
 )
 from services.api.src.database.config import get_settings
@@ -546,6 +548,49 @@ def discord_login(
 
     if is_new:
         logger.info(f"New user {user.email} created via Discord")
+        exercise_repo.seed_initial_data(user.id)
+
+    access_token = create_access_token(
+        data={"sub": str(user.id), "role": user.role}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    refresh_token = create_refresh_token(user.id)
+
+    return Token(
+        access_token=access_token,
+        token_type="bearer",
+        expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        refresh_token=refresh_token,
+    )
+
+
+@app.post("/auth/reddit", response_model=Token, tags=["Authentication"])
+@limiter.limit(lambda: ratelimit_settings.auth_limit)
+def reddit_login(
+    request: Request,
+    login_request: RedditLoginRequest,
+    user_repo: UserRepositoryDep,
+    exercise_repo: RepositoryDep,
+) -> Token:
+    """Authenticate with Reddit and return JWT tokens."""
+    if not settings.reddit_client_id or not settings.reddit_client_secret:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Reddit OAuth is not configured"
+        )
+
+    reddit_info = verify_reddit_token(
+        login_request.code, login_request.redirect_uri, settings.reddit_client_id, settings.reddit_client_secret
+    )
+
+    user, is_new = user_repo.find_or_create_reddit(
+        reddit_id=reddit_info["id"],
+        email=reddit_info["email"],
+        name=reddit_info["name"],
+        picture_url=reddit_info.get("avatar_url"),
+        admin_emails=settings.admin_emails_list,
+    )
+
+    if is_new:
+        logger.info(f"New user {user.name} created via Reddit")
         exercise_repo.seed_initial_data(user.id)
 
     access_token = create_access_token(

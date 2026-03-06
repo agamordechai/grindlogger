@@ -37,6 +37,7 @@ export default function App() {
   // OAuth callback routes must render regardless of auth state
   if (window.location.pathname === '/auth/github/callback') return <OAuthCallback provider="github" />;
   if (window.location.pathname === '/auth/discord/callback') return <OAuthCallback provider="discord" />;
+  if (window.location.pathname === '/auth/reddit/callback') return <OAuthCallback provider="reddit" />;
 
   if (!isAuthenticated) return <LoginPage />;
 

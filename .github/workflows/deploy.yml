@@ -102,6 +102,7 @@ jobs:
             VITE_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
             VITE_GITHUB_CLIENT_ID=${{ secrets.GH_CLIENT_ID }}
             VITE_DISCORD_CLIENT_ID=${{ secrets.DISCORD_CLIENT_ID }}
+            VITE_REDDIT_CLIENT_ID=${{ secrets.REDDIT_CLIENT_ID }}
 
   # ============================================
   # Deploy to EC2
@@ -151,6 +152,8 @@ jobs:
             GH_CLIENT_SECRET=${{ secrets.GH_CLIENT_SECRET }}
             DISCORD_CLIENT_ID=${{ secrets.DISCORD_CLIENT_ID }}
             DISCORD_CLIENT_SECRET=${{ secrets.DISCORD_CLIENT_SECRET }}
+            REDDIT_CLIENT_ID=${{ secrets.REDDIT_CLIENT_ID }}
+            REDDIT_CLIENT_SECRET=${{ secrets.REDDIT_CLIENT_SECRET }}
             ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
             POSTGRES_USER=${{ secrets.POSTGRES_USER }}
             POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}

@@ -144,6 +144,10 @@ class AppSettings(BaseSettings):
     discord_client_id: str = Field(default="", description="Discord OAuth Application Client ID")
     discord_client_secret: str = Field(default="", description="Discord OAuth Application Client Secret")
 
+    # Reddit OAuth
+    reddit_client_id: str = Field(default="", description="Reddit OAuth App Client ID")
+    reddit_client_secret: str = Field(default="", description="Reddit OAuth App Secret")
+
     # Auto-admin configuration
     admin_emails: str = Field(
         default="", description="Comma-separated list of emails that should be auto-promoted to admin on login"

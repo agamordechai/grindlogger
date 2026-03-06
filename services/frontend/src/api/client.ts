@@ -114,6 +114,11 @@ export async function discordLogin(code: string, redirectUri: string): Promise<A
   return response.data;
 }
 
+export async function redditLogin(code: string, redirectUri: string): Promise<AuthTokens> {
+  const response = await client.post<AuthTokens>('/auth/reddit', { code, redirect_uri: redirectUri });
+  return response.data;
+}
+
 export async function registerEmail(
   email: string,
   name: string,

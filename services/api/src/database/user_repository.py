@@ -16,6 +16,11 @@ class UserRepository:
     def __init__(self, session: Session):
         self.session = session
 
+    def get_by_reddit_id(self, reddit_id: str) -> UserTable | None:
+        """Find a user by their Reddit user ID."""
+        statement = select(UserTable).where(UserTable.reddit_id == reddit_id)
+        return self.session.exec(statement).first()
+
     def get_by_github_id(self, github_id: str) -> UserTable | None:
         """Find a user by their GitHub user ID."""
         statement = select(UserTable).where(UserTable.github_id == github_id)
@@ -202,6 +207,35 @@ class UserRepository:
             return by_email, False
 
         user = UserTable(discord_id=discord_id, email=email, name=name, picture_url=picture_url)
+        self.session.add(user)
+        self.session.commit()
+        self.session.refresh(user)
+        if admin_emails and email.lower() in admin_emails:
+            user.role = "admin"
+            self.session.add(user)
+            self.session.commit()
+        return user, True
+
+    def find_or_create_reddit(
+        self,
+        reddit_id: str,
+        email: str,
+        name: str,
+        picture_url: str | None = None,
+        admin_emails: list[str] | None = None,
+    ) -> tuple[UserTable, bool]:
+        """Find an existing user by Reddit ID, or create a new one."""
+        existing = self.get_by_reddit_id(reddit_id)
+        if existing:
+            self.update_profile(existing, name=name, picture_url=picture_url)
+            if admin_emails and existing.email.lower() in admin_emails and existing.role != "admin":
+                existing.role = "admin"
+                self.session.add(existing)
+                self.session.commit()
+            return existing, False
+
+        # Reddit emails are synthetic placeholders — don't link by email
+        user = UserTable(reddit_id=reddit_id, email=email, name=name, picture_url=picture_url)
         self.session.add(user)
         self.session.commit()
         self.session.refresh(user)

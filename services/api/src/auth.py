@@ -94,6 +94,13 @@ class DiscordLoginRequest(BaseModel):
     redirect_uri: str = Field(..., description="Redirect URI used in the OAuth flow")
 
 
+class RedditLoginRequest(BaseModel):
+    """Reddit OAuth sign-in request model."""
+
+    code: str = Field(..., description="Reddit OAuth authorization code from frontend")
+    redirect_uri: str = Field(..., description="Redirect URI used in the OAuth flow")
+
+
 class RefreshRequest(BaseModel):
     """Token refresh request model."""
 
@@ -362,6 +369,68 @@ def verify_discord_token(code: str, redirect_uri: str, client_id: str, client_se
         "email": email,
         "name": user_data.get("global_name") or user_data.get("username", ""),
         "avatar_url": avatar_url,
+    }
+
+
+def verify_reddit_token(code: str, redirect_uri: str, client_id: str, client_secret: str) -> dict:
+    """Exchange a Reddit OAuth code for user info.
+
+    Args:
+        code: Authorization code from the frontend OAuth redirect
+        redirect_uri: Must match the redirect URI used when requesting the code
+        client_id: Reddit App Client ID
+        client_secret: Reddit App Secret
+
+    Returns:
+        Parsed Reddit user info dict with keys: id, email, name, avatar_url
+
+    Raises:
+        HTTPException: If the code is invalid or API call fails
+    """
+    token_response = httpx.post(
+        "https://www.reddit.com/api/v1/access_token",
+        data={"grant_type": "authorization_code", "code": code, "redirect_uri": redirect_uri},
+        auth=(client_id, client_secret),
+        headers={"User-Agent": "web:GrindLogger:v1.0"},
+        timeout=10,
+    )
+    if token_response.status_code != 200:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Reddit OAuth failed: invalid code"
+        )
+    token_data = token_response.json()
+    access_token = token_data.get("access_token")
+    if not access_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Reddit OAuth failed: no access token"
+        )
+
+    user_response = httpx.get(
+        "https://oauth.reddit.com/api/v1/me",
+        headers={"Authorization": f"Bearer {access_token}", "User-Agent": "web:GrindLogger:v1.0"},
+        timeout=10,
+    )
+    if user_response.status_code != 200:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Reddit OAuth failed: could not fetch user"
+        )
+    user_data = user_response.json()
+
+    reddit_id = str(user_data["id"])
+    username = user_data.get("name", reddit_id)
+    # Reddit does not expose email via OAuth — use a synthetic placeholder
+    email = f"reddit_{reddit_id}@reddit.invalid"
+
+    avatar_url = user_data.get("icon_img") or user_data.get("snoovatar_img")
+    # Strip query params Reddit appends to avatar URLs
+    if avatar_url and "?" in avatar_url:
+        avatar_url = avatar_url.split("?")[0]
+
+    return {
+        "id": reddit_id,
+        "email": email,
+        "name": username,
+        "avatar_url": avatar_url or None,
     }
 
 
