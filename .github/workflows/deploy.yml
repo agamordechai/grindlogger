@@ -140,6 +140,18 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
+            echo "Writing .env from GitHub secrets..."
+            cat > .env <<'ENVEOF'
+            DOMAIN_NAME=${{ secrets.DOMAIN_NAME }}
+            JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+            ADMIN_EMAILS=${{ secrets.ADMIN_EMAILS }}
+            ENVEOF
+
             echo "Logging into GitHub Container Registry..."
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 

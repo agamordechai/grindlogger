@@ -43,8 +43,8 @@ export default function LoginPage() {
     script.defer = true;
 
     const initializeGoogle = () => {
-      if (window.google && googleButtonRef.current) {
-        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      if (window.google && googleButtonRef.current && clientId) {
         window.google.accounts.id.initialize({
           client_id: clientId,
           callback: async (response: { credential: string }) => {
