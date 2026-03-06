@@ -3,7 +3,7 @@
  */
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { googleLogin, loginEmail, registerEmail, getCurrentUser, updateProfile as updateProfileApi, deleteAccount as deleteAccountApi } from '../api/client';
+import { googleLogin, githubLogin, discordLogin, loginEmail, registerEmail, getCurrentUser, updateProfile as updateProfileApi, deleteAccount as deleteAccountApi } from '../api/client';
 import type { User } from '../types/auth';
 
 interface AuthContextType {
@@ -11,6 +11,8 @@ interface AuthContextType {
   loading: boolean;
   isAuthenticated: boolean;
   login: (googleIdToken: string) => Promise<void>;
+  loginWithGithub: (code: string, redirectUri: string) => Promise<void>;
+  loginWithDiscord: (code: string, redirectUri: string) => Promise<void>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
   register: (email: string, name: string, password: string) => Promise<void>;
   logout: () => void;
@@ -61,6 +63,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await storeTokensAndLoadUser(tokens);
   }, [storeTokensAndLoadUser]);
 
+  const loginWithGithub = useCallback(async (code: string, redirectUri: string) => {
+    const tokens = await githubLogin(code, redirectUri);
+    await storeTokensAndLoadUser(tokens);
+  }, [storeTokensAndLoadUser]);
+
+  const loginWithDiscord = useCallback(async (code: string, redirectUri: string) => {
+    const tokens = await discordLogin(code, redirectUri);
+    await storeTokensAndLoadUser(tokens);
+  }, [storeTokensAndLoadUser]);
+
   const loginWithEmail = useCallback(async (email: string, password: string) => {
     const tokens = await loginEmail(email, password);
     await storeTokensAndLoadUser(tokens);
@@ -90,6 +102,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         isAuthenticated: user !== null,
         login,
+        loginWithGithub,
+        loginWithDiscord,
         loginWithEmail,
         register,
         logout,

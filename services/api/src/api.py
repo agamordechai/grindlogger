@@ -28,7 +28,9 @@ from services.api.src.auth import (
     AdminStatsResponse,
     AdminUpdateUserRequest,
     AdminUserResponse,
+    DiscordLoginRequest,
     EmailLoginRequest,
+    GitHubLoginRequest,
     GoogleLoginRequest,
     RefreshRequest,
     RegisterRequest,
@@ -41,6 +43,8 @@ from services.api.src.auth import (
     get_current_user,
     hash_password,
     require_admin,
+    verify_discord_token,
+    verify_github_token,
     verify_google_token,
     verify_password,
 )
@@ -461,6 +465,88 @@ def google_login(
 
     if is_new:
         logger.info(f"New user {user.email} created via Google")
+
+    access_token = create_access_token(
+        data={"sub": str(user.id), "role": user.role}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    refresh_token = create_refresh_token(user.id)
+
+    return Token(
+        access_token=access_token,
+        token_type="bearer",
+        expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        refresh_token=refresh_token,
+    )
+
+
+@app.post("/auth/github", response_model=Token, tags=["Authentication"])
+@limiter.limit(lambda: ratelimit_settings.auth_limit)
+def github_login(
+    request: Request,
+    login_request: GitHubLoginRequest,
+    user_repo: UserRepositoryDep,
+    exercise_repo: RepositoryDep,
+) -> Token:
+    """Authenticate with GitHub and return JWT tokens."""
+    if not settings.github_client_id or not settings.github_client_secret:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="GitHub OAuth is not configured")
+
+    github_info = verify_github_token(
+        login_request.code, login_request.redirect_uri, settings.github_client_id, settings.github_client_secret
+    )
+
+    user, is_new = user_repo.find_or_create_github(
+        github_id=github_info["id"],
+        email=github_info["email"],
+        name=github_info["name"],
+        picture_url=github_info.get("avatar_url"),
+        admin_emails=settings.admin_emails_list,
+    )
+
+    if is_new:
+        logger.info(f"New user {user.email} created via GitHub")
+        exercise_repo.seed_initial_data(user.id)
+
+    access_token = create_access_token(
+        data={"sub": str(user.id), "role": user.role}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    refresh_token = create_refresh_token(user.id)
+
+    return Token(
+        access_token=access_token,
+        token_type="bearer",
+        expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        refresh_token=refresh_token,
+    )
+
+
+@app.post("/auth/discord", response_model=Token, tags=["Authentication"])
+@limiter.limit(lambda: ratelimit_settings.auth_limit)
+def discord_login(
+    request: Request,
+    login_request: DiscordLoginRequest,
+    user_repo: UserRepositoryDep,
+    exercise_repo: RepositoryDep,
+) -> Token:
+    """Authenticate with Discord and return JWT tokens."""
+    if not settings.discord_client_id or not settings.discord_client_secret:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Discord OAuth is not configured")
+
+    discord_info = verify_discord_token(
+        login_request.code, login_request.redirect_uri, settings.discord_client_id, settings.discord_client_secret
+    )
+
+    user, is_new = user_repo.find_or_create_discord(
+        discord_id=discord_info["id"],
+        email=discord_info["email"],
+        name=discord_info["name"],
+        picture_url=discord_info.get("avatar_url"),
+        admin_emails=settings.admin_emails_list,
+    )
+
+    if is_new:
+        logger.info(f"New user {user.email} created via Discord")
+        exercise_repo.seed_initial_data(user.id)
 
     access_token = create_access_token(
         data={"sub": str(user.id), "role": user.role}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)

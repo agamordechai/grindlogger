@@ -10,6 +10,7 @@ from enum import Enum
 from typing import Annotated
 
 import bcrypt
+import httpx
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -77,6 +78,20 @@ class GoogleLoginRequest(BaseModel):
     """Google sign-in request model."""
 
     id_token: str = Field(..., description="Google OAuth ID token from frontend")
+
+
+class GitHubLoginRequest(BaseModel):
+    """GitHub OAuth sign-in request model."""
+
+    code: str = Field(..., description="GitHub OAuth authorization code from frontend")
+    redirect_uri: str = Field(..., description="Redirect URI used in the OAuth flow")
+
+
+class DiscordLoginRequest(BaseModel):
+    """Discord OAuth sign-in request model."""
+
+    code: str = Field(..., description="Discord OAuth authorization code from frontend")
+    redirect_uri: str = Field(..., description="Redirect URI used in the OAuth flow")
 
 
 class RefreshRequest(BaseModel):
@@ -219,6 +234,131 @@ def verify_google_token(token: str, client_id: str) -> dict:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid Google token: {e}",
         ) from e
+
+
+def verify_github_token(code: str, redirect_uri: str, client_id: str, client_secret: str) -> dict:
+    """Exchange a GitHub OAuth code for user info.
+
+    Args:
+        code: Authorization code from the frontend OAuth redirect
+        redirect_uri: Must match the redirect URI used when requesting the code
+        client_id: GitHub OAuth App Client ID
+        client_secret: GitHub OAuth App Client Secret
+
+    Returns:
+        Parsed GitHub user info dict with keys: id, email, name, avatar_url
+
+    Raises:
+        HTTPException: If the code is invalid or API call fails
+    """
+    token_response = httpx.post(
+        "https://github.com/login/oauth/access_token",
+        json={"client_id": client_id, "client_secret": client_secret, "code": code, "redirect_uri": redirect_uri},
+        headers={"Accept": "application/json"},
+        timeout=10,
+    )
+    token_data = token_response.json()
+    access_token = token_data.get("access_token")
+    if not access_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="GitHub OAuth failed: invalid code")
+
+    user_response = httpx.get(
+        "https://api.github.com/user",
+        headers={"Authorization": f"Bearer {access_token}", "Accept": "application/vnd.github+json"},
+        timeout=10,
+    )
+    if user_response.status_code != 200:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="GitHub OAuth failed: could not fetch user")
+    user_data = user_response.json()
+
+    # GitHub may not expose email publicly — fetch it separately
+    email = user_data.get("email")
+    if not email:
+        emails_response = httpx.get(
+            "https://api.github.com/user/emails",
+            headers={"Authorization": f"Bearer {access_token}", "Accept": "application/vnd.github+json"},
+            timeout=10,
+        )
+        if emails_response.status_code == 200:
+            for entry in emails_response.json():
+                if entry.get("primary") and entry.get("verified"):
+                    email = entry["email"]
+                    break
+
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="GitHub account has no verified email address. Please add a public email in your GitHub profile.",
+        )
+
+    return {
+        "id": str(user_data["id"]),
+        "email": email,
+        "name": user_data.get("name") or user_data.get("login", ""),
+        "avatar_url": user_data.get("avatar_url"),
+    }
+
+
+def verify_discord_token(code: str, redirect_uri: str, client_id: str, client_secret: str) -> dict:
+    """Exchange a Discord OAuth code for user info.
+
+    Args:
+        code: Authorization code from the frontend OAuth redirect
+        redirect_uri: Must match the redirect URI used when requesting the code
+        client_id: Discord Application Client ID
+        client_secret: Discord Application Client Secret
+
+    Returns:
+        Parsed Discord user info dict with keys: id, email, name, avatar_url
+
+    Raises:
+        HTTPException: If the code is invalid or API call fails
+    """
+    token_response = httpx.post(
+        "https://discord.com/api/oauth2/token",
+        data={
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": redirect_uri,
+            "client_id": client_id,
+            "client_secret": client_secret,
+        },
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        timeout=10,
+    )
+    if token_response.status_code != 200:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Discord OAuth failed: invalid code")
+    token_data = token_response.json()
+    access_token = token_data.get("access_token")
+    if not access_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Discord OAuth failed: no access token")
+
+    user_response = httpx.get(
+        "https://discord.com/api/users/@me",
+        headers={"Authorization": f"Bearer {access_token}"},
+        timeout=10,
+    )
+    if user_response.status_code != 200:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Discord OAuth failed: could not fetch user")
+    user_data = user_response.json()
+
+    email = user_data.get("email")
+    if not email or not user_data.get("verified"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Discord account has no verified email address.",
+        )
+
+    avatar_url = None
+    if user_data.get("avatar"):
+        avatar_url = f"https://cdn.discordapp.com/avatars/{user_data['id']}/{user_data['avatar']}.png"
+
+    return {
+        "id": str(user_data["id"]),
+        "email": email,
+        "name": user_data.get("global_name") or user_data.get("username", ""),
+        "avatar_url": avatar_url,
+    }
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None, secret_key: str = SECRET_KEY) -> str:

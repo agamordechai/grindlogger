@@ -136,6 +136,14 @@ class AppSettings(BaseSettings):
     # Google OAuth
     google_client_id: str = Field(default="", description="Google OAuth 2.0 Client ID for sign-in verification")
 
+    # GitHub OAuth
+    github_client_id: str = Field(default="", description="GitHub OAuth App Client ID")
+    github_client_secret: str = Field(default="", description="GitHub OAuth App Client Secret")
+
+    # Discord OAuth
+    discord_client_id: str = Field(default="", description="Discord OAuth Application Client ID")
+    discord_client_secret: str = Field(default="", description="Discord OAuth Application Client Secret")
+
     # Auto-admin configuration
     admin_emails: str = Field(
         default="", description="Comma-separated list of emails that should be auto-promoted to admin on login"

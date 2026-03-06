@@ -16,6 +16,16 @@ class UserRepository:
     def __init__(self, session: Session):
         self.session = session
 
+    def get_by_github_id(self, github_id: str) -> UserTable | None:
+        """Find a user by their GitHub user ID."""
+        statement = select(UserTable).where(UserTable.github_id == github_id)
+        return self.session.exec(statement).first()
+
+    def get_by_discord_id(self, discord_id: str) -> UserTable | None:
+        """Find a user by their Discord user ID."""
+        statement = select(UserTable).where(UserTable.discord_id == discord_id)
+        return self.session.exec(statement).first()
+
     def get_by_google_id(self, google_id: str) -> UserTable | None:
         """Find a user by their Google subject ID.
 
@@ -124,6 +134,82 @@ class UserRepository:
             self.session.add(new_user)
             self.session.commit()
         return new_user, True
+
+    def find_or_create_github(
+        self,
+        github_id: str,
+        email: str,
+        name: str,
+        picture_url: str | None = None,
+        admin_emails: list[str] | None = None,
+    ) -> tuple[UserTable, bool]:
+        """Find an existing user by GitHub ID, or create a new one."""
+        existing = self.get_by_github_id(github_id)
+        if existing:
+            self.update_profile(existing, email=email, name=name, picture_url=picture_url)
+            if admin_emails and email.lower() in admin_emails and existing.role != "admin":
+                existing.role = "admin"
+                self.session.add(existing)
+                self.session.commit()
+            return existing, False
+
+        by_email = self.get_by_email(email)
+        if by_email:
+            by_email.github_id = github_id
+            self.update_profile(by_email, name=name, picture_url=picture_url)
+            if admin_emails and email.lower() in admin_emails and by_email.role != "admin":
+                by_email.role = "admin"
+                self.session.add(by_email)
+                self.session.commit()
+            return by_email, False
+
+        user = UserTable(github_id=github_id, email=email, name=name, picture_url=picture_url)
+        self.session.add(user)
+        self.session.commit()
+        self.session.refresh(user)
+        if admin_emails and email.lower() in admin_emails:
+            user.role = "admin"
+            self.session.add(user)
+            self.session.commit()
+        return user, True
+
+    def find_or_create_discord(
+        self,
+        discord_id: str,
+        email: str,
+        name: str,
+        picture_url: str | None = None,
+        admin_emails: list[str] | None = None,
+    ) -> tuple[UserTable, bool]:
+        """Find an existing user by Discord ID, or create a new one."""
+        existing = self.get_by_discord_id(discord_id)
+        if existing:
+            self.update_profile(existing, email=email, name=name, picture_url=picture_url)
+            if admin_emails and email.lower() in admin_emails and existing.role != "admin":
+                existing.role = "admin"
+                self.session.add(existing)
+                self.session.commit()
+            return existing, False
+
+        by_email = self.get_by_email(email)
+        if by_email:
+            by_email.discord_id = discord_id
+            self.update_profile(by_email, name=name, picture_url=picture_url)
+            if admin_emails and email.lower() in admin_emails and by_email.role != "admin":
+                by_email.role = "admin"
+                self.session.add(by_email)
+                self.session.commit()
+            return by_email, False
+
+        user = UserTable(discord_id=discord_id, email=email, name=name, picture_url=picture_url)
+        self.session.add(user)
+        self.session.commit()
+        self.session.refresh(user)
+        if admin_emails and email.lower() in admin_emails:
+            user.role = "admin"
+            self.session.add(user)
+            self.session.commit()
+        return user, True
 
     def get_by_email(self, email: str) -> UserTable | None:
         """Find a user by email address (case-insensitive).

@@ -3,9 +3,15 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# Accept Google Client ID as build arg for Vite
+# Accept OAuth Client IDs as build args for Vite
 ARG VITE_GOOGLE_CLIENT_ID
 ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+
+ARG VITE_GITHUB_CLIENT_ID
+ENV VITE_GITHUB_CLIENT_ID=$VITE_GITHUB_CLIENT_ID
+
+ARG VITE_DISCORD_CLIENT_ID
+ENV VITE_DISCORD_CLIENT_ID=$VITE_DISCORD_CLIENT_ID
 
 # Copy package files
 COPY package*.json ./

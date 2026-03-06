@@ -29,6 +29,8 @@ class UserTable(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     google_id: str | None = Field(default=None, unique=True, index=True, max_length=255)
+    github_id: str | None = Field(default=None, unique=True, index=True, max_length=255)
+    discord_id: str | None = Field(default=None, unique=True, index=True, max_length=255)
     email: str = Field(unique=True, index=True, max_length=255)
     name: str = Field(max_length=255)
     password_hash: str | None = Field(default=None, max_length=255)

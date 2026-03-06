@@ -67,6 +67,15 @@ services:
       # Google OAuth
       - APP_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
 
+      # GitHub OAuth
+      - APP_GITHUB_CLIENT_ID=${GH_CLIENT_ID:-}
+      - APP_GITHUB_CLIENT_SECRET=${GH_CLIENT_SECRET:-}
+
+      # Discord OAuth
+      - APP_DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID:-}
+      - APP_DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET:-}
+
+
       # Auto-admin emails (comma-separated)
       - APP_ADMIN_EMAILS=${ADMIN_EMAILS:-}
 
@@ -192,6 +201,8 @@ services:
       dockerfile: Dockerfile
       args:
         - VITE_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+        - VITE_GITHUB_CLIENT_ID=${GH_CLIENT_ID:-}
+        - VITE_DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID:-}
     container_name: grindlogger-frontend
     ports:
       - "3000:80"

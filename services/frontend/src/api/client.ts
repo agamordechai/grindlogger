@@ -104,6 +104,16 @@ export async function googleLogin(idToken: string): Promise<AuthTokens> {
   return response.data;
 }
 
+export async function githubLogin(code: string, redirectUri: string): Promise<AuthTokens> {
+  const response = await client.post<AuthTokens>('/auth/github', { code, redirect_uri: redirectUri });
+  return response.data;
+}
+
+export async function discordLogin(code: string, redirectUri: string): Promise<AuthTokens> {
+  const response = await client.post<AuthTokens>('/auth/discord', { code, redirect_uri: redirectUri });
+  return response.data;
+}
+
 export async function registerEmail(
   email: string,
   name: string,

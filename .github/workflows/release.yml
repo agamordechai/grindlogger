@@ -114,4 +114,6 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             VITE_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            VITE_GITHUB_CLIENT_ID=${{ secrets.GH_CLIENT_ID }}
+            VITE_DISCORD_CLIENT_ID=${{ secrets.DISCORD_CLIENT_ID }}
 

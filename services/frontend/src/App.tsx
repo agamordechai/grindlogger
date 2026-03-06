@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { useAuth } from './contexts/AuthContext';
 import LoginPage from './components/auth/LoginPage';
+import OAuthCallback from './components/auth/OAuthCallback';
 import { TopBar } from './components/nav/TopBar';
 import { BottomNav } from './components/nav/BottomNav';
 import { Skeleton } from './components/ui/Skeleton';
@@ -32,6 +33,11 @@ export default function App() {
   const { loading, isAuthenticated } = useAuth();
 
   if (loading) return <LoadingScreen />;
+
+  // OAuth callback routes must render regardless of auth state
+  if (window.location.pathname === '/auth/github/callback') return <OAuthCallback provider="github" />;
+  if (window.location.pathname === '/auth/discord/callback') return <OAuthCallback provider="discord" />;
+
   if (!isAuthenticated) return <LoginPage />;
 
   return (
