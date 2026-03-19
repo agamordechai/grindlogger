@@ -32,5 +32,6 @@ RUN mkdir -p /app/data
 # Port
 EXPOSE 8000
 
-# Run the app
-CMD ["python", "-m", "uvicorn", "services.api.src.api:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run migrations then start the app
+COPY services/api/entrypoint.sh ./services/api/entrypoint.sh
+CMD ["sh", "services/api/entrypoint.sh"]
