@@ -55,7 +55,6 @@ from services.api.src.database.database import get_session, init_db
 from services.api.src.database.db_models import ExerciseTable, UserTable
 from services.api.src.database.dependencies import RepositoryDep, UserRepositoryDep
 from services.api.src.database.models import Exercise, ExerciseEditRequest, ExerciseResponse, HealthResponse
-from services.shared.models.exercise import ArchivedExerciseSuggestion, ExerciseNameStatus
 from services.api.src.database.sqlmodel_repository import ExerciseRepository
 from services.api.src.etag import maybe_return_not_modified
 from services.api.src.ratelimit import get_rate_limit_key, get_ratelimit_settings, rate_limit_exceeded_handler
