@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, Trash2 } from 'lucide-react';
+import { ChevronRight, Archive, Trash2 } from 'lucide-react';
 import type { Exercise, UpdateExerciseRequest } from '../../types/exercise';
 import { ALL_DAYS } from '../../lib/constants';
 import { ExerciseEditor } from './ExerciseEditor';
@@ -9,9 +9,10 @@ interface ExerciseRowProps {
   exercise: Exercise;
   onUpdate: (id: number, data: UpdateExerciseRequest) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
+  onArchive?: (id: number) => Promise<void>;
 }
 
-export function ExerciseRow({ exercise, onUpdate, onDelete }: ExerciseRowProps) {
+export function ExerciseRow({ exercise, onUpdate, onDelete, onArchive }: ExerciseRowProps) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -56,17 +57,30 @@ export function ExerciseRow({ exercise, onUpdate, onDelete }: ExerciseRowProps) 
               }}
               onCancel={() => setExpanded(false)}
             />
-            <div className="px-4 pb-3">
+            <div className="px-4 pb-3 flex items-center gap-4">
+              {onArchive && (
+                <button
+                  onClick={async () => {
+                    if (confirm(`Archive "${exercise.name}"?`)) {
+                      await onArchive(exercise.id);
+                    }
+                  }}
+                  className="flex items-center gap-1.5 text-xs text-amber-500 hover:text-amber-400 transition-colors"
+                >
+                  <Archive size={12} />
+                  Archive
+                </button>
+              )}
               <button
                 onClick={async () => {
-                  if (confirm(`Delete "${exercise.name}"?`)) {
+                  if (confirm(`Delete "${exercise.name}" permanently?`)) {
                     await onDelete(exercise.id);
                   }
                 }}
                 className="flex items-center gap-1.5 text-xs text-danger hover:text-danger/80 transition-colors"
               >
                 <Trash2 size={12} />
-                Delete exercise
+                Delete
               </button>
             </div>
           </motion.div>

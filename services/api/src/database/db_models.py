@@ -66,3 +66,4 @@ class ExerciseTable(SQLModel, table=True):
     weight: float | None = Field(default=None, ge=0)
     workout_day: str = Field(default="A", max_length=10)
     user_id: int = Field(foreign_key="users.id", index=True)
+    archived: bool = Field(default=False, index=True)

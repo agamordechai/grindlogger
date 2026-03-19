@@ -55,6 +55,7 @@ from services.api.src.database.database import get_session, init_db
 from services.api.src.database.db_models import ExerciseTable, UserTable
 from services.api.src.database.dependencies import RepositoryDep, UserRepositoryDep
 from services.api.src.database.models import Exercise, ExerciseEditRequest, ExerciseResponse, HealthResponse
+from services.shared.models.exercise import ArchivedExerciseSuggestion, ExerciseNameStatus
 from services.api.src.database.sqlmodel_repository import ExerciseRepository
 from services.api.src.etag import maybe_return_not_modified
 from services.api.src.ratelimit import get_rate_limit_key, get_ratelimit_settings, rate_limit_exceeded_handler
@@ -279,6 +280,85 @@ def read_exercises(
 
     # Return 304 Not Modified if If-None-Match matches, or add ETag header
     return maybe_return_not_modified(request, response, payload)
+
+
+@app.get("/exercises/archived", response_model=list[ExerciseResponse], tags=["Exercises"])
+@limiter.limit("120/minute")
+def list_archived_exercises(
+    request: Request,
+    repository: RepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> list[ExerciseResponse]:
+    """List all archived exercises for the current user."""
+    return repository.list_archived(current_user.id)
+
+
+@app.get("/exercises/names", response_model=list[ExerciseNameStatus], tags=["Exercises"])
+@limiter.limit("120/minute")
+def get_exercise_names(
+    request: Request,
+    repository: RepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> list[ExerciseNameStatus]:
+    """Get name and status (active/archived) for all exercises."""
+    return repository.get_exercise_names(current_user.id)
+
+
+@app.get("/exercises/archived/search", response_model=list[ArchivedExerciseSuggestion], tags=["Exercises"])
+@limiter.limit("120/minute")
+def search_archived_exercises(
+    request: Request,
+    repository: RepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+    q: str = Query("", min_length=2, max_length=100, description="Search query"),
+) -> list[ArchivedExerciseSuggestion]:
+    """Search archived exercises by name for restore suggestions."""
+    return repository.search_archived(current_user.id, q)
+
+
+@app.post("/exercises/{exercise_id}/archive", status_code=204, tags=["Exercises"])
+@limiter.limit("60/minute")
+def archive_exercise(
+    request: Request,
+    exercise_id: int,
+    repository: RepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> None:
+    """Archive an exercise (soft delete)."""
+    success = repository.archive(exercise_id, current_user.id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Exercise not found")
+    return None
+
+
+@app.post("/exercises/{exercise_id}/restore", response_model=ExerciseResponse, tags=["Exercises"])
+@limiter.limit("60/minute")
+def restore_exercise(
+    request: Request,
+    exercise_id: int,
+    repository: RepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> ExerciseResponse:
+    """Restore an archived exercise."""
+    exercise = repository.restore(exercise_id, current_user.id)
+    if not exercise:
+        raise HTTPException(status_code=404, detail="Exercise not found")
+    return exercise
+
+
+@app.delete("/exercises/{exercise_id}/permanent", status_code=204, tags=["Exercises"])
+@limiter.limit("60/minute")
+def permanent_delete_exercise(
+    request: Request,
+    exercise_id: int,
+    repository: RepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> None:
+    """Permanently delete an archived exercise."""
+    success = repository.hard_delete(exercise_id, current_user.id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Exercise not found or not archived")
+    return None
 
 
 @app.get("/exercises/{exercise_id}", response_model=ExerciseResponse)

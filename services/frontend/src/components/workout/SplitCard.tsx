@@ -10,10 +10,11 @@ interface SplitCardProps {
   exercises: Exercise[];
   onUpdate: (id: number, data: UpdateExerciseRequest) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
+  onArchive?: (id: number) => Promise<void>;
   onAddToDay: (day: string) => void;
 }
 
-export function SplitCard({ day, exercises, onUpdate, onDelete, onAddToDay }: SplitCardProps) {
+export function SplitCard({ day, exercises, onUpdate, onDelete, onArchive, onAddToDay }: SplitCardProps) {
   const [collapsed, setCollapsed] = useState(false);
   const color = getDayColor(day);
 
@@ -61,6 +62,7 @@ export function SplitCard({ day, exercises, onUpdate, onDelete, onAddToDay }: Sp
                   exercise={ex}
                   onUpdate={onUpdate}
                   onDelete={onDelete}
+                  onArchive={onArchive}
                 />
               ))}
 

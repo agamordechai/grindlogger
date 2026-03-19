@@ -4,6 +4,7 @@ import {
   createExercise,
   updateExercise,
   deleteExercise,
+  archiveExercise,
   seedExercises,
 } from '../api/client';
 import type { Exercise, CreateExerciseRequest, UpdateExerciseRequest } from '../types/exercise';
@@ -58,6 +59,15 @@ export function useExercises() {
     }
   };
 
+  const handleArchive = async (exerciseId: number) => {
+    try {
+      await archiveExercise(exerciseId);
+      await fetchExercises();
+    } catch (err) {
+      alert(`Failed to archive: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
+
   const handleSeed = async (split: 'ppl' | 'ab' | 'fullbody') => {
     await seedExercises(split);
     await fetchExercises();
@@ -71,6 +81,7 @@ export function useExercises() {
     handleCreate,
     handleUpdate,
     handleDelete,
+    handleArchive,
     handleSeed,
   };
 }

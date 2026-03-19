@@ -1,27 +1,62 @@
 import { useState, useEffect } from 'react';
+import { RotateCcw } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { GlowButton } from '../ui/GlowButton';
 import { ALL_DAYS } from '../../lib/constants';
-import type { CreateExerciseRequest } from '../../types/exercise';
+import { searchArchivedExercises } from '../../api/client';
+import type { Exercise, CreateExerciseRequest, ArchivedExerciseSuggestion } from '../../types/exercise';
 
 interface CreateSheetProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: CreateExerciseRequest) => Promise<void>;
+  onRestore?: (id: number) => Promise<void>;
+  onDelete?: (id: number) => Promise<void>;
+  exercises?: Exercise[];
   defaultDay?: string;
+  getNameStatus?: (name: string) => 'active' | 'archived' | 'new';
 }
 
-export function CreateSheet({ open, onClose, onSubmit, defaultDay = 'A' }: CreateSheetProps) {
+export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exercises = [], defaultDay = 'A', getNameStatus }: CreateSheetProps) {
   const [name, setName] = useState('');
   const [sets, setSets] = useState(3);
   const [reps, setReps] = useState(10);
   const [weight, setWeight] = useState(0);
   const [day, setDay] = useState(defaultDay);
   const [saving, setSaving] = useState(false);
+  const [suggestions, setSuggestions] = useState<ArchivedExerciseSuggestion[]>([]);
+
+  const nameStatus = getNameStatus && name.trim().length >= 2 ? getNameStatus(name.trim()) : null;
+  const borderClass = nameStatus === 'new' ? 'border-emerald-500' : nameStatus === 'archived' ? 'border-amber-500' : nameStatus === 'active' ? 'border-red-500' : '';
+  const dotClass = nameStatus === 'new' ? 'bg-emerald-500' : nameStatus === 'archived' ? 'bg-amber-500' : nameStatus === 'active' ? 'bg-red-500' : '';
+  const statusText = nameStatus === 'new' ? 'New exercise' : nameStatus === 'archived' ? 'Exists in archive' : nameStatus === 'active' ? 'Already in your routine' : '';
 
   useEffect(() => {
     if (open) setDay(defaultDay);
   }, [open, defaultDay]);
+
+  // Search archived exercises as user types
+  useEffect(() => {
+    const trimmed = name.trim();
+    if (trimmed.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const results = await searchArchivedExercises(trimmed);
+        setSuggestions(results);
+      } catch {
+        setSuggestions([]);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [name]);
+
+  // Clear suggestions when modal closes
+  useEffect(() => {
+    if (!open) setSuggestions([]);
+  }, [open]);
 
   const reset = () => {
     setName('');
@@ -29,20 +64,63 @@ export function CreateSheet({ open, onClose, onSubmit, defaultDay = 'A' }: Creat
     setReps(10);
     setWeight(0);
     setDay(defaultDay);
+    setSuggestions([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+
+    const trimmedName = name.trim();
+    const duplicate = exercises.find(
+      (ex) => ex.name.toLowerCase() === trimmedName.toLowerCase() && ex.workout_day === day
+    );
+
+    if (duplicate) {
+      const confirmed = confirm(
+        `"${duplicate.name}" already exists on Day ${day}.\nOverride with new values?`
+      );
+      if (!confirmed) return;
+
+      setSaving(true);
+      try {
+        if (onDelete) await onDelete(duplicate.id);
+        await onSubmit({
+          name: trimmedName,
+          sets,
+          reps,
+          weight: weight || null,
+          workout_day: day,
+        });
+        reset();
+        onClose();
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
     setSaving(true);
     try {
       await onSubmit({
-        name: name.trim(),
+        name: trimmedName,
         sets,
         reps,
         weight: weight || null,
         workout_day: day,
       });
+      reset();
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRestore = async (id: number) => {
+    if (!onRestore) return;
+    setSaving(true);
+    try {
+      await onRestore(id);
       reset();
       onClose();
     } finally {
@@ -59,9 +137,43 @@ export function CreateSheet({ open, onClose, onSubmit, defaultDay = 'A' }: Creat
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder="e.g. Bench Press"
-            className="input"
+            className={`input ${borderClass ? `border-2 ${borderClass}` : ''}`}
             autoFocus
           />
+          {nameStatus && (
+            <div className="flex items-center gap-1.5 mt-1">
+              <div className={`w-2 h-2 rounded-full ${dotClass}`} />
+              <span className="text-[11px] text-steel">{statusText}</span>
+            </div>
+          )}
+
+          {/* Archived suggestions */}
+          {suggestions.length > 0 && onRestore && (
+            <div className="mt-2 rounded-lg border border-border bg-surface-2/50 overflow-hidden">
+              <p className="px-3 py-1.5 text-[11px] font-medium text-steel border-b border-border/50">
+                Restore from archive
+              </p>
+              {suggestions.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => handleRestore(s.id)}
+                  disabled={saving}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-2 transition-colors"
+                >
+                  <RotateCcw size={14} className="text-amber-500 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-chalk">{s.name}</span>
+                    <span className="text-xs text-steel ml-2 font-mono">
+                      {s.sets}&times;{s.reps}
+                      {s.weight != null && s.weight > 0 && ` ${s.weight}kg`}
+                      {' · Day '}{s.workout_day}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-3 gap-3">

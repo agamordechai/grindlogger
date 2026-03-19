@@ -10,6 +10,7 @@ import DashboardPage from './pages/DashboardPage';
 import CoachPage from './pages/CoachPage';
 import SettingsPage from './pages/SettingsPage';
 import AdminPage from './pages/AdminPage';
+import ArchivePage from './pages/ArchivePage';
 
 function LoadingScreen() {
   return (
@@ -50,6 +51,7 @@ export default function App() {
             <Route index element={<DashboardPage />} />
             <Route path="coach" element={<CoachPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="archive" element={<ArchivePage />} />
             <Route path="admin" element={<AdminPage />} />
           </Routes>
         </AnimatePresence>

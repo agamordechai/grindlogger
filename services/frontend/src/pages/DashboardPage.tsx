@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useExercises } from '../hooks/useExercises';
+import { useExerciseNames } from '../hooks/useExerciseNames';
+import { restoreExercise } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { PageShell } from '../components/ui/PageShell';
 import { GlowButton } from '../components/ui/GlowButton';
@@ -17,7 +19,8 @@ import { ALL_DAYS } from '../lib/constants';
 import { containerStagger } from '../lib/motion';
 
 export default function DashboardPage() {
-  const { exercises, loading, error, fetchExercises, handleCreate, handleUpdate, handleDelete, handleSeed } = useExercises();
+  const { exercises, loading, error, fetchExercises, handleCreate, handleUpdate, handleDelete, handleArchive, handleSeed } = useExercises();
+  const { getNameStatus, fetchNames } = useExerciseNames();
   const { user } = useAuth();
   const [selectedDay, setSelectedDay] = useState('All');
   const [showCreate, setShowCreate] = useState(false);
@@ -53,6 +56,12 @@ export default function DashboardPage() {
       return order.indexOf(a) - order.indexOf(b);
     });
   }, [exercises, selectedDay]);
+
+  const handleRestoreFromCreate = async (id: number) => {
+    await restoreExercise(id);
+    await fetchExercises();
+    await fetchNames();
+  };
 
   const handleAddToDay = (day: string) => {
     setCreateDefaultDay(day);
@@ -99,7 +108,11 @@ export default function DashboardPage() {
           open={showCreate}
           onClose={() => setShowCreate(false)}
           onSubmit={handleCreate}
+          onRestore={handleRestoreFromCreate}
+          onDelete={handleDelete}
+          exercises={exercises}
           defaultDay={createDefaultDay}
+          getNameStatus={getNameStatus}
         />
       </PageShell>
     );
@@ -159,6 +172,7 @@ export default function DashboardPage() {
               exercises={dayExercises}
               onUpdate={handleUpdate}
               onDelete={handleDelete}
+              onArchive={handleArchive}
               onAddToDay={handleAddToDay}
             />
           ))}
@@ -175,7 +189,11 @@ export default function DashboardPage() {
         open={showCreate}
         onClose={() => setShowCreate(false)}
         onSubmit={handleCreate}
+        onRestore={handleRestoreFromCreate}
+        onDelete={handleDelete}
+        exercises={exercises}
         defaultDay={createDefaultDay}
+        getNameStatus={getNameStatus}
       />
     </PageShell>
   );

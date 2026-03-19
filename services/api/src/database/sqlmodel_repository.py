@@ -11,6 +11,7 @@ from sqlmodel import Session, select
 
 from services.api.src.database.db_models import ExerciseTable
 from services.api.src.database.models import ExerciseResponse
+from services.shared.models.exercise import ArchivedExerciseSuggestion, ExerciseNameStatus
 
 
 class ExerciseRepository:
@@ -39,7 +40,10 @@ class ExerciseRepository:
         Returns:
             List of all exercises belonging to the user.
         """
-        statement = select(ExerciseTable).where(ExerciseTable.user_id == user_id)
+        statement = select(ExerciseTable).where(
+            ExerciseTable.user_id == user_id,
+            ExerciseTable.archived == False,  # noqa: E712
+        )
         results = self.session.exec(statement).all()
         return [ExerciseResponse.model_validate(ex.model_dump()) for ex in results]
 
@@ -65,7 +69,9 @@ class ExerciseRepository:
         """
         total = (
             self.session.execute(
-                select(func.count()).select_from(ExerciseTable).where(ExerciseTable.user_id == user_id)
+                select(func.count())
+                .select_from(ExerciseTable)
+                .where(ExerciseTable.user_id == user_id, ExerciseTable.archived == False)  # noqa: E712
             ).scalar()
             or 0
         )
@@ -74,7 +80,7 @@ class ExerciseRepository:
         order = column.desc() if sort_order == "desc" else column.asc()
         statement = (
             select(ExerciseTable)
-            .where(ExerciseTable.user_id == user_id)
+            .where(ExerciseTable.user_id == user_id, ExerciseTable.archived == False)  # noqa: E712
             .order_by(order)
             .offset((page - 1) * page_size)
             .limit(page_size)
@@ -96,6 +102,7 @@ class ExerciseRepository:
         statement = select(ExerciseTable).where(
             ExerciseTable.id == exercise_id,
             ExerciseTable.user_id == user_id,
+            ExerciseTable.archived == False,  # noqa: E712
         )
         exercise = self.session.exec(statement).first()
         if exercise:
@@ -194,6 +201,7 @@ class ExerciseRepository:
         statement = select(ExerciseTable).where(
             ExerciseTable.id == exercise_id,
             ExerciseTable.user_id == user_id,
+            ExerciseTable.archived == False,  # noqa: E712
         )
         exercise = self.session.exec(statement).first()
         if not exercise:
@@ -212,13 +220,125 @@ class ExerciseRepository:
         Returns:
             Number of exercises deleted
         """
-        statement = select(ExerciseTable).where(ExerciseTable.user_id == user_id)
+        statement = select(ExerciseTable).where(
+            ExerciseTable.user_id == user_id,
+            ExerciseTable.archived == False,  # noqa: E712
+        )
         exercises = self.session.exec(statement).all()
         count = len(exercises)
         for exercise in exercises:
             self.session.delete(exercise)
         self.session.commit()
         return count
+
+    def archive(self, exercise_id: int, user_id: int) -> bool:
+        """Archive an exercise (soft delete).
+
+        Returns:
+            True if archived, False if not found.
+        """
+        statement = select(ExerciseTable).where(
+            ExerciseTable.id == exercise_id,
+            ExerciseTable.user_id == user_id,
+            ExerciseTable.archived == False,  # noqa: E712
+        )
+        exercise = self.session.exec(statement).first()
+        if not exercise:
+            return False
+        exercise.archived = True
+        self.session.add(exercise)
+        self.session.commit()
+        return True
+
+    def restore(self, exercise_id: int, user_id: int) -> ExerciseResponse | None:
+        """Restore an archived exercise.
+
+        If an active exercise with the same name and workout_day exists,
+        it is deleted before restoring the archived one.
+
+        Returns:
+            The restored exercise, or None if not found.
+        """
+        statement = select(ExerciseTable).where(
+            ExerciseTable.id == exercise_id,
+            ExerciseTable.user_id == user_id,
+            ExerciseTable.archived == True,  # noqa: E712
+        )
+        exercise = self.session.exec(statement).first()
+        if not exercise:
+            return None
+
+        # Delete active duplicates with the same name + day
+        dupes = self.session.exec(
+            select(ExerciseTable).where(
+                ExerciseTable.user_id == user_id,
+                ExerciseTable.archived == False,  # noqa: E712
+                func.lower(ExerciseTable.name) == exercise.name.lower(),
+                ExerciseTable.workout_day == exercise.workout_day,
+            )
+        ).all()
+        for dupe in dupes:
+            self.session.delete(dupe)
+
+        exercise.archived = False
+        self.session.add(exercise)
+        self.session.commit()
+        self.session.refresh(exercise)
+        return ExerciseResponse.model_validate(exercise.model_dump())
+
+    def list_archived(self, user_id: int) -> list[ExerciseResponse]:
+        """Return all archived exercises for a user."""
+        statement = select(ExerciseTable).where(
+            ExerciseTable.user_id == user_id,
+            ExerciseTable.archived == True,  # noqa: E712
+        )
+        results = self.session.exec(statement).all()
+        return [ExerciseResponse.model_validate(ex.model_dump()) for ex in results]
+
+    def hard_delete(self, exercise_id: int, user_id: int) -> bool:
+        """Permanently delete an archived exercise.
+
+        Returns:
+            True if deleted, False if not found or not archived.
+        """
+        statement = select(ExerciseTable).where(
+            ExerciseTable.id == exercise_id,
+            ExerciseTable.user_id == user_id,
+            ExerciseTable.archived == True,  # noqa: E712
+        )
+        exercise = self.session.exec(statement).first()
+        if not exercise:
+            return False
+        self.session.delete(exercise)
+        self.session.commit()
+        return True
+
+    def get_exercise_names(self, user_id: int) -> list[ExerciseNameStatus]:
+        """Return name+status for all exercises. Active takes precedence over archived."""
+        statement = select(ExerciseTable).where(ExerciseTable.user_id == user_id)
+        results = self.session.exec(statement).all()
+        name_map: dict[str, str] = {}
+        for ex in results:
+            lower_name = ex.name.lower()
+            if lower_name not in name_map or not ex.archived:
+                name_map[lower_name] = "active" if not ex.archived else "archived"
+        return [ExerciseNameStatus(name=name, status=status) for name, status in name_map.items()]
+
+    def search_archived(self, user_id: int, query: str) -> list[ArchivedExerciseSuggestion]:
+        """Search archived exercises whose name contains the query (case-insensitive)."""
+        statement = select(ExerciseTable).where(
+            ExerciseTable.user_id == user_id,
+            ExerciseTable.archived == True,  # noqa: E712
+            func.lower(ExerciseTable.name).contains(query.lower()),
+        )
+        results = self.session.exec(statement).all()
+        return [
+            ArchivedExerciseSuggestion(
+                id=ex.id, name=ex.name, sets=ex.sets, reps=ex.reps,
+                weight=ex.weight, workout_day=ex.workout_day,
+            )
+            for ex in results
+        ]
 
     def seed_initial_data(self, user_id: int, split: str = "ppl") -> int:
         """Seed database with initial workout data for a specific user.

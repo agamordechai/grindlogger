@@ -58,6 +58,7 @@ class ExerciseResponse(ExerciseBase):
     """
 
     id: int = Field(..., ge=1, description="Unique identifier of the exercise")
+    archived: bool = Field(default=False, description="Whether the exercise is archived")
 
     model_config = {"from_attributes": True}
 
@@ -94,3 +95,21 @@ class PaginatedExerciseResponse(BaseModel):
     page_size: int = Field(..., ge=1, description="Items per page")
     total: int = Field(..., ge=0, description="Total number of exercises across all pages")
     items: list[ExerciseResponse] = Field(..., description="Exercises on this page")
+
+
+class ExerciseNameStatus(BaseModel):
+    """Exercise name with its status (active or archived)."""
+
+    name: str
+    status: str = Field(..., description="'active' or 'archived'")
+
+
+class ArchivedExerciseSuggestion(BaseModel):
+    """Archived exercise shown as a suggestion during creation."""
+
+    id: int
+    name: str
+    sets: int
+    reps: int
+    weight: float | None
+    workout_day: str

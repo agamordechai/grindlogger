@@ -9,6 +9,21 @@ export interface Exercise {
   reps: number;
   weight: number | null;
   workout_day: string;
+  archived: boolean;
+}
+
+export interface ExerciseNameStatus {
+  name: string;
+  status: 'active' | 'archived';
+}
+
+export interface ArchivedExerciseSuggestion {
+  id: number;
+  name: string;
+  sets: number;
+  reps: number;
+  weight: number | null;
+  workout_day: string;
 }
 
 export interface CreateExerciseRequest {

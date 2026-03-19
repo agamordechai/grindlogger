@@ -4,7 +4,7 @@
  */
 
 import axios, { AxiosInstance } from 'axios';
-import type { Exercise, CreateExerciseRequest, UpdateExerciseRequest, PaginatedExerciseResponse } from '../types/exercise';
+import type { Exercise, CreateExerciseRequest, UpdateExerciseRequest, PaginatedExerciseResponse, ExerciseNameStatus, ArchivedExerciseSuggestion } from '../types/exercise';
 import type {
   ChatRequest,
   ChatResponse,
@@ -229,6 +229,52 @@ export async function clearExercises(): Promise<{ deleted: number }> {
  */
 export async function seedExercises(split: 'ppl' | 'ab' | 'fullbody' = 'ppl'): Promise<{ seeded: number }> {
   const response = await client.post<{ seeded: number }>(`/exercises/seed?split=${split}`);
+  return response.data;
+}
+
+/**
+ * Archive an exercise (soft delete).
+ */
+export async function archiveExercise(exerciseId: number): Promise<void> {
+  await client.post(`/exercises/${exerciseId}/archive`);
+}
+
+/**
+ * Restore an archived exercise.
+ */
+export async function restoreExercise(exerciseId: number): Promise<Exercise> {
+  const response = await client.post<Exercise>(`/exercises/${exerciseId}/restore`);
+  return response.data;
+}
+
+/**
+ * List all archived exercises.
+ */
+export async function listArchivedExercises(): Promise<Exercise[]> {
+  const response = await client.get<Exercise[]>('/exercises/archived');
+  return response.data;
+}
+
+/**
+ * Permanently delete an archived exercise.
+ */
+export async function permanentDeleteExercise(exerciseId: number): Promise<void> {
+  await client.delete(`/exercises/${exerciseId}/permanent`);
+}
+
+/**
+ * Search archived exercises by name for restore suggestions.
+ */
+export async function searchArchivedExercises(query: string): Promise<ArchivedExerciseSuggestion[]> {
+  const response = await client.get<ArchivedExerciseSuggestion[]>('/exercises/archived/search', { params: { q: query } });
+  return response.data;
+}
+
+/**
+ * Get exercise names with their status (active/archived).
+ */
+export async function getExerciseNames(): Promise<ExerciseNameStatus[]> {
+  const response = await client.get<ExerciseNameStatus[]>('/exercises/names');
   return response.data;
 }
 

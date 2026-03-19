@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Bot, Settings, Shield } from 'lucide-react';
+import { Home, Bot, Settings, Shield, Archive } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const BASE_TABS = [
   { to: '/', label: 'Home', icon: Home },
+  { to: '/archive', label: 'Archive', icon: Archive },
   { to: '/coach', label: 'Coach', icon: Bot },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
