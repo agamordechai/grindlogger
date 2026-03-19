@@ -59,6 +59,7 @@ from services.shared.models.exercise import ArchivedExerciseSuggestion, Exercise
 from services.api.src.database.sqlmodel_repository import ExerciseRepository
 from services.api.src.etag import maybe_return_not_modified
 from services.api.src.ratelimit import get_rate_limit_key, get_ratelimit_settings, rate_limit_exceeded_handler
+from services.shared.models.exercise import ArchivedExerciseSuggestion, ExerciseNameStatus
 
 # Get application settings
 settings = get_settings()
