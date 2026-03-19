@@ -334,8 +334,12 @@ class ExerciseRepository:
         results = self.session.exec(statement).all()
         return [
             ArchivedExerciseSuggestion(
-                id=ex.id, name=ex.name, sets=ex.sets, reps=ex.reps,
-                weight=ex.weight, workout_day=ex.workout_day,
+                id=ex.id,
+                name=ex.name,
+                sets=ex.sets,
+                reps=ex.reps,
+                weight=ex.weight,
+                workout_day=ex.workout_day,
             )
             for ex in results
         ]
