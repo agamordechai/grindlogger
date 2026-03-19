@@ -15,7 +15,9 @@
       "Bash(gh auth:*)",
       "Bash(git remote get-url:*)",
       "Bash(uv run:*)",
-      "Bash(rsvg-convert:*)"
+      "Bash(rsvg-convert:*)",
+      "Bash(curl:*)",
+      "Bash(uv sync:*)"
     ]
   }
 }
