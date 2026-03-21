@@ -6,8 +6,8 @@ import { useMemo } from 'react';
 
 const BASE_NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: Home },
-  { to: '/archive', label: 'Archive', icon: Archive },
   { to: '/coach', label: 'Coach', icon: Bot },
+  { to: '/archive', label: 'Archive', icon: Archive },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
