@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
-import { RotateCcw } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { RotateCcw, Dumbbell } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { GlowButton } from '../ui/GlowButton';
 import { ALL_DAYS } from '../../lib/constants';
 import { searchArchivedExercises } from '../../api/client';
+import { searchLibrary, getMuscleGroupColor } from '../../lib/exerciseLibrary';
+import type { LibraryExercise } from '../../lib/exerciseLibrary';
 import type { Exercise, CreateExerciseRequest, ArchivedExerciseSuggestion } from '../../types/exercise';
 
 interface CreateSheetProps {
@@ -25,6 +27,8 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
   const [day, setDay] = useState(defaultDay);
   const [saving, setSaving] = useState(false);
   const [suggestions, setSuggestions] = useState<ArchivedExerciseSuggestion[]>([]);
+
+  const librarySuggestions = useMemo(() => searchLibrary(name), [name]);
 
   const nameStatus = getNameStatus && name.trim().length >= 2 ? getNameStatus(name.trim()) : null;
   const borderClass = nameStatus === 'new' ? 'border-emerald-500' : nameStatus === 'archived' ? 'border-amber-500' : nameStatus === 'active' ? 'border-red-500' : '';
@@ -128,6 +132,13 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
     }
   };
 
+  const handleSelectLibrary = (ex: LibraryExercise) => {
+    setName(ex.name);
+    setSets(ex.defaultSets);
+    setReps(ex.defaultReps);
+    setWeight(ex.defaultWeight ?? 0);
+  };
+
   return (
     <Modal open={open} onClose={onClose} title="Add Exercise" description="Create a new exercise for your routine">
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -144,6 +155,35 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
             <div className="flex items-center gap-1.5 mt-1">
               <div className={`w-2 h-2 rounded-full ${dotClass}`} />
               <span className="text-[11px] text-steel">{statusText}</span>
+            </div>
+          )}
+
+          {/* Library suggestions */}
+          {librarySuggestions.length > 0 && nameStatus !== 'active' && (
+            <div className="mt-2 rounded-lg border border-border bg-surface-2/50 overflow-hidden">
+              <p className="px-3 py-1.5 text-[11px] font-medium text-steel border-b border-border/50">
+                Exercise library
+              </p>
+              {librarySuggestions.map((ex) => (
+                <button
+                  key={ex.name}
+                  type="button"
+                  onClick={() => handleSelectLibrary(ex)}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-2 transition-colors"
+                >
+                  <Dumbbell size={14} className="text-ember shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-chalk">{ex.name}</span>
+                    <span className={`text-[11px] ml-2 ${getMuscleGroupColor(ex.muscleGroup)}`}>
+                      {ex.muscleGroup}
+                    </span>
+                  </div>
+                  <span className="text-xs text-steel font-mono shrink-0">
+                    {ex.defaultSets}&times;{ex.defaultReps}
+                    {ex.defaultWeight != null && ` ${ex.defaultWeight}kg`}
+                  </span>
+                </button>
+              ))}
             </div>
           )}
 
