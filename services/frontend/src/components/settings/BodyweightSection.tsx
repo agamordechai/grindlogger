@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { PersonStanding } from 'lucide-react';
 import { GlowButton } from '../ui/GlowButton';
 import { getBodyweightKg, setBodyweightKg } from '../../hooks/useBodyweight';
+import { getWeightUnit, toDisplayWeight, toKg } from '../../hooks/useUnits';
 
 export function BodyweightSection() {
+  const unit = getWeightUnit();
   const [input, setInput] = useState('');
   const [saved, setSaved] = useState<number | null>(null);
 
@@ -14,8 +16,9 @@ export function BodyweightSection() {
   const handleSave = () => {
     const val = parseFloat(input);
     if (!input.trim() || isNaN(val) || val <= 0) return;
-    setBodyweightKg(val);
-    setSaved(val);
+    const kg = toKg(val, unit);
+    setBodyweightKg(kg);
+    setSaved(kg);
     setInput('');
   };
 
@@ -37,7 +40,7 @@ export function BodyweightSection() {
 
       {saved !== null && (
         <div className="flex items-center gap-3 bg-surface-2 rounded-xl px-3 py-2.5 mb-3">
-          <span className="text-sm text-ember flex-1 font-mono">{saved} kg</span>
+          <span className="text-sm text-ember flex-1 font-mono">{toDisplayWeight(saved, unit)} {unit}</span>
           <GlowButton variant="danger" size="sm" onClick={handleRemove}>
             Remove
           </GlowButton>

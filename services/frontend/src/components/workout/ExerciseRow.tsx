@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, Archive, Trash2 } from 'lucide-react';
 import type { Exercise, UpdateExerciseRequest } from '../../types/exercise';
 import { ALL_DAYS } from '../../lib/constants';
+import { formatWeight } from '../../hooks/useUnits';
 import { ExerciseEditor } from './ExerciseEditor';
 
 interface ExerciseRowProps {
@@ -26,7 +27,7 @@ export function ExerciseRow({ exercise, onUpdate, onDelete, onArchive }: Exercis
           <p className="text-xs text-steel font-mono mt-0.5">
             {exercise.sets}&times;{exercise.reps}
             {exercise.weight != null && exercise.weight > 0 && (
-              <span className="text-ember ml-2">{exercise.weight} kg</span>
+              <span className="text-ember ml-2">{formatWeight(exercise.weight)}</span>
             )}
             {(exercise.weight == null || exercise.weight === 0) && (
               <span className="text-steel/60 ml-2">BW</span>

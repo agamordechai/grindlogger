@@ -5,6 +5,7 @@ import { GlowButton } from '../ui/GlowButton';
 import { ALL_DAYS } from '../../lib/constants';
 import { searchArchivedExercises } from '../../api/client';
 import { searchLibrary, getMuscleGroupColor } from '../../lib/exerciseLibrary';
+import { getWeightUnit, toDisplayWeight, toKg } from '../../hooks/useUnits';
 import type { LibraryExercise } from '../../lib/exerciseLibrary';
 import type { Exercise, CreateExerciseRequest, ArchivedExerciseSuggestion } from '../../types/exercise';
 
@@ -28,6 +29,7 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
   const [saving, setSaving] = useState(false);
   const [suggestions, setSuggestions] = useState<ArchivedExerciseSuggestion[]>([]);
 
+  const unit = getWeightUnit();
   const librarySuggestions = useMemo(() => searchLibrary(name), [name]);
 
   const nameStatus = getNameStatus && name.trim().length >= 2 ? getNameStatus(name.trim()) : null;
@@ -93,7 +95,7 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
           name: trimmedName,
           sets,
           reps,
-          weight: weight || null,
+          weight: weight ? toKg(weight, unit) : null,
           workout_day: day,
         });
         reset();
@@ -136,7 +138,7 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
     setName(ex.name);
     setSets(ex.defaultSets);
     setReps(ex.defaultReps);
-    setWeight(ex.defaultWeight ?? 0);
+    setWeight(toDisplayWeight(ex.defaultWeight, unit) ?? 0);
   };
 
   return (
@@ -180,7 +182,7 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
                   </div>
                   <span className="text-xs text-steel font-mono shrink-0">
                     {ex.defaultSets}&times;{ex.defaultReps}
-                    {ex.defaultWeight != null && ` ${ex.defaultWeight}kg`}
+                    {ex.defaultWeight != null && ` ${toDisplayWeight(ex.defaultWeight, unit)}${unit}`}
                   </span>
                 </button>
               ))}
@@ -206,7 +208,7 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
                     <span className="text-sm text-chalk">{s.name}</span>
                     <span className="text-xs text-steel ml-2 font-mono">
                       {s.sets}&times;{s.reps}
-                      {s.weight != null && s.weight > 0 && ` ${s.weight}kg`}
+                      {s.weight != null && s.weight > 0 && ` ${toDisplayWeight(s.weight, unit)}${unit}`}
                       {' · Day '}{s.workout_day}
                     </span>
                   </div>
@@ -226,7 +228,7 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
             <input type="number" min={1} value={reps} onChange={e => setReps(Number(e.target.value))} className="input font-mono text-center" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-steel mb-1.5">Weight (kg)</label>
+            <label className="block text-xs font-medium text-steel mb-1.5">Weight ({unit})</label>
             <input type="number" min={0} step={0.5} value={weight} onChange={e => setWeight(Number(e.target.value))} className="input font-mono text-center" />
           </div>
         </div>

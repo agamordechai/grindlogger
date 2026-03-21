@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { getDayColor } from '../../lib/constants';
 import { getBodyweightKg } from '../../hooks/useBodyweight';
+import { getWeightUnit, toDisplayWeight } from '../../hooks/useUnits';
 import type { Exercise } from '../../types/exercise';
 
 interface VolumeChartProps {
@@ -9,6 +10,7 @@ interface VolumeChartProps {
 }
 
 export function VolumeChart({ exercises }: VolumeChartProps) {
+  const unit = getWeightUnit();
   const data = useMemo(() => {
     const bwKg = getBodyweightKg() ?? 0;
     const byDay: Record<string, number> = {};
@@ -18,9 +20,9 @@ export function VolumeChart({ exercises }: VolumeChartProps) {
       byDay[day] = (byDay[day] || 0) + ex.sets * ex.reps * w;
     }
     return Object.entries(byDay)
-      .map(([day, volume]) => ({ day, volume: Math.round(volume) }))
+      .map(([day, volume]) => ({ day, volume: Math.round(toDisplayWeight(volume, unit) ?? 0) }))
       .sort((a, b) => b.volume - a.volume);
-  }, [exercises]);
+  }, [exercises, unit]);
 
   if (data.length === 0) return null;
 
@@ -50,7 +52,7 @@ export function VolumeChart({ exercises }: VolumeChartProps) {
                 color: '#FAFAF9',
                 fontSize: '12px',
               }}
-              formatter={(value) => [`${Number(value).toLocaleString()} kg`, 'Volume']}
+              formatter={(value) => [`${Number(value).toLocaleString()} ${unit}`, 'Volume']}
             />
             <Bar dataKey="volume" radius={[6, 6, 0, 0]}>
               {data.map((entry) => (

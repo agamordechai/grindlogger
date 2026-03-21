@@ -2,6 +2,7 @@ import { RotateCcw, Trash2, Archive } from 'lucide-react';
 import { useArchivedExercises } from '../hooks/useArchivedExercises';
 import { PageShell } from '../components/ui/PageShell';
 import { CardSkeleton } from '../components/ui/Skeleton';
+import { formatWeight } from '../hooks/useUnits';
 
 export default function ArchivePage() {
   const { exercises, loading, error, handleRestore, handlePermanentDelete } = useArchivedExercises();
@@ -47,7 +48,7 @@ export default function ArchivePage() {
                 <p className="text-xs text-steel font-mono mt-0.5">
                   {ex.sets}&times;{ex.reps}
                   {ex.weight != null && ex.weight > 0 && (
-                    <span className="text-ember ml-2">{ex.weight} kg</span>
+                    <span className="text-ember ml-2">{formatWeight(ex.weight)}</span>
                   )}
                   <span className="text-steel/60 ml-2">Day {ex.workout_day}</span>
                 </p>

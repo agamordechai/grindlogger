@@ -3,6 +3,7 @@ import { Dumbbell, Layers, Weight } from 'lucide-react';
 import { StatCard } from '../ui/StatCard';
 import { containerStagger } from '../../lib/motion';
 import { getBodyweightKg } from '../../hooks/useBodyweight';
+import { getWeightUnit, toDisplayWeight } from '../../hooks/useUnits';
 import type { Exercise } from '../../types/exercise';
 
 interface StatsRowProps {
@@ -10,12 +11,14 @@ interface StatsRowProps {
 }
 
 export function StatsRow({ exercises }: StatsRowProps) {
+  const unit = getWeightUnit();
   const bwKg = getBodyweightKg() ?? 0;
   const totalSets = exercises.reduce((sum, ex) => sum + ex.sets, 0);
-  const totalVolume = exercises.reduce((sum, ex) => {
+  const totalVolumeKg = exercises.reduce((sum, ex) => {
     const w = ex.weight != null ? ex.weight : bwKg;
     return sum + ex.sets * ex.reps * w;
   }, 0);
+  const totalVolume = toDisplayWeight(totalVolumeKg, unit) ?? 0;
 
   const formatVolume = (v: number) => {
     if (v >= 1000) return `${(v / 1000).toFixed(1)}k`;
@@ -40,7 +43,7 @@ export function StatsRow({ exercises }: StatsRowProps) {
         icon={<Layers size={18} />}
       />
       <StatCard
-        label="Volume (kg)"
+        label={`Volume (${unit})`}
         value={formatVolume(totalVolume)}
         icon={<Weight size={18} />}
       />
