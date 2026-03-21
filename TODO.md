@@ -19,11 +19,12 @@
 - [ ] **Leaderboard** — Opt-in community stats (total volume, consistency, etc.)
 
 ## Quality of Life
-- [ ] **Dark/light theme toggle** — User-selectable theme
-- [ ] **PWA / mobile install** — Add manifest + service worker for mobile app experience
+- [X] **Dark/light theme toggle** — User-selectable theme
+- [X] **PWA / mobile install** — Add manifest + service worker for mobile app experience
 - [ ] **Workout templates** — Save and load full routines as reusable templates
-- [ ] **Exercise library** — Searchable database of exercises with muscle group tags
-- [ ] **Units preference** — kg/lbs toggle with automatic conversion
+- [X] **Exercise library** — Searchable database of exercises with muscle group tags
+- [X] **Units preference** — kg/lbs toggle with automatic conversion
+- [X] **Disable mobile zoom** — Prevent pinch-to-zoom for native app feel
 - [ ] **Notifications/reminders** — Remind users to work out on scheduled days
 
 ## Data & Integration
