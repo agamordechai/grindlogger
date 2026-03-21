@@ -6,8 +6,8 @@ import { useAuth } from '../../contexts/AuthContext';
 
 const BASE_TABS = [
   { to: '/', label: 'Home', icon: Home },
-  { to: '/archive', label: 'Archive', icon: Archive },
   { to: '/coach', label: 'Coach', icon: Bot },
+  { to: '/archive', label: 'Archive', icon: Archive },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
