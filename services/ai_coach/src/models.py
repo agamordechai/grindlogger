@@ -105,6 +105,25 @@ class ProgressAnalysis(BaseModel):
     muscle_balance_score: float | None = Field(default=None, ge=0, le=100, description="Balance score")
 
 
+class Conversation(BaseModel):
+    """A stored conversation."""
+
+    id: str = Field(..., description="Conversation ID")
+    title: str = Field(default="New Chat", description="Auto-generated title from first user message")
+    messages: list[ChatMessage] = Field(default_factory=list)
+    created_at: str = Field(..., description="ISO timestamp")
+    updated_at: str = Field(..., description="ISO timestamp")
+
+
+class ConversationSummary(BaseModel):
+    """Lightweight conversation metadata for listing."""
+
+    id: str = Field(..., description="Conversation ID")
+    title: str = Field(default="New Chat")
+    message_count: int = Field(default=0)
+    updated_at: str = Field(..., description="ISO timestamp")
+
+
 class HealthResponse(BaseModel):
     """Health check response."""
 

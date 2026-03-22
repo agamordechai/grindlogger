@@ -54,6 +54,11 @@ class Settings(BaseSettings):
     redis_url: str = Field(default="redis://redis:6379/0", alias="REDIS_URL")
     cache_ttl: int = Field(default=3600, alias="CACHE_TTL")
 
+    # Chat history
+    chat_history_ttl: int = Field(default=1_209_600, alias="CHAT_HISTORY_TTL", description="Chat TTL in seconds (default 14 days)")
+    chat_max_conversations: int = Field(default=20, alias="CHAT_MAX_CONVERSATIONS")
+    chat_max_messages: int = Field(default=100, alias="CHAT_MAX_MESSAGES", description="Max messages per conversation")
+
     # JWT (shared with API for admin-check on per-user keys)
     jwt_secret_key: str = Field(default="dev-secret-key-change-in-production", alias="JWT_SECRET_KEY")
 

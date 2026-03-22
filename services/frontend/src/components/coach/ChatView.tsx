@@ -1,16 +1,15 @@
-import { useState, useRef, useEffect } from 'react';
-import { Send, MessageSquarePlus } from 'lucide-react';
-import { chatWithCoach } from '../../api/client';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Send, MessageSquarePlus, History, Trash2, X, ChevronLeft } from 'lucide-react';
+import { chatWithCoach, listConversations, getConversation, saveConversation, deleteConversation } from '../../api/client';
 import { ChatMessage } from './ChatMessage';
-import { useSessionStorage } from '../../hooks/useSessionStorage';
-import type { ChatMessage as ChatMessageType } from '../../types/aiCoach';
+import type { ChatMessage as ChatMessageType, ConversationSummary } from '../../types/aiCoach';
 
-const DEFAULT_MESSAGES: ChatMessageType[] = [
-  {
-    role: 'assistant',
-    content: "Hey! I'm your AI fitness coach. Ask me anything about your routine, form tips, or training strategy. I can see your current exercises and give personalized advice.",
-  },
-];
+const WELCOME_MESSAGE: ChatMessageType = {
+  role: 'assistant',
+  content: "Hey! I'm your AI fitness coach. Ask me anything about your routine, form tips, or training strategy. I can see your current exercises and give personalized advice.",
+};
+
+const DEFAULT_MESSAGES: ChatMessageType[] = [WELCOME_MESSAGE];
 
 const SUGGESTIONS = [
   "What exercises should I add for balance?",
@@ -19,16 +18,47 @@ const SUGGESTIONS = [
   "What's a good warm-up routine?",
 ];
 
+function generateId(): string {
+  return crypto.randomUUID?.() ?? Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
 export function ChatView() {
-  const [messages, setMessages] = useSessionStorage<ChatMessageType[]>('coach_chat_messages', DEFAULT_MESSAGES);
+  const [messages, setMessages] = useState<ChatMessageType[]>(DEFAULT_MESSAGES);
+  const [conversationId, setConversationId] = useState<string>(generateId);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [includeContext, setIncludeContext] = useState(true);
+  const [showHistory, setShowHistory] = useState(false);
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Debounced save to Redis after messages change (only if there are user messages)
+  const persistMessages = useCallback((msgs: ChatMessageType[], convId: string) => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    // Only save if there are user messages
+    if (!msgs.some(m => m.role === 'user')) return;
+    saveTimeoutRef.current = setTimeout(() => {
+      saveConversation(convId, msgs).catch(() => {
+        // Silent fail — sessionStorage is the fallback
+      });
+    }, 1000);
+  }, []);
+
+  useEffect(() => {
+    persistMessages(messages, conversationId);
+  }, [messages, conversationId, persistMessages]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, []);
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
@@ -65,6 +95,116 @@ export function ChatView() {
       handleSend();
     }
   };
+
+  const handleNewChat = () => {
+    setMessages(DEFAULT_MESSAGES);
+    setConversationId(generateId());
+    setShowHistory(false);
+  };
+
+  const handleOpenHistory = async () => {
+    setShowHistory(true);
+    setHistoryLoading(true);
+    try {
+      const convos = await listConversations();
+      setConversations(convos);
+    } catch {
+      setConversations([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleLoadConversation = async (id: string) => {
+    try {
+      const convo = await getConversation(id);
+      setConversationId(convo.id);
+      setMessages(convo.messages);
+      setShowHistory(false);
+    } catch {
+      // Conversation might have expired
+    }
+  };
+
+  const handleDeleteConversation = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    try {
+      await deleteConversation(id);
+      setConversations(prev => prev.filter(c => c.id !== id));
+      // If we deleted the active conversation, start fresh
+      if (id === conversationId) {
+        handleNewChat();
+      }
+    } catch {
+      // Silent fail
+    }
+  };
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffDays = Math.floor(diffMs / 86400000);
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return d.toLocaleDateString();
+  };
+
+  // History panel
+  if (showHistory) {
+    return (
+      <div className="card flex flex-col p-0 overflow-hidden" style={{ height: 'calc(100vh - 14rem)' }}>
+        <div className="flex items-center gap-2 p-4 border-b border-border">
+          <button onClick={() => setShowHistory(false)} className="text-steel hover:text-chalk transition-colors">
+            <ChevronLeft size={20} />
+          </button>
+          <h3 className="text-sm font-medium text-chalk flex-1">Chat History</h3>
+          <button onClick={() => setShowHistory(false)} className="text-steel hover:text-chalk transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          {historyLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="w-5 h-5 border-2 border-ember border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : conversations.length === 0 ? (
+            <div className="p-6 text-center text-steel/60 text-sm">
+              No saved conversations yet. Start chatting and your history will appear here.
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {conversations.map(conv => (
+                <button
+                  key={conv.id}
+                  onClick={() => handleLoadConversation(conv.id)}
+                  className={`w-full text-left px-4 py-3 hover:bg-surface-2 transition-colors group ${
+                    conv.id === conversationId ? 'bg-ember/5 border-l-2 border-l-ember' : ''
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-chalk truncate">{conv.title}</p>
+                      <p className="text-xs text-steel/60 mt-0.5">
+                        {conv.message_count} messages · {formatDate(conv.updated_at)}
+                      </p>
+                    </div>
+                    <button
+                      onClick={(e) => handleDeleteConversation(e, conv.id)}
+                      className="opacity-0 group-hover:opacity-100 text-steel hover:text-red-400 transition-all p-1"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="card flex flex-col p-0 overflow-hidden" style={{ height: 'calc(100vh - 14rem)' }}>
@@ -121,11 +261,18 @@ export function ChatView() {
             {includeContext ? 'Workout context: ON' : 'Workout context: OFF'}
           </button>
           <button
-            onClick={() => setMessages(DEFAULT_MESSAGES)}
+            onClick={handleNewChat}
             className="text-xs px-3 py-1 rounded-full border border-border text-steel hover:text-chalk hover:border-steel/40 transition-all flex items-center gap-1"
           >
             <MessageSquarePlus size={12} />
             New Chat
+          </button>
+          <button
+            onClick={handleOpenHistory}
+            className="text-xs px-3 py-1 rounded-full border border-border text-steel hover:text-chalk hover:border-steel/40 transition-all flex items-center gap-1"
+          >
+            <History size={12} />
+            History
           </button>
         </div>
         <div className="flex gap-2">

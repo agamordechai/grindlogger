@@ -12,6 +12,9 @@ import type {
   WorkoutRecommendation,
   ProgressAnalysis,
   AICoachHealthResponse,
+  Conversation,
+  ConversationSummary,
+  ChatMessage,
 } from '../types/aiCoach';
 import type { User, AuthTokens } from '../types/auth';
 import type { AdminUser, AdminStats } from '../types/admin';
@@ -344,6 +347,41 @@ export async function getProgressAnalysis(): Promise<ProgressAnalysis> {
   const response = await aiCoachClient.get<ProgressAnalysis>('/analyze');
   return response.data;
 }
+
+// ============ Chat History API ============
+
+/**
+ * List all conversations for the current user.
+ */
+export async function listConversations(): Promise<ConversationSummary[]> {
+  const response = await aiCoachClient.get<ConversationSummary[]>('/conversations');
+  return response.data;
+}
+
+/**
+ * Fetch a single conversation by ID.
+ */
+export async function getConversation(conversationId: string): Promise<Conversation> {
+  const response = await aiCoachClient.get<Conversation>(`/conversations/${conversationId}`);
+  return response.data;
+}
+
+/**
+ * Save (create or update) a conversation.
+ */
+export async function saveConversation(conversationId: string, messages: ChatMessage[]): Promise<Conversation> {
+  const response = await aiCoachClient.put<Conversation>(`/conversations/${conversationId}`, { messages });
+  return response.data;
+}
+
+/**
+ * Delete a conversation.
+ */
+export async function deleteConversation(conversationId: string): Promise<void> {
+  await aiCoachClient.delete(`/conversations/${conversationId}`);
+}
+
+// ============ Utilities ============
 
 /**
  * Parse a reps string like "8-12" or "10" to an integer (lower bound).

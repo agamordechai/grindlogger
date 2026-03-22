@@ -9,7 +9,7 @@
 - [ ] **Exercise notes** — Per-exercise or per-session free-text notes
 
 ## AI Coach Improvements
-- [ ] **Chat history persistence** — Save conversations to the database so users can revisit past coaching advice
+- [X] **Chat history persistence** — Save conversations to Redis so users can revisit past coaching advice (14-day TTL, auto-eviction)
 - [ ] **Progressive overload suggestions** — AI analyzes logged history and recommends when to increase weight/volume
 - [ ] **Form tips** — Exercise-specific technique cues
 

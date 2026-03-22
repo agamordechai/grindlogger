@@ -72,3 +72,18 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface Conversation {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  message_count: number;
+  updated_at: string;
+}
+

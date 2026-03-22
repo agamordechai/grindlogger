@@ -1,8 +1,11 @@
 """FastAPI application for the AI Workout Coach service."""
 
+import json
 import logging
+import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 import jwt
 import redis.asyncio as redis
@@ -12,8 +15,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from services.ai_coach.src.agent import analyze_progress, chat_with_coach, get_workout_recommendation
 from services.ai_coach.src.config import get_settings
 from services.ai_coach.src.models import (
+    ChatMessage,
     ChatRequest,
     ChatResponse,
+    Conversation,
+    ConversationSummary,
     HealthResponse,
     ProgressAnalysis,
     RecommendationRequest,
@@ -82,6 +88,32 @@ def _resolve_anthropic_key(request: Request) -> str:
         status_code=403,
         detail="Anthropic API key required. Please set your API key in Settings.",
     )
+
+
+def _get_user_id(request: Request) -> str:
+    """Extract user ID from JWT token. Raises 401 if missing/invalid."""
+    auth = request.headers.get("Authorization", "")
+    token = auth.removeprefix("Bearer ").strip() if auth.startswith("Bearer ") else ""
+    if not token:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    try:
+        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=["HS256"])
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return str(user_id)
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+
+def _chat_key(user_id: str, conversation_id: str) -> str:
+    """Redis key for a single conversation."""
+    return f"chat:{user_id}:{conversation_id}"
+
+
+def _chat_index_key(user_id: str) -> str:
+    """Redis key for the user's conversation index (sorted set)."""
+    return f"chat_index:{user_id}"
 
 
 @asynccontextmanager
@@ -258,3 +290,126 @@ async def get_current_exercises(request: Request):
     except Exception as e:
         logger.error(f"Failed to fetch exercises: {e}")
         raise HTTPException(status_code=503, detail="Unable to connect to workout API.") from e
+
+
+# ============ Chat History Endpoints ============
+
+
+def _require_redis() -> redis.Redis:
+    """Return the Redis client or raise 503."""
+    if redis_client is None:
+        raise HTTPException(status_code=503, detail="Chat history unavailable (Redis not connected)")
+    return redis_client
+
+
+@app.get("/conversations", response_model=list[ConversationSummary])
+async def list_conversations(request: Request) -> list[ConversationSummary]:
+    """List all conversations for the authenticated user, newest first."""
+    r = _require_redis()
+    user_id = _get_user_id(request)
+
+    # Get conversation IDs from sorted set (scored by timestamp), newest first
+    conv_ids = await r.zrevrange(_chat_index_key(user_id), 0, -1)
+    summaries: list[ConversationSummary] = []
+
+    for conv_id in conv_ids:
+        raw = await r.get(_chat_key(user_id, conv_id))
+        if not raw:
+            # Stale index entry — clean up
+            await r.zrem(_chat_index_key(user_id), conv_id)
+            continue
+        data = json.loads(raw)
+        summaries.append(
+            ConversationSummary(
+                id=data["id"],
+                title=data.get("title", "New Chat"),
+                message_count=len(data.get("messages", [])),
+                updated_at=data.get("updated_at", data.get("created_at", "")),
+            )
+        )
+
+    return summaries
+
+
+@app.get("/conversations/{conversation_id}", response_model=Conversation)
+async def get_conversation(conversation_id: str, request: Request) -> Conversation:
+    """Fetch a single conversation by ID."""
+    r = _require_redis()
+    user_id = _get_user_id(request)
+
+    raw = await r.get(_chat_key(user_id, conversation_id))
+    if not raw:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return Conversation(**json.loads(raw))
+
+
+@app.put("/conversations/{conversation_id}")
+async def save_conversation(conversation_id: str, request: Request) -> Conversation:
+    """Create or update a conversation. The frontend sends the full message list."""
+    r = _require_redis()
+    user_id = _get_user_id(request)
+    body = await request.json()
+    messages = body.get("messages", [])
+
+    now = datetime.now(timezone.utc).isoformat()
+
+    # Check if conversation already exists
+    existing_raw = await r.get(_chat_key(user_id, conversation_id))
+    if existing_raw:
+        existing = json.loads(existing_raw)
+        created_at = existing.get("created_at", now)
+    else:
+        created_at = now
+        # Enforce max conversations limit — evict oldest if needed
+        count = await r.zcard(_chat_index_key(user_id))
+        if count >= settings.chat_max_conversations:
+            oldest = await r.zrange(_chat_index_key(user_id), 0, 0)
+            if oldest:
+                await r.delete(_chat_key(user_id, oldest[0]))
+                await r.zrem(_chat_index_key(user_id), oldest[0])
+
+    # Auto-title from first user message
+    title = "New Chat"
+    for msg in messages:
+        if msg.get("role") == "user":
+            title = msg["content"][:60]
+            if len(msg["content"]) > 60:
+                title += "..."
+            break
+
+    # Trim messages to max limit
+    trimmed_messages = messages[-settings.chat_max_messages :]
+
+    conversation = Conversation(
+        id=conversation_id,
+        title=title,
+        messages=[ChatMessage(**m) for m in trimmed_messages],
+        created_at=created_at,
+        updated_at=now,
+    )
+
+    # Store conversation with TTL
+    await r.set(
+        _chat_key(user_id, conversation_id),
+        conversation.model_dump_json(),
+        ex=settings.chat_history_ttl,
+    )
+    # Update index sorted set (score = timestamp for ordering)
+    await r.zadd(
+        _chat_index_key(user_id),
+        {conversation_id: datetime.now(timezone.utc).timestamp()},
+    )
+    await r.expire(_chat_index_key(user_id), settings.chat_history_ttl)
+
+    return conversation
+
+
+@app.delete("/conversations/{conversation_id}")
+async def delete_conversation(conversation_id: str, request: Request) -> dict:
+    """Delete a conversation."""
+    r = _require_redis()
+    user_id = _get_user_id(request)
+
+    await r.delete(_chat_key(user_id, conversation_id))
+    await r.zrem(_chat_index_key(user_id), conversation_id)
+    return {"deleted": True}
