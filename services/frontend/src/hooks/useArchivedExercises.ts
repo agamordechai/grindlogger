@@ -32,7 +32,7 @@ export function useArchivedExercises() {
       await restoreExercise(exerciseId);
       await fetchArchived();
     } catch (err) {
-      alert(`Failed to restore: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setError(`Failed to restore: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 
@@ -41,7 +41,7 @@ export function useArchivedExercises() {
       await permanentDeleteExercise(exerciseId);
       await fetchArchived();
     } catch (err) {
-      alert(`Failed to delete: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setError(`Failed to delete: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 

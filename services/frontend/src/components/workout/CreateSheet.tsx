@@ -6,6 +6,7 @@ import { ALL_DAYS } from '../../lib/constants';
 import { searchArchivedExercises } from '../../api/client';
 import { searchLibrary, getMuscleGroupColor } from '../../lib/exerciseLibrary';
 import { getWeightUnit, toDisplayWeight, toKg } from '../../hooks/useUnits';
+import { useDialog } from '../ui/ConfirmDialog';
 import type { LibraryExercise } from '../../lib/exerciseLibrary';
 import type { Exercise, CreateExerciseRequest, ArchivedExerciseSuggestion } from '../../types/exercise';
 
@@ -21,6 +22,7 @@ interface CreateSheetProps {
 }
 
 export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exercises = [], defaultDay = 'A', getNameStatus }: CreateSheetProps) {
+  const { confirm } = useDialog();
   const [name, setName] = useState('');
   const [sets, setSets] = useState(3);
   const [reps, setReps] = useState(10);
@@ -83,9 +85,11 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
     );
 
     if (duplicate) {
-      const confirmed = confirm(
-        `"${duplicate.name}" already exists on Day ${day}.\nOverride with new values?`
-      );
+      const confirmed = await confirm({
+        title: 'Duplicate exercise',
+        message: `"${duplicate.name}" already exists on Day ${day}. Override with new values?`,
+        confirmText: 'Override',
+      });
       if (!confirmed) return;
 
       setSaving(true);

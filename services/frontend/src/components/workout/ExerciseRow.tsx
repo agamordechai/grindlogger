@@ -4,6 +4,7 @@ import { ChevronRight, Archive, Trash2 } from 'lucide-react';
 import type { Exercise, UpdateExerciseRequest } from '../../types/exercise';
 import { ALL_DAYS } from '../../lib/constants';
 import { formatWeight } from '../../hooks/useUnits';
+import { useDialog } from '../ui/ConfirmDialog';
 import { ExerciseEditor } from './ExerciseEditor';
 
 interface ExerciseRowProps {
@@ -15,6 +16,7 @@ interface ExerciseRowProps {
 
 export function ExerciseRow({ exercise, onUpdate, onDelete, onArchive }: ExerciseRowProps) {
   const [expanded, setExpanded] = useState(false);
+  const { confirm } = useDialog();
 
   return (
     <div className="border-b border-border/50 last:border-b-0">
@@ -62,7 +64,7 @@ export function ExerciseRow({ exercise, onUpdate, onDelete, onArchive }: Exercis
               {onArchive && (
                 <button
                   onClick={async () => {
-                    if (confirm(`Archive "${exercise.name}"?`)) {
+                    if (await confirm({ title: 'Archive exercise', message: `Move "${exercise.name}" to archive?`, confirmText: 'Archive' })) {
                       await onArchive(exercise.id);
                     }
                   }}
@@ -74,7 +76,7 @@ export function ExerciseRow({ exercise, onUpdate, onDelete, onArchive }: Exercis
               )}
               <button
                 onClick={async () => {
-                  if (confirm(`Delete "${exercise.name}" permanently?`)) {
+                  if (await confirm({ title: 'Delete exercise', message: `Permanently delete "${exercise.name}"?`, type: 'danger', confirmText: 'Delete' })) {
                     await onDelete(exercise.id);
                   }
                 }}

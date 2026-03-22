@@ -3,9 +3,11 @@ import { useArchivedExercises } from '../hooks/useArchivedExercises';
 import { PageShell } from '../components/ui/PageShell';
 import { CardSkeleton } from '../components/ui/Skeleton';
 import { formatWeight } from '../hooks/useUnits';
+import { useDialog } from '../components/ui/ConfirmDialog';
 
 export default function ArchivePage() {
   const { exercises, loading, error, handleRestore, handlePermanentDelete } = useArchivedExercises();
+  const { confirm } = useDialog();
 
   if (loading) {
     return (
@@ -61,8 +63,8 @@ export default function ArchivePage() {
                 <RotateCcw size={16} />
               </button>
               <button
-                onClick={() => {
-                  if (confirm(`Permanently delete "${ex.name}"? This cannot be undone.`)) {
+                onClick={async () => {
+                  if (await confirm({ title: 'Permanent delete', message: `Delete "${ex.name}" forever? This cannot be undone.`, type: 'danger', confirmText: 'Delete forever' })) {
                     handlePermanentDelete(ex.id);
                   }
                 }}

@@ -21,7 +21,7 @@
 ## Quality of Life
 - [X] **Dark/light theme toggle** — User-selectable theme
 - [X] **PWA / mobile install** — Add manifest + service worker for mobile app experience
-- [ ] **Workout templates** — Save and load full routines as reusable templates
+- [X] **Workout templates** — Save and load full routines as reusable templates
 - [X] **Exercise library** — Searchable database of exercises with muscle group tags
 - [X] **Units preference** — kg/lbs toggle with automatic conversion
 - [X] **Disable mobile zoom** — Prevent pinch-to-zoom for native app feel

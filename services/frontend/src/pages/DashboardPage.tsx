@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Plus, RefreshCw, AlertTriangle, Save, FolderOpen } from 'lucide-react';
 import { useExercises } from '../hooks/useExercises';
 import { useExerciseNames } from '../hooks/useExerciseNames';
-import { restoreExercise } from '../api/client';
+import { useTemplates } from '../hooks/useTemplates';
+import { restoreExercise, createExercise, deleteExercise } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
+import { useDialog } from '../components/ui/ConfirmDialog';
 import { PageShell } from '../components/ui/PageShell';
 import { GlowButton } from '../components/ui/GlowButton';
 import { CardSkeleton } from '../components/ui/Skeleton';
@@ -15,8 +17,13 @@ import { DayPills } from '../components/workout/DayPills';
 import { SplitCard } from '../components/workout/SplitCard';
 import { CreateSheet } from '../components/workout/CreateSheet';
 import { EmptyState } from '../components/workout/EmptyState';
+import { SaveTemplateModal } from '../components/workout/SaveTemplateModal';
+import { LoadTemplateModal } from '../components/workout/LoadTemplateModal';
+import { TemplateOverrideModal } from '../components/workout/TemplateOverrideModal';
 import { ALL_DAYS } from '../lib/constants';
 import { containerStagger } from '../lib/motion';
+import type { WorkoutTemplate, TemplateExercise } from '../hooks/useTemplates';
+import type { Exercise } from '../types/exercise';
 
 export default function DashboardPage() {
   const { exercises, loading, error, fetchExercises, handleCreate, handleUpdate, handleDelete, handleArchive, handleSeed } = useExercises();
@@ -25,6 +32,17 @@ export default function DashboardPage() {
   const [selectedDay, setSelectedDay] = useState('All');
   const [showCreate, setShowCreate] = useState(false);
   const [createDefaultDay, setCreateDefaultDay] = useState('A');
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [showLoadTemplate, setShowLoadTemplate] = useState(false);
+  const { templates, addTemplate, deleteTemplate } = useTemplates();
+  const { alert: showAlert } = useDialog();
+
+  // Override modal state
+  const [overrideModal, setOverrideModal] = useState<{
+    open: boolean;
+    duplicates: { templateExercise: TemplateExercise; existingExercise: Exercise }[];
+    newExercises: TemplateExercise[];
+  }>({ open: false, duplicates: [], newExercises: [] });
 
   const dayCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -61,6 +79,86 @@ export default function DashboardPage() {
     await restoreExercise(id);
     await fetchExercises();
     await fetchNames();
+  };
+
+  const handleLoadTemplate = async (template: WorkoutTemplate) => {
+    // Build a map of existing name+day combos
+    const existingMap = new Map<string, Exercise>();
+    for (const ex of exercises) {
+      existingMap.set(`${ex.name.toLowerCase()}::${ex.workout_day}`, ex);
+    }
+
+    const newExercises: TemplateExercise[] = [];
+    const duplicates: { templateExercise: TemplateExercise; existingExercise: Exercise }[] = [];
+
+    for (const ex of template.exercises) {
+      const key = `${ex.name.toLowerCase()}::${ex.workout_day}`;
+      const existing = existingMap.get(key);
+      if (existing) {
+        duplicates.push({ templateExercise: ex, existingExercise: existing });
+      } else {
+        newExercises.push(ex);
+      }
+    }
+
+    if (duplicates.length === 0) {
+      // No conflicts — add all directly
+      for (const ex of newExercises) {
+        await createExercise({
+          name: ex.name,
+          sets: ex.sets,
+          reps: ex.reps,
+          weight: ex.weight,
+          workout_day: ex.workout_day,
+        });
+      }
+      await fetchExercises();
+      await fetchNames();
+      await showAlert({ title: 'Template loaded', message: `Added ${newExercises.length} exercise${newExercises.length !== 1 ? 's' : ''}.` });
+    } else {
+      // Show override selection modal
+      setOverrideModal({ open: true, duplicates, newExercises });
+    }
+  };
+
+  const handleOverrideConfirm = async (overrideIds: Set<number>) => {
+    const { duplicates, newExercises } = overrideModal;
+    setOverrideModal({ open: false, duplicates: [], newExercises: [] });
+
+    // Add new exercises
+    for (const ex of newExercises) {
+      await createExercise({
+        name: ex.name,
+        sets: ex.sets,
+        reps: ex.reps,
+        weight: ex.weight,
+        workout_day: ex.workout_day,
+      });
+    }
+
+    // Override selected duplicates: delete old, create new
+    for (const dup of duplicates) {
+      if (overrideIds.has(dup.existingExercise.id)) {
+        await deleteExercise(dup.existingExercise.id);
+        await createExercise({
+          name: dup.templateExercise.name,
+          sets: dup.templateExercise.sets,
+          reps: dup.templateExercise.reps,
+          weight: dup.templateExercise.weight,
+          workout_day: dup.templateExercise.workout_day,
+        });
+      }
+    }
+
+    await fetchExercises();
+    await fetchNames();
+
+    const overridden = overrideIds.size;
+    const added = newExercises.length;
+    const parts = [];
+    if (added > 0) parts.push(`${added} added`);
+    if (overridden > 0) parts.push(`${overridden} overridden`);
+    await showAlert({ title: 'Template loaded', message: parts.join(', ') + '.' });
   };
 
   const handleAddToDay = (day: string) => {
@@ -137,6 +235,20 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setShowLoadTemplate(true)}
+            title="Load template"
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
+          >
+            <FolderOpen size={16} />
+          </button>
+          <button
+            onClick={() => setShowSaveTemplate(true)}
+            title="Save as template"
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
+          >
+            <Save size={16} />
+          </button>
+          <button
             onClick={fetchExercises}
             disabled={loading}
             className="w-9 h-9 rounded-xl flex items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
@@ -194,6 +306,29 @@ export default function DashboardPage() {
         exercises={exercises}
         defaultDay={createDefaultDay}
         getNameStatus={getNameStatus}
+      />
+
+      <SaveTemplateModal
+        open={showSaveTemplate}
+        onClose={() => setShowSaveTemplate(false)}
+        exercises={exercises}
+        onSave={addTemplate}
+      />
+
+      <LoadTemplateModal
+        open={showLoadTemplate}
+        onClose={() => setShowLoadTemplate(false)}
+        templates={templates}
+        onLoad={handleLoadTemplate}
+        onDelete={deleteTemplate}
+      />
+
+      <TemplateOverrideModal
+        open={overrideModal.open}
+        onClose={() => setOverrideModal({ open: false, duplicates: [], newExercises: [] })}
+        duplicates={overrideModal.duplicates}
+        newExercises={overrideModal.newExercises}
+        onConfirm={handleOverrideConfirm}
       />
     </PageShell>
   );
