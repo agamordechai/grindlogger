@@ -2,10 +2,9 @@
 
 import json
 import logging
-import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import jwt
 import redis.asyncio as redis
@@ -102,8 +101,8 @@ def _get_user_id(request: Request) -> str:
         if not user_id:
             raise HTTPException(status_code=401, detail="Invalid token")
         return str(user_id)
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    except jwt.PyJWTError as err:
+        raise HTTPException(status_code=401, detail="Invalid token") from err
 
 
 def _chat_key(user_id: str, conversation_id: str) -> str:
@@ -351,7 +350,7 @@ async def save_conversation(conversation_id: str, request: Request) -> Conversat
     body = await request.json()
     messages = body.get("messages", [])
 
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
 
     # Check if conversation already exists
     existing_raw = await r.get(_chat_key(user_id, conversation_id))
@@ -397,7 +396,7 @@ async def save_conversation(conversation_id: str, request: Request) -> Conversat
     # Update index sorted set (score = timestamp for ordering)
     await r.zadd(
         _chat_index_key(user_id),
-        {conversation_id: datetime.now(timezone.utc).timestamp()},
+        {conversation_id: datetime.now(UTC).timestamp()},
     )
     await r.expire(_chat_index_key(user_id), settings.chat_history_ttl)
 

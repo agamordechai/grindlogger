@@ -55,7 +55,9 @@ class Settings(BaseSettings):
     cache_ttl: int = Field(default=3600, alias="CACHE_TTL")
 
     # Chat history
-    chat_history_ttl: int = Field(default=1_209_600, alias="CHAT_HISTORY_TTL", description="Chat TTL in seconds (default 14 days)")
+    chat_history_ttl: int = Field(
+        default=1_209_600, alias="CHAT_HISTORY_TTL", description="Chat TTL in seconds (default 14 days)"
+    )
     chat_max_conversations: int = Field(default=20, alias="CHAT_MAX_CONVERSATIONS")
     chat_max_messages: int = Field(default=100, alias="CHAT_MAX_MESSAGES", description="Max messages per conversation")
 
