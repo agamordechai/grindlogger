@@ -5,12 +5,12 @@ import { CoachLanding } from '../components/coach/CoachLanding';
 import { ChatView } from '../components/coach/ChatView';
 import { WorkoutGenerator } from '../components/coach/WorkoutGenerator';
 import { AnalysisReport } from '../components/coach/AnalysisReport';
-import { useSessionStorage } from '../hooks/useSessionStorage';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 
 type View = 'landing' | 'chat' | 'workout' | 'progress';
 
 export default function CoachPage() {
-  const [activeView, setActiveView] = useSessionStorage<View>('coach_active_view', 'landing');
+  const [activeView, setActiveView] = useLocalStorage<View>('coach_active_view', 'landing');
 
   return (
     <PageShell>

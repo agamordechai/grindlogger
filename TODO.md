@@ -25,6 +25,7 @@
 - [X] **Exercise library** — Searchable database of exercises with muscle group tags
 - [X] **Units preference** — kg/lbs toggle with automatic conversion
 - [X] **Disable mobile zoom** — Prevent pinch-to-zoom for native app feel
+- [X] **Restore last page** — Auto-navigate to last visited page within 30 minutes
 - [ ] **Notifications/reminders** — Remind users to work out on scheduled days
 
 ## Data & Integration

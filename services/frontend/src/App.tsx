@@ -1,4 +1,5 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useAuth } from './contexts/AuthContext';
 import LoginPage from './components/auth/LoginPage';
@@ -30,6 +31,36 @@ function LoadingScreen() {
   );
 }
 
+const LAST_ROUTE_KEY = 'last_route';
+const ROUTE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const SKIP_PATHS = ['/auth/'];
+
+function usePersistRoute() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const restored = useRef(false);
+
+  // Restore on first mount — runs before save can overwrite
+  useEffect(() => {
+    const raw = localStorage.getItem(LAST_ROUTE_KEY);
+    if (!raw) { restored.current = true; return; }
+    try {
+      const { path, ts } = JSON.parse(raw);
+      if (Date.now() - ts < ROUTE_TTL_MS && path !== '/' && path !== location.pathname) {
+        navigate(path, { replace: true });
+      }
+    } catch { /* ignore corrupt data */ }
+    restored.current = true;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Save current route on every navigation — skip until restore is done
+  useEffect(() => {
+    if (!restored.current) return;
+    if (SKIP_PATHS.some((p) => location.pathname.startsWith(p))) return;
+    localStorage.setItem(LAST_ROUTE_KEY, JSON.stringify({ path: location.pathname, ts: Date.now() }));
+  }, [location.pathname]);
+}
+
 export default function App() {
   const { loading, isAuthenticated } = useAuth();
 
@@ -41,6 +72,12 @@ export default function App() {
   if (window.location.pathname === '/auth/reddit/callback') return <OAuthCallback provider="reddit" />;
 
   if (!isAuthenticated) return <LoginPage />;
+
+  return <AuthenticatedApp />;
+}
+
+function AuthenticatedApp() {
+  usePersistRoute();
 
   return (
     <div className="min-h-screen bg-background">
