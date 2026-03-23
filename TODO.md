@@ -4,7 +4,7 @@
 - [ ] **Workout history/logging** — Record completed workouts with actual sets/reps/weight per session, not just planned exercises
 - [ ] **Progress charts** — Visualize weight/volume progression over time per exercise
 - [ ] **Personal records (PRs)** — Automatically detect and celebrate new 1RM estimates or volume PRs
-- [ ] **Rest timer** — Built-in countdown timer between sets during a workout session
+- [X] **Rest timer** — Built-in countdown timer between sets during a workout session
 - [ ] **Superset / circuit grouping** — Group exercises that are performed back-to-back
 - [ ] **Exercise notes** — Per-exercise or per-session free-text notes
 
