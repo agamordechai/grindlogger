@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, RefreshCw, AlertTriangle, Save, FolderOpen } from 'lucide-react';
+import { Plus, RefreshCw, AlertTriangle, Save, FolderOpen, Archive } from 'lucide-react';
 import { useExercises } from '../hooks/useExercises';
 import { useExerciseNames } from '../hooks/useExerciseNames';
 import { useTemplates } from '../hooks/useTemplates';
@@ -20,6 +20,7 @@ import { EmptyState } from '../components/workout/EmptyState';
 import { SaveTemplateModal } from '../components/workout/SaveTemplateModal';
 import { LoadTemplateModal } from '../components/workout/LoadTemplateModal';
 import { TemplateOverrideModal } from '../components/workout/TemplateOverrideModal';
+import { ArchiveModal } from '../components/workout/ArchiveModal';
 import { ALL_DAYS } from '../lib/constants';
 import { containerStagger } from '../lib/motion';
 import type { WorkoutTemplate, TemplateExercise } from '../hooks/useTemplates';
@@ -34,6 +35,7 @@ export default function DashboardPage() {
   const [createDefaultDay, setCreateDefaultDay] = useState('A');
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
   const [showLoadTemplate, setShowLoadTemplate] = useState(false);
+  const [showArchive, setShowArchive] = useState(false);
   const { templates, addTemplate, deleteTemplate } = useTemplates();
   const { alert: showAlert } = useDialog();
 
@@ -235,6 +237,13 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setShowArchive(true)}
+            title="Archive"
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
+          >
+            <Archive size={16} />
+          </button>
+          <button
             onClick={() => setShowLoadTemplate(true)}
             title="Load template"
             className="w-9 h-9 rounded-xl flex items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
@@ -329,6 +338,12 @@ export default function DashboardPage() {
         duplicates={overrideModal.duplicates}
         newExercises={overrideModal.newExercises}
         onConfirm={handleOverrideConfirm}
+      />
+
+      <ArchiveModal
+        open={showArchive}
+        onClose={() => setShowArchive(false)}
+        onRestored={() => { setTimeout(fetchExercises, 0); }}
       />
     </PageShell>
   );

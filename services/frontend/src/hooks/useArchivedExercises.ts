@@ -28,20 +28,23 @@ export function useArchivedExercises() {
   }, [fetchArchived, isAuthenticated]);
 
   const handleRestore = async (exerciseId: number) => {
+    // Optimistically remove from list
+    setExercises(prev => prev.filter(ex => ex.id !== exerciseId));
     try {
       await restoreExercise(exerciseId);
-      await fetchArchived();
     } catch (err) {
       setError(`Failed to restore: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      await fetchArchived(); // Revert on failure
     }
   };
 
   const handlePermanentDelete = async (exerciseId: number) => {
+    setExercises(prev => prev.filter(ex => ex.id !== exerciseId));
     try {
       await permanentDeleteExercise(exerciseId);
-      await fetchArchived();
     } catch (err) {
       setError(`Failed to delete: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      await fetchArchived();
     }
   };
 
