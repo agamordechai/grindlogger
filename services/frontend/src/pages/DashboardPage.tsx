@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, RefreshCw, AlertTriangle, Save, FolderOpen, Archive } from 'lucide-react';
+import { Plus, RefreshCw, AlertTriangle, Save, FolderOpen, Archive, MoreVertical } from 'lucide-react';
 import { useExercises } from '../hooks/useExercises';
 import { useExerciseNames } from '../hooks/useExerciseNames';
 import { useTemplates } from '../hooks/useTemplates';
@@ -25,6 +25,58 @@ import { ALL_DAYS } from '../lib/constants';
 import { containerStagger } from '../lib/motion';
 import type { WorkoutTemplate, TemplateExercise } from '../hooks/useTemplates';
 import type { Exercise } from '../types/exercise';
+
+function MoreMenu({ onRefresh, onArchive, onSaveTemplate, onLoadTemplate, refreshing }: {
+  onRefresh: () => void;
+  onArchive: () => void;
+  onSaveTemplate: () => void;
+  onLoadTemplate: () => void;
+  refreshing: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    const id = setTimeout(() => document.addEventListener('click', handleClick), 0);
+    return () => { clearTimeout(id); document.removeEventListener('click', handleClick); };
+  }, [open]);
+
+  const items = [
+    { label: 'Refresh', icon: RefreshCw, onClick: onRefresh, spinning: refreshing },
+    { label: 'Archive', icon: Archive, onClick: onArchive },
+    { label: 'Save Template', icon: Save, onClick: onSaveTemplate },
+    { label: 'Load Template', icon: FolderOpen, onClick: onLoadTemplate },
+  ];
+
+  return (
+    <div ref={ref} className="relative sm:hidden">
+      <button
+        onClick={() => setOpen(prev => !prev)}
+        className="w-9 h-9 rounded-xl flex items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
+      >
+        <MoreVertical size={18} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 w-44 bg-surface-1 border border-border rounded-xl py-1 shadow-xl shadow-black/30 z-[60]">
+          {items.map(({ label, icon: Icon, onClick, spinning }) => (
+            <button
+              key={label}
+              onClick={() => { onClick(); setOpen(false); }}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
+            >
+              <Icon size={16} className={spinning ? 'animate-spin' : ''} />
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const { exercises, loading, error, fetchExercises, handleCreate, handleUpdate, handleDelete, handleArchive, handleSeed } = useExercises();
@@ -236,34 +288,45 @@ export default function DashboardPage() {
           <p className="text-steel text-sm mt-0.5">Your training split at a glance</p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowArchive(true)}
-            title="Archive"
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
-          >
-            <Archive size={16} />
-          </button>
+          {/* Desktop: individual icon buttons */}
           <button
             onClick={() => setShowLoadTemplate(true)}
             title="Load template"
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
+            className="hidden sm:flex w-9 h-9 rounded-xl items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
           >
             <FolderOpen size={16} />
           </button>
           <button
             onClick={() => setShowSaveTemplate(true)}
             title="Save as template"
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
+            className="hidden sm:flex w-9 h-9 rounded-xl items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
           >
             <Save size={16} />
           </button>
           <button
+            onClick={() => setShowArchive(true)}
+            title="Archive"
+            className="hidden sm:flex w-9 h-9 rounded-xl items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
+          >
+            <Archive size={16} />
+          </button>
+          <button
             onClick={fetchExercises}
             disabled={loading}
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
+            title="Refresh"
+            className="hidden sm:flex w-9 h-9 rounded-xl items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
           >
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
           </button>
+
+          {/* Mobile: three-dot dropdown */}
+          <MoreMenu
+            onRefresh={fetchExercises}
+            onArchive={() => setShowArchive(true)}
+            onSaveTemplate={() => setShowSaveTemplate(true)}
+            onLoadTemplate={() => setShowLoadTemplate(true)}
+            refreshing={loading}
+          />
           <GlowButton onClick={() => { setCreateDefaultDay('A'); setShowCreate(true); }}>
             <Plus size={16} />
             <span className="hidden sm:inline">Add Exercise</span>
