@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Flame, Home, Archive, Bot, Settings, Shield } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useMemo } from 'react';
+import { RestTimerButton } from '../timer/RestTimerButton';
 
 const BASE_NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: Home },
@@ -60,8 +61,9 @@ export function TopBar() {
           ))}
         </nav>
 
-        {/* Avatar */}
-        <div className="flex items-center">
+        {/* Timer + Avatar */}
+        <div className="flex items-center gap-2">
+          <RestTimerButton />
           {user?.picture_url ? (
             <img
               src={user.picture_url}

@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { DialogProvider } from './components/ui/ConfirmDialog'
 import { AuthProvider } from './contexts/AuthContext'
+import { RestTimerProvider } from './contexts/RestTimerContext'
 import App from './App.tsx'
 import './index.css'
 
@@ -12,9 +13,11 @@ createRoot(document.getElementById('root')!).render(
     <ThemeProvider>
       <DialogProvider>
         <AuthProvider>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
+          <RestTimerProvider>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </RestTimerProvider>
         </AuthProvider>
       </DialogProvider>
     </ThemeProvider>
