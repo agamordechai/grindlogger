@@ -17,6 +17,7 @@ export function ExerciseEditor({ exercise, days, onSave, onCancel }: ExerciseEdi
   const [reps, setReps] = useState(exercise.reps);
   const [weight, setWeight] = useState(toDisplayWeight(exercise.weight, unit) ?? 0);
   const [day, setDay] = useState(exercise.workout_day);
+  const [notes, setNotes] = useState(exercise.notes || '');
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -28,6 +29,7 @@ export function ExerciseEditor({ exercise, days, onSave, onCancel }: ExerciseEdi
         reps,
         weight: weight ? toKg(weight, unit) : null,
         workout_day: day,
+        notes: notes.trim() || null,
       });
     } finally {
       setSaving(false);
@@ -63,6 +65,17 @@ export function ExerciseEditor({ exercise, days, onSave, onCancel }: ExerciseEdi
             <option key={d} value={d}>{d}</option>
           ))}
         </select>
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-steel mb-1">Notes</label>
+        <input
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          placeholder="Cues, reminders..."
+          className="input text-sm"
+          maxLength={500}
+        />
       </div>
 
       <div className="flex gap-2">

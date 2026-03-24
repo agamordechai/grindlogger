@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, Archive, Trash2 } from 'lucide-react';
+import { ChevronRight, Archive, Trash2, StickyNote } from 'lucide-react';
 import type { Exercise, UpdateExerciseRequest } from '../../types/exercise';
 import { ALL_DAYS } from '../../lib/constants';
 import { formatWeight } from '../../hooks/useUnits';
@@ -35,6 +35,12 @@ export function ExerciseRow({ exercise, onUpdate, onDelete, onArchive }: Exercis
               <span className="text-steel/60 ml-2">BW</span>
             )}
           </p>
+          {exercise.notes && (
+            <div className="flex items-center gap-1 mt-0.5 min-w-0">
+              <StickyNote size={10} className="text-steel/70 shrink-0" />
+              <span className="text-[11px] text-steel/70 truncate">{exercise.notes}</span>
+            </div>
+          )}
         </div>
         <ChevronRight
           size={16}

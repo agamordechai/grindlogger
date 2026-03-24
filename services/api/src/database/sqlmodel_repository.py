@@ -148,6 +148,8 @@ class ExerciseRepository:
         weight: float | None = None,
         update_weight: bool = False,
         workout_day: str | None = None,
+        notes: str | None = None,
+        update_notes: bool = False,
     ) -> ExerciseResponse | None:
         """Update an existing exercise owned by a user.
 
@@ -182,6 +184,8 @@ class ExerciseRepository:
             exercise.weight = weight
         if workout_day is not None:
             exercise.workout_day = workout_day
+        if notes is not None or update_notes:
+            exercise.notes = notes
 
         self.session.add(exercise)
         self.session.commit()

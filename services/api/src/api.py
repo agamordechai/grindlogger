@@ -438,6 +438,7 @@ def edit_exercise_endpoint(
     """
     provided_fields = exercise_edit.model_dump(exclude_unset=True)
     update_weight_flag = "weight" in provided_fields
+    update_notes_flag = "notes" in provided_fields
     stats_changed = any(k in provided_fields for k in ("weight", "sets", "reps"))
 
     exercise = repository.update(
@@ -449,6 +450,8 @@ def edit_exercise_endpoint(
         weight=exercise_edit.weight,
         update_weight=update_weight_flag,
         workout_day=exercise_edit.workout_day,
+        notes=exercise_edit.notes,
+        update_notes=update_notes_flag,
     )
     if not exercise:
         raise HTTPException(status_code=404, detail="Exercise not found")

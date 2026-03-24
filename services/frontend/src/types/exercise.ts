@@ -9,6 +9,7 @@ export interface Exercise {
   reps: number;
   weight: number | null;
   workout_day: string;
+  notes: string | null;
   archived: boolean;
 }
 
@@ -40,6 +41,7 @@ export interface UpdateExerciseRequest {
   reps?: number;
   weight?: number | null;
   workout_day?: string;
+  notes?: string | null;
 }
 
 export interface PaginatedExerciseResponse {

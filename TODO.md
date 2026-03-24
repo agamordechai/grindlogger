@@ -19,7 +19,7 @@
 - [X] **Progress charts** — Visualize weight/volume/1RM progression over time, grouped by workout day with color-coded exercises
 - [ ] **Personal records (PRs)** — Automatically detect and celebrate new 1RM estimates or volume PRs
 - [ ] **Superset / circuit grouping** — Group exercises that are performed back-to-back
-- [ ] **Exercise notes** — Per-exercise or per-session free-text notes
+- [X] **Exercise notes** — Per-exercise notes (cues, reminders) and per-session free-text notes
 
 ## AI Coach
 - [X] **AI chat** — Conversation-based coaching with workout context awareness

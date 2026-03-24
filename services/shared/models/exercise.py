@@ -37,6 +37,12 @@ class ExerciseBase(BaseModel):
         description="Workout day identifier (A-G for specific days, 'None' for daily exercises)",
         examples=["A", "B", "C", "None"],
     )
+    notes: str | None = Field(
+        default=None,
+        max_length=500,
+        description="Per-exercise notes (cues, reminders, etc.)",
+        examples=["Grip wider", "Pause at bottom"],
+    )
 
 
 class ExerciseCreate(ExerciseBase):
@@ -86,6 +92,7 @@ class ExerciseEditRequest(BaseModel):
         max_length=10,
         description="New workout day identifier (A-G for specific days, 'None' for daily exercises)",
     )
+    notes: str | None = Field(default=None, max_length=500, description="Per-exercise notes")
 
 
 class PaginatedExerciseResponse(BaseModel):
