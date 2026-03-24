@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { getExerciseProgressData } from '../../api/client';
 import { getWeightUnit, toDisplayWeight } from '../../hooks/useUnits';
 import type { ProgressPoint } from '../../types/session';
@@ -66,6 +66,7 @@ export function ProgressChart({ exerciseName, metric }: ProgressChartProps) {
     <div className="h-48">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={chartData}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
           <XAxis
             dataKey="date"
             axisLine={false}
@@ -80,12 +81,14 @@ export function ProgressChart({ exerciseName, metric }: ProgressChartProps) {
             width={45}
           />
           <Tooltip
+            wrapperStyle={{ opacity: 1 }}
             contentStyle={{
               backgroundColor: '#1C1917',
               border: '1px solid rgba(87,83,78,0.4)',
               borderRadius: '12px',
               color: '#FAFAF9',
               fontSize: '12px',
+              opacity: 1,
             }}
             formatter={(value) => [
               `${Number(value).toLocaleString()} ${metric === 'volume' ? unit : unit}`,

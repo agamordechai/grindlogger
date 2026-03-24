@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Cell } from 'recharts';
 import { getDayColor } from '../../lib/constants';
 import { getBodyweightKg } from '../../hooks/useBodyweight';
 import { getWeightUnit, toDisplayWeight } from '../../hooks/useUnits';
@@ -32,6 +32,7 @@ export function VolumeChart({ exercises }: VolumeChartProps) {
       <div className="h-48">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} barCategoryGap="20%">
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
             <XAxis
               dataKey="day"
               axisLine={false}
@@ -45,12 +46,14 @@ export function VolumeChart({ exercises }: VolumeChartProps) {
               width={40}
             />
             <Tooltip
+              wrapperStyle={{ opacity: 1 }}
               contentStyle={{
                 backgroundColor: '#1C1917',
                 border: '1px solid rgba(87,83,78,0.4)',
                 borderRadius: '12px',
                 color: '#FAFAF9',
                 fontSize: '12px',
+                opacity: 1,
               }}
               formatter={(value) => [`${Number(value).toLocaleString()} ${unit}`, 'Volume']}
             />

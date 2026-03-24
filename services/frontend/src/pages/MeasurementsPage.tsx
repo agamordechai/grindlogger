@@ -173,11 +173,13 @@ export default function MeasurementsPage() {
                 width={45}
               />
               <Tooltip
+                wrapperStyle={{ opacity: 1 }}
                 contentStyle={{
-                  background: '#1a1a2e',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: '#1C1917',
+                  border: '1px solid rgba(87,83,78,0.4)',
                   borderRadius: '8px',
                   fontSize: '12px',
+                  opacity: 1,
                 }}
                 labelStyle={{ color: '#aaa' }}
               />

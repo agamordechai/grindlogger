@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { TrendingUp } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
 import { getExerciseProgressData } from '../../api/client';
 import { getWeightUnit, toDisplayWeight } from '../../hooks/useUnits';
 import { useExercises } from '../../hooks/useExercises';
@@ -145,6 +145,7 @@ export function ExerciseProgressPanel({ metric }: ExerciseProgressPanelProps) {
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={rows}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                 <XAxis
                   dataKey="date"
                   axisLine={false}
@@ -159,12 +160,14 @@ export function ExerciseProgressPanel({ metric }: ExerciseProgressPanelProps) {
                   width={45}
                 />
                 <Tooltip
+                  wrapperStyle={{ zIndex: 50, opacity: 1 }}
                   contentStyle={{
                     backgroundColor: '#1C1917',
                     border: '1px solid rgba(87,83,78,0.4)',
                     borderRadius: '12px',
                     color: '#FAFAF9',
                     fontSize: '12px',
+                    opacity: 1,
                   }}
                   formatter={(value) => [
                     `${Number(value).toLocaleString()} ${unit}`,
