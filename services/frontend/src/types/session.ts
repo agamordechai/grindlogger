@@ -1,0 +1,66 @@
+/**
+ * Workout session type definitions matching the FastAPI backend models.
+ */
+
+export interface SessionExercise {
+  id: number;
+  exercise_name: string;
+  sets_completed: number;
+  reps_completed: number;
+  weight_used: number | null;
+  one_rep_max: number | null;
+  order: number;
+}
+
+export interface CreateSessionExercise {
+  exercise_name: string;
+  sets_completed: number;
+  reps_completed: number;
+  weight_used?: number | null;
+  one_rep_max?: number | null;
+  order: number;
+}
+
+export interface WorkoutSession {
+  id: number;
+  date: string;
+  workout_day: string;
+  notes: string | null;
+  duration_minutes: number | null;
+  created_at: string;
+  exercises: SessionExercise[];
+}
+
+export interface CreateWorkoutSession {
+  date: string;
+  workout_day: string;
+  notes?: string | null;
+  duration_minutes?: number | null;
+  exercises: CreateSessionExercise[];
+}
+
+export interface WorkoutSessionSummary {
+  id: number;
+  date: string;
+  workout_day: string;
+  exercise_count: number;
+  total_volume: number;
+}
+
+export interface StreakInfo {
+  current_streak: number;
+  best_streak: number;
+  total_workouts: number;
+  last_workout_date: string | null;
+}
+
+export interface ProgressPoint {
+  date: string;
+  value: number;
+}
+
+export interface ExerciseProgress {
+  exercise_name: string;
+  metric: string;
+  data: ProgressPoint[];
+}

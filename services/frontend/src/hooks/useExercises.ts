@@ -21,7 +21,12 @@ export function useExercises() {
       setLoading(true);
       setError(null);
       const data = await listExercises({ page_size: 200 });
-      setExercises(data.items);
+      // Only update state if data actually changed to avoid unnecessary re-renders
+      setExercises(prev => {
+        const next = data.items;
+        if (JSON.stringify(prev) === JSON.stringify(next)) return prev;
+        return next;
+      });
     } catch (err) {
       setError(
         `Failed to connect to the API. Is the backend running?\n${

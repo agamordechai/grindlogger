@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion';
-import { Dumbbell, Layers, Weight } from 'lucide-react';
+import { Dumbbell, Flame, Layers, Weight } from 'lucide-react';
 import { StatCard } from '../ui/StatCard';
 import { containerStagger } from '../../lib/motion';
 import { getBodyweightKg } from '../../hooks/useBodyweight';
 import { getWeightUnit, toDisplayWeight } from '../../hooks/useUnits';
+import { useStreak } from '../../hooks/useStreak';
 import type { Exercise } from '../../types/exercise';
 
 interface StatsRowProps {
@@ -11,6 +12,7 @@ interface StatsRowProps {
 }
 
 export function StatsRow({ exercises }: StatsRowProps) {
+  const { streak } = useStreak();
   const unit = getWeightUnit();
   const bwKg = getBodyweightKg() ?? 0;
   const totalSets = exercises.reduce((sum, ex) => sum + ex.sets, 0);
@@ -30,7 +32,7 @@ export function StatsRow({ exercises }: StatsRowProps) {
       variants={containerStagger}
       initial="initial"
       animate="animate"
-      className="grid grid-cols-3 gap-3"
+      className="grid grid-cols-2 sm:grid-cols-4 gap-3"
     >
       <StatCard
         label="Exercises"
@@ -46,6 +48,11 @@ export function StatsRow({ exercises }: StatsRowProps) {
         label={`Volume (${unit})`}
         value={formatVolume(totalVolume)}
         icon={<Weight size={18} />}
+      />
+      <StatCard
+        label="Streak"
+        value={streak ? `${streak.current_streak}d` : '—'}
+        icon={<Flame size={18} />}
       />
     </motion.div>
   );

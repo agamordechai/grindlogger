@@ -15,8 +15,8 @@
 - [X] **Split distribution** — Donut chart showing exercise count per day
 - [X] **Day filtering** — Filter exercises by workout day with count badges
 - [X] **Bodyweight tracking** — Store bodyweight, use in volume calculations for BW exercises
-- [ ] **Workout history/logging** — Record completed workouts with actual sets/reps/weight per session
-- [ ] **Progress charts** — Visualize weight/volume progression over time per exercise
+- [X] **Workout history/logging** — Record completed workouts with actual sets/reps/weight per session, auto-log on exercise edits, edit/delete sessions, mark day complete for streaks
+- [X] **Progress charts** — Visualize weight/volume/1RM progression over time, grouped by workout day with color-coded exercises
 - [ ] **Personal records (PRs)** — Automatically detect and celebrate new 1RM estimates or volume PRs
 - [ ] **Superset / circuit grouping** — Group exercises that are performed back-to-back
 - [ ] **Exercise notes** — Per-exercise or per-session free-text notes
@@ -30,7 +30,7 @@
 - [ ] **Form tips** — Exercise-specific technique cues
 
 ## Social & Motivation
-- [ ] **Streak tracking** — Track consecutive workout days/weeks with visual indicators
+- [X] **Streak tracking** — Track consecutive workout days/weeks with visual indicators
 - [ ] **Workout sharing** — Generate shareable links or images of routines
 - [ ] **Leaderboard** — Opt-in community stats (total volume, consistency, etc.)
 

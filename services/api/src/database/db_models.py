@@ -5,7 +5,7 @@ Separate from Pydantic models to maintain clear separation between
 database layer and API layer.
 """
 
-from datetime import UTC, datetime
+import datetime as dt
 
 from sqlmodel import Field, SQLModel
 
@@ -38,7 +38,7 @@ class UserTable(SQLModel, table=True):
     picture_url: str | None = Field(default=None, max_length=1024)
     role: str = Field(default="user", max_length=20)
     disabled: bool = Field(default=False)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    created_at: dt.datetime = Field(default_factory=lambda: dt.datetime.now(dt.UTC))
 
 
 class ExerciseTable(SQLModel, table=True):
@@ -67,3 +67,33 @@ class ExerciseTable(SQLModel, table=True):
     workout_day: str = Field(default="A", max_length=10)
     user_id: int = Field(foreign_key="users.id", index=True)
     archived: bool = Field(default=False, index=True)
+
+
+class WorkoutSessionTable(SQLModel, table=True):
+    """Logged workout session — records that a user completed a workout on a given date."""
+
+    __tablename__ = "workout_sessions"
+
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    workout_date: dt.date = Field(index=True)
+    workout_day: str = Field(max_length=10)
+    notes: str | None = Field(default=None, max_length=1000)
+    duration_minutes: int | None = Field(default=None, ge=0)
+    created_at: dt.datetime = Field(default_factory=lambda: dt.datetime.now(dt.UTC))
+
+
+class SessionExerciseTable(SQLModel, table=True):
+    """Individual exercise performed within a workout session."""
+
+    __tablename__ = "session_exercises"
+
+    id: int | None = Field(default=None, primary_key=True)
+    session_id: int = Field(foreign_key="workout_sessions.id", index=True)
+    exercise_name: str = Field(max_length=100)
+    sets_completed: int = Field(ge=0, le=100)
+    reps_completed: int = Field(ge=0, le=1000)
+    weight_used: float | None = Field(default=None, ge=0)
+    one_rep_max: float | None = Field(default=None, ge=0)
+    order: int = Field(default=0, ge=0)
+    created_at: dt.datetime = Field(default_factory=lambda: dt.datetime.now(dt.UTC))

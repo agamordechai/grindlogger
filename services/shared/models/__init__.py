@@ -7,6 +7,16 @@ from services.shared.models.exercise import (
     ExerciseResponse,
     PaginatedExerciseResponse,
 )
+from services.shared.models.session import (
+    ExerciseProgressResponse,
+    ProgressPoint,
+    SessionExerciseCreate,
+    SessionExerciseResponse,
+    StreakResponse,
+    WorkoutSessionCreate,
+    WorkoutSessionResponse,
+    WorkoutSessionSummary,
+)
 
 __all__ = [
     "ExerciseBase",
@@ -14,4 +24,12 @@ __all__ = [
     "ExerciseResponse",
     "ExerciseEditRequest",
     "PaginatedExerciseResponse",
+    "SessionExerciseCreate",
+    "SessionExerciseResponse",
+    "WorkoutSessionCreate",
+    "WorkoutSessionResponse",
+    "WorkoutSessionSummary",
+    "StreakResponse",
+    "ProgressPoint",
+    "ExerciseProgressResponse",
 ]

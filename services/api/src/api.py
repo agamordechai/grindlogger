@@ -53,7 +53,7 @@ from services.api.src.auth import (
 from services.api.src.database.config import get_settings
 from services.api.src.database.database import get_session, init_db
 from services.api.src.database.db_models import ExerciseTable, UserTable
-from services.api.src.database.dependencies import RepositoryDep, UserRepositoryDep
+from services.api.src.database.dependencies import RepositoryDep, SessionRepositoryDep, UserRepositoryDep
 from services.api.src.database.models import Exercise, ExerciseEditRequest, ExerciseResponse, HealthResponse
 from services.api.src.database.sqlmodel_repository import ExerciseRepository
 from services.api.src.etag import maybe_return_not_modified
@@ -419,9 +419,12 @@ def edit_exercise_endpoint(
     exercise_id: int,
     exercise_edit: ExerciseEditRequest,
     repository: RepositoryDep,
+    session_repo: SessionRepositoryDep,
     current_user: Annotated[UserTable, Depends(get_current_user)],
 ) -> ExerciseResponse:
     """Update any attributes of a specific exercise.
+
+    Auto-logs a session entry when weight, sets, or reps change.
 
     Args:
         exercise_id: The unique identifier of the exercise to update.
@@ -435,6 +438,7 @@ def edit_exercise_endpoint(
     """
     provided_fields = exercise_edit.model_dump(exclude_unset=True)
     update_weight_flag = "weight" in provided_fields
+    stats_changed = any(k in provided_fields for k in ("weight", "sets", "reps"))
 
     exercise = repository.update(
         exercise_id,
@@ -448,6 +452,18 @@ def edit_exercise_endpoint(
     )
     if not exercise:
         raise HTTPException(status_code=404, detail="Exercise not found")
+
+    # Auto-log session entry when stats change
+    if stats_changed:
+        session_repo.auto_log_exercise(
+            user_id=current_user.id,
+            exercise_name=exercise.name,
+            workout_day=exercise.workout_day,
+            sets=exercise.sets,
+            reps=exercise.reps,
+            weight=exercise.weight,
+        )
+
     return exercise
 
 
@@ -511,6 +527,112 @@ def seed_exercises(
         split = "ppl"
     count = repository.seed_initial_data(current_user.id, split=split)
     return {"seeded": count}
+
+
+# ============ Workout Session Endpoints ============
+
+from services.shared.models.session import (  # noqa: E402
+    ExerciseProgressResponse,
+    StreakResponse,
+    WorkoutSessionCreate,
+    WorkoutSessionResponse,
+    WorkoutSessionSummary,
+)
+
+
+@app.post("/sessions", response_model=WorkoutSessionResponse, status_code=201, tags=["Sessions"])
+@limiter.limit("30/minute")
+def create_workout_session(
+    request: Request,
+    data: WorkoutSessionCreate,
+    session_repo: SessionRepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> WorkoutSessionResponse:
+    """Log a completed workout session with exercises."""
+    return session_repo.create_session(current_user.id, data)
+
+
+@app.get("/sessions/calendar", response_model=list[WorkoutSessionSummary], tags=["Sessions"])
+@limiter.limit("120/minute")
+def get_calendar_sessions(
+    request: Request,
+    session_repo: SessionRepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+    year: int = Query(..., ge=2020, le=2100),
+    month: int = Query(..., ge=1, le=12),
+) -> list[WorkoutSessionSummary]:
+    """Get session summaries for a calendar month."""
+    return session_repo.list_sessions_by_month(current_user.id, year, month)
+
+
+@app.get("/sessions/streak", response_model=StreakResponse, tags=["Sessions"])
+@limiter.limit("120/minute")
+def get_streak(
+    request: Request,
+    session_repo: SessionRepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> StreakResponse:
+    """Get current and best workout streak."""
+    return session_repo.get_streak(current_user.id)
+
+
+@app.get("/sessions/progress", response_model=ExerciseProgressResponse, tags=["Sessions"])
+@limiter.limit("120/minute")
+def get_exercise_progress(
+    request: Request,
+    session_repo: SessionRepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+    exercise_name: str = Query(..., min_length=1, max_length=100),
+    metric: str = Query("weight", pattern="^(weight|volume|one_rep_max)$"),
+) -> ExerciseProgressResponse:
+    """Get progress time series for an exercise."""
+    return session_repo.get_exercise_progress(current_user.id, exercise_name, metric)
+
+
+@app.get("/sessions/{session_id}", response_model=WorkoutSessionResponse, tags=["Sessions"])
+@limiter.limit("120/minute")
+def get_workout_session(
+    request: Request,
+    session_id: int,
+    session_repo: SessionRepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> WorkoutSessionResponse:
+    """Get a specific workout session with exercises."""
+    result = session_repo.get_session(session_id, current_user.id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return result
+
+
+@app.put("/sessions/{session_id}", response_model=WorkoutSessionResponse, tags=["Sessions"])
+@limiter.limit("30/minute")
+def update_workout_session(
+    request: Request,
+    session_id: int,
+    data: WorkoutSessionCreate,
+    session_repo: SessionRepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> WorkoutSessionResponse:
+    """Update a logged workout session."""
+    result = session_repo.update_session(session_id, current_user.id, data)
+    if not result:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return result
+
+
+@app.delete("/sessions/{session_id}", status_code=204, tags=["Sessions"])
+@limiter.limit("30/minute")
+def delete_workout_session(
+    request: Request,
+    session_id: int,
+    session_repo: SessionRepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> None:
+    """Delete a logged workout session."""
+    success = session_repo.delete_session(session_id, current_user.id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return None
 
 
 # ============ Authentication Endpoints ============

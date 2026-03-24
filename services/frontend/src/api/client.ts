@@ -18,6 +18,13 @@ import type {
 } from '../types/aiCoach';
 import type { User, AuthTokens } from '../types/auth';
 import type { AdminUser, AdminStats } from '../types/admin';
+import type {
+  WorkoutSession,
+  CreateWorkoutSession,
+  WorkoutSessionSummary,
+  StreakInfo,
+  ExerciseProgress,
+} from '../types/session';
 
 // In development, Vite proxies /api to localhost:8000
 // In production, configure API_BASE_URL environment variable
@@ -278,6 +285,49 @@ export async function searchArchivedExercises(query: string): Promise<ArchivedEx
  */
 export async function getExerciseNames(): Promise<ExerciseNameStatus[]> {
   const response = await client.get<ExerciseNameStatus[]>('/exercises/names');
+  return response.data;
+}
+
+// ============ Workout Session API ============
+
+export async function createSession(data: CreateWorkoutSession): Promise<WorkoutSession> {
+  const response = await client.post<WorkoutSession>('/sessions', data);
+  return response.data;
+}
+
+export async function getSession(sessionId: number): Promise<WorkoutSession> {
+  const response = await client.get<WorkoutSession>(`/sessions/${sessionId}`);
+  return response.data;
+}
+
+export async function updateSession(sessionId: number, data: CreateWorkoutSession): Promise<WorkoutSession> {
+  const response = await client.put<WorkoutSession>(`/sessions/${sessionId}`, data);
+  return response.data;
+}
+
+export async function deleteSession(sessionId: number): Promise<void> {
+  await client.delete(`/sessions/${sessionId}`);
+}
+
+export async function getCalendarSessions(year: number, month: number): Promise<WorkoutSessionSummary[]> {
+  const response = await client.get<WorkoutSessionSummary[]>('/sessions/calendar', {
+    params: { year, month },
+  });
+  return response.data;
+}
+
+export async function getStreak(): Promise<StreakInfo> {
+  const response = await client.get<StreakInfo>('/sessions/streak');
+  return response.data;
+}
+
+export async function getExerciseProgressData(
+  exerciseName: string,
+  metric: 'weight' | 'volume' | 'one_rep_max' = 'weight',
+): Promise<ExerciseProgress> {
+  const response = await client.get<ExerciseProgress>('/sessions/progress', {
+    params: { exercise_name: exerciseName, metric },
+  });
   return response.data;
 }
 

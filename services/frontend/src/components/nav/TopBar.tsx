@@ -1,12 +1,13 @@
 import { NavLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Flame, Home, Bot, Settings, Shield } from 'lucide-react';
+import { Flame, Home, CalendarDays, Bot, Settings, Shield } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useMemo } from 'react';
 import { RestTimerButton } from '../timer/RestTimerButton';
 
 const BASE_NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: Home },
+  { to: '/history', label: 'History', icon: CalendarDays },
   { to: '/coach', label: 'Coach', icon: Bot },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];

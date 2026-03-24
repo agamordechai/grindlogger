@@ -220,6 +220,7 @@ export default function DashboardPage() {
     setShowCreate(true);
   };
 
+
   if (error) {
     return (
       <PageShell>
@@ -408,6 +409,7 @@ export default function DashboardPage() {
         onClose={() => setShowArchive(false)}
         onRestored={() => { setTimeout(fetchExercises, 0); }}
       />
+
     </PageShell>
   );
 }

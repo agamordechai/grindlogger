@@ -45,7 +45,12 @@ def init_db() -> None:
     import time
 
     # Import all models to ensure they're registered with SQLModel metadata
-    from services.api.src.database.db_models import ExerciseTable, UserTable  # noqa: F401
+    from services.api.src.database.db_models import (  # noqa: F401
+        ExerciseTable,
+        SessionExerciseTable,
+        UserTable,
+        WorkoutSessionTable,
+    )
 
     # Retry loop to handle Postgres being slow to accept connections after pg_isready
     last_exc: Exception | None = None
