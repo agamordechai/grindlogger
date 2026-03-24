@@ -6,6 +6,7 @@ import {
   deleteExercise,
   archiveExercise,
   seedExercises,
+  reorderExercises,
 } from '../api/client';
 import type { Exercise, CreateExerciseRequest, UpdateExerciseRequest } from '../types/exercise';
 import { useAuth } from '../contexts/AuthContext';
@@ -78,6 +79,22 @@ export function useExercises() {
     await fetchExercises();
   };
 
+  // Optimistically reorder exercises in local state, then persist to backend.
+  // Backend is the source of truth — no localStorage involved.
+  const handleReorder = useCallback(async (reordered: Exercise[]) => {
+    const ids = new Set(reordered.map(e => e.id));
+    setExercises(prev => {
+      const rest = prev.filter(e => !ids.has(e.id));
+      return [...reordered, ...rest];
+    });
+    try {
+      await reorderExercises(reordered.map((ex, i) => ({ id: ex.id, sort_order: i })));
+    } catch {
+      // Revert to server state on failure
+      fetchExercises();
+    }
+  }, [fetchExercises]);
+
   return {
     exercises,
     loading,
@@ -88,5 +105,6 @@ export function useExercises() {
     handleDelete,
     handleArchive,
     handleSeed,
+    handleReorder,
   };
 }
