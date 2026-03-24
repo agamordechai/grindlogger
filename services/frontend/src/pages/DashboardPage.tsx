@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, RefreshCw, AlertTriangle, Save, FolderOpen, Archive, MoreVertical } from 'lucide-react';
 import { useExercises } from '../hooks/useExercises';
+import { useExerciseOrder } from '../hooks/useExerciseOrder';
 import { useExerciseNames } from '../hooks/useExerciseNames';
 import { useTemplates } from '../hooks/useTemplates';
 import { restoreExercise, createExercise, deleteExercise } from '../api/client';
@@ -81,8 +82,10 @@ function MoreMenu({ onRefresh, onArchive, onSaveTemplate, onLoadTemplate, refres
 export default function DashboardPage() {
   const { exercises, loading, error, fetchExercises, handleCreate, handleUpdate, handleDelete, handleArchive, handleSeed } = useExercises();
   const { getNameStatus, fetchNames } = useExerciseNames();
+  const { applyOrder, setOrder } = useExerciseOrder();
   const { user } = useAuth();
   const [selectedDay, setSelectedDay] = useState('All');
+  const [editMode, setEditMode] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [createDefaultDay, setCreateDefaultDay] = useState('A');
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
@@ -122,12 +125,17 @@ export default function DashboardPage() {
       groups[day].push(ex);
     }
 
+    // Apply custom order per day
+    for (const day of Object.keys(groups)) {
+      groups[day] = applyOrder(day, groups[day]);
+    }
+
     // Sort: days A-G, Daily, None
     const order = [...ALL_DAYS, 'None'];
     return Object.entries(groups).sort(([a], [b]) => {
       return order.indexOf(a) - order.indexOf(b);
     });
-  }, [exercises, selectedDay]);
+  }, [exercises, selectedDay, applyOrder]);
 
   const handleRestoreFromCreate = async (id: number) => {
     await restoreExercise(id);
@@ -328,6 +336,16 @@ export default function DashboardPage() {
             onLoadTemplate={() => setShowLoadTemplate(true)}
             refreshing={loading}
           />
+          <button
+            onClick={() => setEditMode(e => !e)}
+            className={`text-sm font-medium px-3 py-1.5 rounded-xl transition-colors ${
+              editMode
+                ? 'bg-ember text-white'
+                : 'text-steel hover:text-chalk hover:bg-surface-2'
+            }`}
+          >
+            {editMode ? 'Done' : 'Edit'}
+          </button>
           <GlowButton onClick={() => { setCreateDefaultDay('A'); setShowCreate(true); }}>
             <Plus size={16} />
             <span className="hidden sm:inline">Add Exercise</span>
@@ -355,6 +373,8 @@ export default function DashboardPage() {
               key={day}
               day={day}
               exercises={dayExercises}
+              editMode={editMode}
+              onReorder={(reordered) => setOrder(day, reordered)}
               onUpdate={handleUpdate}
               onDelete={handleDelete}
               onArchive={handleArchive}
