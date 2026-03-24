@@ -93,6 +93,7 @@ class ExerciseTable(SQLModel, table=True):
     notes: str | None = Field(default=None, max_length=500)
     user_id: int = Field(foreign_key="users.id", index=True)
     archived: bool = Field(default=False, index=True)
+    sort_order: int = Field(default=0, ge=0)
 
 
 class WorkoutSessionTable(SQLModel, table=True):

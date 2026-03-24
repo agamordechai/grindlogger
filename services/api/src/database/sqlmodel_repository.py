@@ -76,15 +76,24 @@ class ExerciseRepository:
             or 0
         )
 
-        column = getattr(ExerciseTable, sort_by)
-        order = column.desc() if sort_order == "desc" else column.asc()
-        statement = (
-            select(ExerciseTable)
-            .where(ExerciseTable.user_id == user_id, ExerciseTable.archived == False)  # noqa: E712
-            .order_by(order)
-            .offset((page - 1) * page_size)
-            .limit(page_size)
-        )
+        if sort_by == "sort_order":
+            statement = (
+                select(ExerciseTable)
+                .where(ExerciseTable.user_id == user_id, ExerciseTable.archived == False)  # noqa: E712
+                .order_by(ExerciseTable.sort_order.asc(), ExerciseTable.id.asc())
+                .offset((page - 1) * page_size)
+                .limit(page_size)
+            )
+        else:
+            column = getattr(ExerciseTable, sort_by)
+            order = column.desc() if sort_order == "desc" else column.asc()
+            statement = (
+                select(ExerciseTable)
+                .where(ExerciseTable.user_id == user_id, ExerciseTable.archived == False)  # noqa: E712
+                .order_by(order)
+                .offset((page - 1) * page_size)
+                .limit(page_size)
+            )
         results = self.session.exec(statement).all()
         items = [ExerciseResponse.model_validate(ex.model_dump()) for ex in results]
         return items, total
@@ -347,6 +356,24 @@ class ExerciseRepository:
             )
             for ex in results
         ]
+
+    def update_sort_orders(self, user_id: int, orders: list[tuple[int, int]]) -> None:
+        """Bulk-update sort_order for a list of exercises owned by a user.
+
+        Args:
+            user_id: Owner's user ID
+            orders: List of (exercise_id, sort_order) tuples
+        """
+        for exercise_id, sort_order in orders:
+            statement = select(ExerciseTable).where(
+                ExerciseTable.id == exercise_id,
+                ExerciseTable.user_id == user_id,
+            )
+            exercise = self.session.exec(statement).first()
+            if exercise:
+                exercise.sort_order = sort_order
+                self.session.add(exercise)
+        self.session.commit()
 
     def seed_initial_data(self, user_id: int, split: str = "ppl") -> int:
         """Seed database with initial workout data for a specific user.

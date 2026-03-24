@@ -11,6 +11,7 @@ export interface Exercise {
   workout_day: string;
   notes: string | null;
   archived: boolean;
+  sort_order: number;
 }
 
 export interface ExerciseNameStatus {

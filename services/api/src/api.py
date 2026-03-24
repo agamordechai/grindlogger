@@ -54,7 +54,7 @@ from services.api.src.database.config import get_settings
 from services.api.src.database.database import get_session, init_db
 from services.api.src.database.db_models import ExerciseTable, UserTable
 from services.api.src.database.dependencies import MeasurementRepositoryDep, RepositoryDep, SessionRepositoryDep, UserRepositoryDep
-from services.api.src.database.models import Exercise, ExerciseEditRequest, ExerciseResponse, HealthResponse
+from services.api.src.database.models import Exercise, ExerciseEditRequest, ExerciseReorderRequest, ExerciseResponse, HealthResponse
 from services.api.src.database.sqlmodel_repository import ExerciseRepository
 from services.api.src.etag import maybe_return_not_modified
 from services.api.src.ratelimit import get_rate_limit_key, get_ratelimit_settings, rate_limit_exceeded_handler
@@ -223,7 +223,7 @@ def health_check() -> HealthResponse:
     )
 
 
-_SORTABLE_COLUMNS = {"id", "name", "sets", "reps", "weight", "workout_day"}
+_SORTABLE_COLUMNS = {"id", "name", "sets", "reps", "weight", "workout_day", "sort_order"}
 
 
 @app.get("/exercises")
@@ -234,7 +234,7 @@ def read_exercises(
     current_user: Annotated[UserTable, Depends(get_current_user)],
     page: int = Query(1, ge=1, le=10_000_000, description="Page number"),
     page_size: int = Query(20, ge=1, le=200, description="Items per page"),
-    sort_by: str = Query("id", description="Column to sort by"),
+    sort_by: str = Query("sort_order", description="Column to sort by"),
     sort_order: Literal["asc", "desc"] = Query("asc", description="Sort direction"),
     format: Literal["json", "csv"] = Query("json", description="Response format"),
 ) -> Response:
@@ -409,6 +409,21 @@ def add_exercise(
         reps=exercise.reps,
         weight=exercise.weight,
         workout_day=exercise.workout_day,
+    )
+
+
+@app.post("/exercises/reorder", status_code=204, tags=["Exercises"])
+@limiter.limit("60/minute")
+def reorder_exercises(
+    request: Request,
+    body: ExerciseReorderRequest,
+    repository: RepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> None:
+    """Bulk-update sort_order for exercises to persist user-defined ordering."""
+    repository.update_sort_orders(
+        current_user.id,
+        [(item.id, item.sort_order) for item in body.items],
     )
 
 

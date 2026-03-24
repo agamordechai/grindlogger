@@ -28,6 +28,19 @@ __all__ = [
 ]
 
 
+class ExerciseReorderItem(BaseModel):
+    """Single item in a reorder request."""
+
+    id: int = Field(..., ge=1)
+    sort_order: int = Field(..., ge=0)
+
+
+class ExerciseReorderRequest(BaseModel):
+    """Bulk reorder request body."""
+
+    items: list[ExerciseReorderItem]
+
+
 class HealthResponse(BaseModel):
     """Health check response model.
 

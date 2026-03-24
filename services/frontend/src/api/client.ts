@@ -241,6 +241,13 @@ export async function clearExercises(): Promise<{ deleted: number }> {
 }
 
 /**
+ * Persist user-defined exercise order to the backend.
+ */
+export async function reorderExercises(items: { id: number; sort_order: number }[]): Promise<void> {
+  await client.post('/exercises/reorder', { items });
+}
+
+/**
  * Seed default sample exercises for the current user.
  */
 export async function seedExercises(split: 'ppl' | 'ab' | 'fullbody' = 'ppl'): Promise<{ seeded: number }> {

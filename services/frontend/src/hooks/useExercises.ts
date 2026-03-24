@@ -20,7 +20,7 @@ export function useExercises() {
     try {
       setLoading(true);
       setError(null);
-      const data = await listExercises({ page_size: 200 });
+      const data = await listExercises({ page_size: 200, sort_by: 'sort_order' });
       // Only update state if data actually changed to avoid unnecessary re-renders
       setExercises(prev => {
         const next = data.items;
