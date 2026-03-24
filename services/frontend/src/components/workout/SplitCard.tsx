@@ -8,7 +8,6 @@ import { ExerciseRow } from './ExerciseRow';
 interface SplitCardProps {
   day: string;
   exercises: Exercise[];
-  editMode?: boolean;
   onReorder?: (exercises: Exercise[]) => void;
   onUpdate: (id: number, data: UpdateExerciseRequest) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
@@ -43,8 +42,9 @@ function DraggableRow({ exercise }: { exercise: Exercise }) {
   );
 }
 
-export function SplitCard({ day, exercises, editMode, onReorder, onUpdate, onDelete, onArchive, onAddToDay }: SplitCardProps) {
+export function SplitCard({ day, exercises, onReorder, onUpdate, onDelete, onArchive, onAddToDay }: SplitCardProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   const color = getDayColor(day);
 
   return (
@@ -74,6 +74,18 @@ export function SplitCard({ day, exercises, editMode, onReorder, onUpdate, onDel
               className={`text-steel transition-transform duration-200 ${collapsed ? '-rotate-90' : ''}`}
             />
           )}
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setEditMode(v => !v);
+            if (!editMode) setCollapsed(false);
+          }}
+          className={`px-3 py-3 text-xs font-semibold transition-colors ${
+            editMode ? 'text-ember' : 'text-steel hover:text-chalk'
+          }`}
+        >
+          {editMode ? 'Done' : 'Edit'}
         </button>
       </div>
 
