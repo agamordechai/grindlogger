@@ -9,6 +9,7 @@ from fastapi import Depends
 from sqlmodel import Session
 
 from services.api.src.database.database import get_session
+from services.api.src.database.measurement_repository import BodyMeasurementRepository
 from services.api.src.database.session_repository import WorkoutSessionRepository
 from services.api.src.database.sqlmodel_repository import ExerciseRepository
 from services.api.src.database.user_repository import UserRepository
@@ -45,8 +46,16 @@ def get_workout_session_repository(
     return WorkoutSessionRepository(session)
 
 
+def get_measurement_repository(
+    session: Annotated[Session, Depends(get_session)],
+) -> BodyMeasurementRepository:
+    """Provide a BodyMeasurementRepository instance."""
+    return BodyMeasurementRepository(session)
+
+
 # Type aliases for dependency injection
 SessionDep = Annotated[Session, Depends(get_session)]
 RepositoryDep = Annotated[ExerciseRepository, Depends(get_exercise_repository)]
 UserRepositoryDep = Annotated[UserRepository, Depends(get_user_repository)]
 SessionRepositoryDep = Annotated[WorkoutSessionRepository, Depends(get_workout_session_repository)]
+MeasurementRepositoryDep = Annotated[BodyMeasurementRepository, Depends(get_measurement_repository)]

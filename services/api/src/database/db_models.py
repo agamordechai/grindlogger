@@ -41,6 +41,31 @@ class UserTable(SQLModel, table=True):
     created_at: dt.datetime = Field(default_factory=lambda: dt.datetime.now(dt.UTC))
 
 
+class BodyMeasurementTable(SQLModel, table=True):
+    """Body measurement entry — tracks weight, body fat %, and tape measurements over time."""
+
+    __tablename__ = "body_measurements"
+
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    measurement_date: dt.date = Field(index=True)
+    weight_kg: float | None = Field(default=None, ge=0)
+    body_fat_pct: float | None = Field(default=None, ge=0, le=100)
+    chest_cm: float | None = Field(default=None, ge=0)
+    waist_cm: float | None = Field(default=None, ge=0)
+    hips_cm: float | None = Field(default=None, ge=0)
+    bicep_left_cm: float | None = Field(default=None, ge=0)
+    bicep_right_cm: float | None = Field(default=None, ge=0)
+    thigh_left_cm: float | None = Field(default=None, ge=0)
+    thigh_right_cm: float | None = Field(default=None, ge=0)
+    neck_cm: float | None = Field(default=None, ge=0)
+    shoulders_cm: float | None = Field(default=None, ge=0)
+    forearm_cm: float | None = Field(default=None, ge=0)
+    calf_cm: float | None = Field(default=None, ge=0)
+    notes: str | None = Field(default=None, max_length=500)
+    created_at: dt.datetime = Field(default_factory=lambda: dt.datetime.now(dt.UTC))
+
+
 class ExerciseTable(SQLModel, table=True):
     """Exercise database table model.
 

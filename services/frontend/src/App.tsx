@@ -12,6 +12,7 @@ import CoachPage from './pages/CoachPage';
 import SettingsPage from './pages/SettingsPage';
 import AdminPage from './pages/AdminPage';
 import HistoryPage from './pages/HistoryPage';
+import MeasurementsPage from './pages/MeasurementsPage';
 
 function LoadingScreen() {
   return (
@@ -87,6 +88,7 @@ function AuthenticatedApp() {
           <Routes>
             <Route index element={<DashboardPage />} />
             <Route path="history" element={<HistoryPage />} />
+            <Route path="measurements" element={<MeasurementsPage />} />
             <Route path="coach" element={<CoachPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="admin" element={<AdminPage />} />

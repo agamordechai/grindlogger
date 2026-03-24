@@ -46,6 +46,7 @@ def init_db() -> None:
 
     # Import all models to ensure they're registered with SQLModel metadata
     from services.api.src.database.db_models import (  # noqa: F401
+        BodyMeasurementTable,
         ExerciseTable,
         SessionExerciseTable,
         UserTable,

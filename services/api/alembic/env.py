@@ -35,7 +35,7 @@ config.set_main_option("sqlalchemy.url", database_url)
 
 # Import all models to ensure they're registered with SQLModel metadata
 # Use the same import path structure as the rest of the application
-from services.api.src.database.db_models import ExerciseTable, UserTable  # noqa: F401
+from services.api.src.database.db_models import BodyMeasurementTable, ExerciseTable, UserTable  # noqa: F401
 
 # Set target metadata for autogenerate support
 target_metadata = SQLModel.metadata

@@ -25,6 +25,12 @@ import type {
   StreakInfo,
   ExerciseProgress,
 } from '../types/session';
+import type {
+  BodyMeasurement,
+  CreateBodyMeasurement,
+  MeasurementProgress,
+  MeasurementMetric,
+} from '../types/measurement';
 
 // In development, Vite proxies /api to localhost:8000
 // In production, configure API_BASE_URL environment variable
@@ -329,6 +335,39 @@ export async function getExerciseProgressData(
     params: { exercise_name: exerciseName, metric },
   });
   return response.data;
+}
+
+// ============ Body Measurements API ============
+
+export async function createMeasurement(data: CreateBodyMeasurement): Promise<BodyMeasurement> {
+  const response = await client.post<BodyMeasurement>('/measurements', data);
+  return response.data;
+}
+
+export async function listMeasurements(): Promise<BodyMeasurement[]> {
+  const response = await client.get<BodyMeasurement[]>('/measurements');
+  return response.data;
+}
+
+export async function getLatestMeasurement(): Promise<BodyMeasurement> {
+  const response = await client.get<BodyMeasurement>('/measurements/latest');
+  return response.data;
+}
+
+export async function getMeasurementProgress(metric: MeasurementMetric): Promise<MeasurementProgress> {
+  const response = await client.get<MeasurementProgress>('/measurements/progress', {
+    params: { metric },
+  });
+  return response.data;
+}
+
+export async function updateMeasurement(id: number, data: CreateBodyMeasurement): Promise<BodyMeasurement> {
+  const response = await client.put<BodyMeasurement>(`/measurements/${id}`, data);
+  return response.data;
+}
+
+export async function deleteMeasurement(id: number): Promise<void> {
+  await client.delete(`/measurements/${id}`);
 }
 
 // ============ Admin API ============

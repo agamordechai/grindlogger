@@ -51,5 +51,5 @@
 
 ## Data & Integration
 - [ ] **Import from other apps** — Import workout data from Strong, JEFIT, or other common CSV formats
-- [ ] **Body measurements tracking** — Weight, body fat %, measurements over time
+- [x] **Body measurements tracking** — Weight, body fat %, measurements over time
 - [ ] **Webhook/Zapier integration** — Trigger external actions on workout completion

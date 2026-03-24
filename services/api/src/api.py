@@ -53,7 +53,7 @@ from services.api.src.auth import (
 from services.api.src.database.config import get_settings
 from services.api.src.database.database import get_session, init_db
 from services.api.src.database.db_models import ExerciseTable, UserTable
-from services.api.src.database.dependencies import RepositoryDep, SessionRepositoryDep, UserRepositoryDep
+from services.api.src.database.dependencies import MeasurementRepositoryDep, RepositoryDep, SessionRepositoryDep, UserRepositoryDep
 from services.api.src.database.models import Exercise, ExerciseEditRequest, ExerciseResponse, HealthResponse
 from services.api.src.database.sqlmodel_repository import ExerciseRepository
 from services.api.src.etag import maybe_return_not_modified
@@ -635,6 +635,110 @@ def delete_workout_session(
     success = session_repo.delete_session(session_id, current_user.id)
     if not success:
         raise HTTPException(status_code=404, detail="Session not found")
+    return None
+
+
+# ============ Body Measurement Endpoints ============
+
+from services.shared.models.measurement import (  # noqa: E402
+    BodyMeasurementCreate,
+    BodyMeasurementResponse,
+    MeasurementProgressResponse,
+)
+
+
+@app.post("/measurements", response_model=BodyMeasurementResponse, status_code=201, tags=["Measurements"])
+@limiter.limit("30/minute")
+def create_measurement(
+    request: Request,
+    data: BodyMeasurementCreate,
+    measurement_repo: MeasurementRepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> BodyMeasurementResponse:
+    """Log a new body measurement entry."""
+    return measurement_repo.create(current_user.id, data)
+
+
+@app.get("/measurements", response_model=list[BodyMeasurementResponse], tags=["Measurements"])
+@limiter.limit("120/minute")
+def list_measurements(
+    request: Request,
+    measurement_repo: MeasurementRepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> list[BodyMeasurementResponse]:
+    """List all body measurements, newest first."""
+    return measurement_repo.list_all(current_user.id)
+
+
+@app.get("/measurements/latest", response_model=BodyMeasurementResponse, tags=["Measurements"])
+@limiter.limit("120/minute")
+def get_latest_measurement(
+    request: Request,
+    measurement_repo: MeasurementRepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> BodyMeasurementResponse:
+    """Get the most recent body measurement."""
+    result = measurement_repo.get_latest(current_user.id)
+    if not result:
+        raise HTTPException(status_code=404, detail="No measurements found")
+    return result
+
+
+@app.get("/measurements/progress", response_model=MeasurementProgressResponse, tags=["Measurements"])
+@limiter.limit("120/minute")
+def get_measurement_progress(
+    request: Request,
+    measurement_repo: MeasurementRepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+    metric: str = Query("weight", max_length=30),
+) -> MeasurementProgressResponse:
+    """Get progress time series for a specific body metric."""
+    return measurement_repo.get_progress(current_user.id, metric)
+
+
+@app.get("/measurements/{measurement_id}", response_model=BodyMeasurementResponse, tags=["Measurements"])
+@limiter.limit("120/minute")
+def get_measurement(
+    request: Request,
+    measurement_id: int,
+    measurement_repo: MeasurementRepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> BodyMeasurementResponse:
+    """Get a specific body measurement entry."""
+    result = measurement_repo.get(measurement_id, current_user.id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Measurement not found")
+    return result
+
+
+@app.put("/measurements/{measurement_id}", response_model=BodyMeasurementResponse, tags=["Measurements"])
+@limiter.limit("30/minute")
+def update_measurement(
+    request: Request,
+    measurement_id: int,
+    data: BodyMeasurementCreate,
+    measurement_repo: MeasurementRepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> BodyMeasurementResponse:
+    """Update a body measurement entry."""
+    result = measurement_repo.update(measurement_id, current_user.id, data)
+    if not result:
+        raise HTTPException(status_code=404, detail="Measurement not found")
+    return result
+
+
+@app.delete("/measurements/{measurement_id}", status_code=204, tags=["Measurements"])
+@limiter.limit("30/minute")
+def delete_measurement(
+    request: Request,
+    measurement_id: int,
+    measurement_repo: MeasurementRepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> None:
+    """Delete a body measurement entry."""
+    success = measurement_repo.delete(measurement_id, current_user.id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Measurement not found")
     return None
 
 
