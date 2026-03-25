@@ -53,8 +53,19 @@ from services.api.src.auth import (
 from services.api.src.database.config import get_settings
 from services.api.src.database.database import get_session, init_db
 from services.api.src.database.db_models import ExerciseTable, UserTable
-from services.api.src.database.dependencies import MeasurementRepositoryDep, RepositoryDep, SessionRepositoryDep, UserRepositoryDep
-from services.api.src.database.models import Exercise, ExerciseEditRequest, ExerciseReorderRequest, ExerciseResponse, HealthResponse
+from services.api.src.database.dependencies import (
+    MeasurementRepositoryDep,
+    RepositoryDep,
+    SessionRepositoryDep,
+    UserRepositoryDep,
+)
+from services.api.src.database.models import (
+    Exercise,
+    ExerciseEditRequest,
+    ExerciseReorderRequest,
+    ExerciseResponse,
+    HealthResponse,
+)
 from services.api.src.database.sqlmodel_repository import ExerciseRepository
 from services.api.src.etag import maybe_return_not_modified
 from services.api.src.ratelimit import get_rate_limit_key, get_ratelimit_settings, rate_limit_exceeded_handler

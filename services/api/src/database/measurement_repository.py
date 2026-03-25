@@ -6,8 +6,6 @@ All queries scoped by user_id.
 
 from __future__ import annotations
 
-from datetime import date
-
 from sqlmodel import Session, select
 
 from services.api.src.database.db_models import BodyMeasurementTable
