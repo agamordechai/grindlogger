@@ -66,6 +66,24 @@ function playChime() {
   osc2.stop(now + 0.65);
 }
 
+/** Play a short single beep for step transitions */
+function playBeep() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(1046.5, now); // C6
+  gain.gain.setValueAtTime(0.25, now);
+  gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+  osc.start(now);
+  osc.stop(now + 0.2);
+}
+
 // ─── Notifications ───
 
 async function ensureNotificationPermission(): Promise<boolean> {
@@ -119,8 +137,16 @@ interface RestTimerContextType {
   remaining: number;
   total: number;
   running: boolean;
+  paused: boolean;
   finished: boolean;
+  /** Sequence steps (empty for single timer) */
+  steps: number[];
+  /** Current step index within the sequence (0-based) */
+  currentStepIndex: number;
   start: (seconds: number) => void;
+  startSequence: (steps: number[]) => void;
+  pause: () => void;
+  resume: () => void;
   extend: (seconds: number) => void;
   skip: () => void;
   dismissFinished: () => void;
@@ -132,10 +158,16 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
   const [remaining, setRemaining] = useState(0);
   const [total, setTotal] = useState(0);
   const [running, setRunning] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [finished, setFinished] = useState(false);
+  const [steps, setSteps] = useState<number[]>([]);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
   const endTimeRef = useRef<number>(0);
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const stepsRef = useRef<number[]>([]);
+  const stepIndexRef = useRef(0);
+  const pausedRemainingRef = useRef<number>(0);
 
   const clearTimer = useCallback(() => {
     if (intervalRef.current) {
@@ -149,19 +181,47 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
     setRemaining(left);
 
     if (left <= 0) {
-      clearTimer();
-      setRunning(false);
-      setFinished(true);
+      const hasMoreSteps =
+        stepsRef.current.length > 0 &&
+        stepIndexRef.current < stepsRef.current.length - 1;
 
-      playChime();
-      vibrate();
-      showNotification();
+      if (hasMoreSteps) {
+        // Advance to next step — keep interval running
+        const nextIndex = stepIndexRef.current + 1;
+        stepIndexRef.current = nextIndex;
+        setCurrentStepIndex(nextIndex);
+
+        const nextDuration = stepsRef.current[nextIndex];
+        setTotal(nextDuration);
+        setRemaining(nextDuration);
+        endTimeRef.current = Date.now() + nextDuration * 1000;
+
+        // Short beep for step transition
+        if (!document.hidden) playBeep();
+        vibrate();
+      } else {
+        // Final step or single timer — done
+        clearTimer();
+        setRunning(false);
+        setFinished(true);
+
+        if (!document.hidden) {
+          playChime();
+        }
+        vibrate();
+        showNotification();
+      }
     }
   }, [clearTimer]);
 
   const start = useCallback((seconds: number) => {
     clearTimer();
     setFinished(false);
+    setPaused(false);
+    setSteps([]);
+    stepsRef.current = [];
+    stepIndexRef.current = 0;
+    setCurrentStepIndex(0);
     setTotal(seconds);
     setRemaining(seconds);
     setRunning(true);
@@ -174,6 +234,44 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
     ensureNotificationPermission();
   }, [clearTimer, tick]);
 
+  const startSequence = useCallback((seq: number[]) => {
+    if (seq.length === 0) return;
+    clearTimer();
+    setFinished(false);
+    setPaused(false);
+
+    stepsRef.current = seq;
+    stepIndexRef.current = 0;
+    setSteps(seq);
+    setCurrentStepIndex(0);
+
+    const firstDuration = seq[0];
+    setTotal(firstDuration);
+    setRemaining(firstDuration);
+    setRunning(true);
+    endTimeRef.current = Date.now() + firstDuration * 1000;
+    intervalRef.current = setInterval(tick, 250);
+
+    unlockAudio();
+    primeVibration();
+    ensureNotificationPermission();
+  }, [clearTimer, tick]);
+
+  const pause = useCallback(() => {
+    if (!running || paused) return;
+    clearTimer();
+    // Snapshot the remaining ms so resume can rebuild endTime
+    pausedRemainingRef.current = Math.max(0, endTimeRef.current - Date.now());
+    setPaused(true);
+  }, [running, paused, clearTimer]);
+
+  const resume = useCallback(() => {
+    if (!paused) return;
+    endTimeRef.current = Date.now() + pausedRemainingRef.current;
+    intervalRef.current = setInterval(tick, 250);
+    setPaused(false);
+  }, [paused, tick]);
+
   const extend = useCallback((seconds: number) => {
     if (!running) return;
     endTimeRef.current += seconds * 1000;
@@ -184,21 +282,35 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
   const skip = useCallback(() => {
     clearTimer();
     setRunning(false);
+    setPaused(false);
     setRemaining(0);
     setTotal(0);
     setFinished(false);
+    setSteps([]);
+    stepsRef.current = [];
+    stepIndexRef.current = 0;
+    setCurrentStepIndex(0);
   }, [clearTimer]);
 
   const dismissFinished = useCallback(() => {
     setFinished(false);
+    setPaused(false);
     setRemaining(0);
     setTotal(0);
+    setSteps([]);
+    stepsRef.current = [];
+    stepIndexRef.current = 0;
+    setCurrentStepIndex(0);
   }, []);
 
   useEffect(() => clearTimer, [clearTimer]);
 
   return (
-    <RestTimerContext.Provider value={{ remaining, total, running, finished, start, extend, skip, dismissFinished }}>
+    <RestTimerContext.Provider value={{
+      remaining, total, running, paused, finished,
+      steps, currentStepIndex,
+      start, startSequence, pause, resume, extend, skip, dismissFinished,
+    }}>
       {children}
     </RestTimerContext.Provider>
   );
