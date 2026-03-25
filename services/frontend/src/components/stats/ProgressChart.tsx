@@ -83,13 +83,15 @@ export function ProgressChart({ exerciseName, metric }: ProgressChartProps) {
           <Tooltip
             wrapperStyle={{ opacity: 1 }}
             contentStyle={{
-              backgroundColor: '#1C1917',
-              border: '1px solid rgba(87,83,78,0.4)',
+              backgroundColor: 'var(--color-surface-1)',
+              border: '1px solid var(--color-border)',
               borderRadius: '12px',
-              color: '#FAFAF9',
+              color: 'var(--color-chalk)',
               fontSize: '12px',
               opacity: 1,
             }}
+            labelStyle={{ color: 'var(--color-chalk)' }}
+            itemStyle={{ color: 'var(--color-chalk)' }}
             formatter={(value) => [
               `${Number(value).toLocaleString()} ${metric === 'volume' ? unit : unit}`,
               METRIC_LABELS[metric],
