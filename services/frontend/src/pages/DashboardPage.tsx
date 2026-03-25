@@ -82,7 +82,24 @@ export default function DashboardPage() {
   const { exercises, loading, error, fetchExercises, handleCreate, handleUpdate, handleDelete, handleArchive, handleSeed, handleReorder } = useExercises();
   const { getNameStatus, fetchNames } = useExerciseNames();
   const { user } = useAuth();
-  const [selectedDay, setSelectedDay] = useState('All');
+  const [selectedDay, setSelectedDay] = useState(() => {
+    try {
+      const raw = localStorage.getItem('dashboard_selectedDay');
+      if (raw) {
+        const { value, expiry } = JSON.parse(raw);
+        if (Date.now() < expiry) return value;
+      }
+    } catch {}
+    return 'All';
+  });
+
+  const handleDayChange = (day: string) => {
+    setSelectedDay(day);
+    localStorage.setItem('dashboard_selectedDay', JSON.stringify({
+      value: day,
+      expiry: Date.now() + 30 * 60 * 1000,
+    }));
+  };
   const [showCreate, setShowCreate] = useState(false);
   const [createDefaultDay, setCreateDefaultDay] = useState('A');
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
@@ -339,7 +356,7 @@ export default function DashboardPage() {
       <StatsRow exercises={exercises} />
 
       {/* Day pills */}
-      <DayPills selected={selectedDay} onChange={setSelectedDay} dayCounts={dayCounts} />
+      <DayPills selected={selectedDay} onChange={handleDayChange} dayCounts={dayCounts} />
 
       {/* Main content grid: splits + charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
