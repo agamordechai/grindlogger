@@ -19,16 +19,18 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
     PATH="/app/.venv/bin:$PATH"
 
-# Install dependencies from pyproject.toml
+# Install dependencies first (cached unless pyproject.toml changes)
 COPY services/ai_coach/pyproject.toml ./pyproject.toml
+RUN mkdir -p services && touch services/__init__.py && \
+    uv sync --no-dev --no-install-project
+
+# Copy source code
 COPY services/__init__.py ./services/
 COPY services/shared/ ./services/shared/
 COPY services/ai_coach/ ./services/ai_coach/
-RUN uv sync --no-dev --no-install-project
 
 # Port
 EXPOSE 8001
 
 # Run the app
 CMD ["python", "-m", "uvicorn", "services.ai_coach.src.api:app", "--host", "0.0.0.0", "--port", "8001"]
-

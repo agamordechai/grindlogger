@@ -20,13 +20,16 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
     PATH="/app/.venv/bin:$PATH"
 
-# Install dependencies from pyproject.toml
+# Install dependencies first (cached unless pyproject.toml changes)
 COPY services/worker/pyproject.toml ./pyproject.toml
+RUN mkdir -p services && touch services/__init__.py && \
+    uv sync --no-dev --no-install-project
+
+# Copy source code
 COPY services/__init__.py /app/services/
 COPY services/shared/ /app/services/shared/
 COPY dev/ /app/dev/
 COPY services/worker/ /app/services/worker/
-RUN uv sync --no-dev --no-install-project
 
 # Expose health check port
 EXPOSE 8002

@@ -19,12 +19,15 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
     PATH="/app/.venv/bin:$PATH"
 
-# Install dependencies from pyproject.toml
+# Install dependencies first (cached unless pyproject.toml/uv.lock change)
 COPY pyproject.toml uv.lock ./
+RUN mkdir -p services && touch services/__init__.py && \
+    uv sync --no-dev --no-install-project
+
+# Copy source code (changes here won't re-install deps)
 COPY services/__init__.py ./services/
 COPY services/shared/ ./services/shared/
 COPY services/api/ ./services/api/
-RUN uv sync --no-dev --no-install-project
 
 # Create directory for database
 RUN mkdir -p /app/data
@@ -33,5 +36,4 @@ RUN mkdir -p /app/data
 EXPOSE 8000
 
 # Run migrations then start the app
-COPY services/api/entrypoint.sh ./services/api/entrypoint.sh
 CMD ["sh", "services/api/entrypoint.sh"]
