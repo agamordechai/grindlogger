@@ -11,21 +11,38 @@ import {
 import type { Exercise, CreateExerciseRequest, UpdateExerciseRequest } from '../types/exercise';
 import { useAuth } from '../contexts/AuthContext';
 
+const CACHE_KEY = 'exercises_cache';
+
+function readCache(): Exercise[] {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (raw) return JSON.parse(raw) as Exercise[];
+  } catch {}
+  return [];
+}
+
+function writeCache(exercises: Exercise[]) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(exercises));
+  } catch {}
+}
+
 export function useExercises() {
   const { isAuthenticated } = useAuth();
-  const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [exercises, setExercises] = useState<Exercise[]>(readCache);
+  const [loading, setLoading] = useState(() => readCache().length === 0);
   const [error, setError] = useState<string | null>(null);
 
   const fetchExercises = useCallback(async () => {
     try {
-      setLoading(true);
+      // don't flip loading back on if we already have cached data visible
       setError(null);
       const data = await listExercises({ page_size: 200, sort_by: 'sort_order' });
       // Only update state if data actually changed to avoid unnecessary re-renders
       setExercises(prev => {
         const next = data.items;
         if (JSON.stringify(prev) === JSON.stringify(next)) return prev;
+        writeCache(next);
         return next;
       });
     } catch (err) {
