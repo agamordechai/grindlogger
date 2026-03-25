@@ -148,9 +148,7 @@ class WorkoutSessionRepository:
             db_ex.weight_used = weight
         else:
             # Determine order: next after existing exercises
-            count_stmt = select(func.count()).where(
-                SessionExerciseTable.session_id == db_session.id
-            )
+            count_stmt = select(func.count()).where(SessionExerciseTable.session_id == db_session.id)
             count = self.session.exec(count_stmt).one()
             db_ex = SessionExerciseTable(
                 session_id=db_session.id,
@@ -183,9 +181,7 @@ class WorkoutSessionRepository:
         db_session.duration_minutes = data.duration_minutes
 
         # Delete old exercises
-        old_ex_stmt = select(SessionExerciseTable).where(
-            SessionExerciseTable.session_id == session_id
-        )
+        old_ex_stmt = select(SessionExerciseTable).where(SessionExerciseTable.session_id == session_id)
         for ex in self.session.exec(old_ex_stmt).all():
             self.session.delete(ex)
 
@@ -257,9 +253,7 @@ class WorkoutSessionRepository:
             return False
 
         # Delete exercises first
-        ex_stmt = select(SessionExerciseTable).where(
-            SessionExerciseTable.session_id == session_id
-        )
+        ex_stmt = select(SessionExerciseTable).where(SessionExerciseTable.session_id == session_id)
         for ex in self.session.exec(ex_stmt).all():
             self.session.delete(ex)
 
@@ -267,9 +261,7 @@ class WorkoutSessionRepository:
         self.session.commit()
         return True
 
-    def list_sessions_by_month(
-        self, user_id: int, year: int, month: int
-    ) -> list[WorkoutSessionSummary]:
+    def list_sessions_by_month(self, user_id: int, year: int, month: int) -> list[WorkoutSessionSummary]:
         """List session summaries for a calendar month."""
         start = date(year, month, 1)
         if month == 12:
@@ -290,15 +282,10 @@ class WorkoutSessionRepository:
 
         summaries = []
         for s in sessions:
-            ex_stmt = select(SessionExerciseTable).where(
-                SessionExerciseTable.session_id == s.id
-            )
+            ex_stmt = select(SessionExerciseTable).where(SessionExerciseTable.session_id == s.id)
             exercises = self.session.exec(ex_stmt).all()
             exercise_count = len(exercises)
-            total_volume = sum(
-                ex.sets_completed * ex.reps_completed * (ex.weight_used or 0)
-                for ex in exercises
-            )
+            total_volume = sum(ex.sets_completed * ex.reps_completed * (ex.weight_used or 0) for ex in exercises)
             summaries.append(
                 WorkoutSessionSummary(
                     id=s.id,
@@ -322,9 +309,7 @@ class WorkoutSessionRepository:
 
         total_workouts = len(dates)
         if not dates:
-            return StreakResponse(
-                current_streak=0, best_streak=0, total_workouts=0, last_workout_date=None
-            )
+            return StreakResponse(current_streak=0, best_streak=0, total_workouts=0, last_workout_date=None)
 
         last_workout_date = dates[0]
 
@@ -395,10 +380,7 @@ class WorkoutSessionRepository:
             if metric == "weight":
                 value = max((ex.weight_used or 0) for ex in exercises)
             elif metric == "volume":
-                value = sum(
-                    ex.sets_completed * ex.reps_completed * (ex.weight_used or 0)
-                    for ex in exercises
-                )
+                value = sum(ex.sets_completed * ex.reps_completed * (ex.weight_used or 0) for ex in exercises)
             elif metric == "one_rep_max":
                 value = max((ex.one_rep_max or 0) for ex in exercises)
             else:

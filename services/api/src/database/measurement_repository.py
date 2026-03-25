@@ -96,9 +96,7 @@ class BodyMeasurementRepository:
         row = self.session.exec(stmt).first()
         return _to_response(row) if row else None
 
-    def update(
-        self, measurement_id: int, user_id: int, data: BodyMeasurementCreate
-    ) -> BodyMeasurementResponse | None:
+    def update(self, measurement_id: int, user_id: int, data: BodyMeasurementCreate) -> BodyMeasurementResponse | None:
         """Update an existing measurement entry."""
         stmt = select(BodyMeasurementTable).where(
             BodyMeasurementTable.id == measurement_id,
