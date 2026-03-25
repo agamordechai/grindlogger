@@ -269,71 +269,75 @@ class WorkoutSessionRepository:
         else:
             end = date(year, month + 1, 1)
 
+        # Single query: aggregate exercise stats per session
         stmt = (
-            select(WorkoutSessionTable)
+            select(
+                WorkoutSessionTable.id,
+                WorkoutSessionTable.workout_date,
+                WorkoutSessionTable.workout_day,
+                func.count(SessionExerciseTable.id).label("exercise_count"),
+                func.coalesce(
+                    func.sum(
+                        SessionExerciseTable.sets_completed
+                        * SessionExerciseTable.reps_completed
+                        * func.coalesce(SessionExerciseTable.weight_used, 0)
+                    ),
+                    0,
+                ).label("total_volume"),
+            )
+            .outerjoin(SessionExerciseTable, SessionExerciseTable.session_id == WorkoutSessionTable.id)
             .where(
                 WorkoutSessionTable.user_id == user_id,
                 WorkoutSessionTable.workout_date >= start,
                 WorkoutSessionTable.workout_date < end,
             )
+            .group_by(WorkoutSessionTable.id, WorkoutSessionTable.workout_date, WorkoutSessionTable.workout_day)
             .order_by(WorkoutSessionTable.workout_date)
         )
-        sessions = self.session.exec(stmt).all()
+        rows = self.session.exec(stmt).all()
 
-        summaries = []
-        for s in sessions:
-            ex_stmt = select(SessionExerciseTable).where(SessionExerciseTable.session_id == s.id)
-            exercises = self.session.exec(ex_stmt).all()
-            exercise_count = len(exercises)
-            total_volume = sum(ex.sets_completed * ex.reps_completed * (ex.weight_used or 0) for ex in exercises)
-            summaries.append(
-                WorkoutSessionSummary(
-                    id=s.id,
-                    date=s.workout_date,
-                    workout_day=s.workout_day,
-                    exercise_count=exercise_count,
-                    total_volume=total_volume,
-                )
+        return [
+            WorkoutSessionSummary(
+                id=row.id,
+                date=row.workout_date,
+                workout_day=row.workout_day,
+                exercise_count=row.exercise_count,
+                total_volume=float(row.total_volume),
             )
-        return summaries
+            for row in rows
+        ]
 
     def get_streak(self, user_id: int) -> StreakResponse:
         """Calculate current and best workout streaks."""
+        # Single query: all distinct workout dates in ascending order
         stmt = (
             select(func.distinct(WorkoutSessionTable.workout_date))
             .where(WorkoutSessionTable.user_id == user_id)
-            .order_by(WorkoutSessionTable.workout_date.desc())
+            .order_by(WorkoutSessionTable.workout_date)
         )
-        rows = self.session.exec(stmt).all()
-        dates: list[date] = sorted(rows, reverse=True)
+        all_dates: list[date] = list(self.session.exec(stmt).all())
 
-        total_workouts = len(dates)
-        if not dates:
+        total_workouts = len(all_dates)
+        if not all_dates:
             return StreakResponse(current_streak=0, best_streak=0, total_workouts=0, last_workout_date=None)
 
-        last_workout_date = dates[0]
-
-        # Current streak: walk backwards from today
+        last_workout_date = all_dates[-1]
         today = date.today()
-        current_streak = 0
-        check_date = today
 
-        # Allow current streak if last workout was today or yesterday
-        if last_workout_date < today - timedelta(days=1):
-            current_streak = 0
-        else:
-            date_set = set(dates)
+        # Current streak: walk backwards from today/last_workout_date
+        current_streak = 0
+        if last_workout_date >= today - timedelta(days=1):
+            date_set = set(all_dates)
             check_date = min(today, last_workout_date)
             while check_date in date_set:
                 current_streak += 1
                 check_date -= timedelta(days=1)
 
-        # Best streak: scan all dates
-        sorted_asc = sorted(dates)
+        # Best streak: scan consecutive dates
         best_streak = 1
         run = 1
-        for i in range(1, len(sorted_asc)):
-            if sorted_asc[i] - sorted_asc[i - 1] == timedelta(days=1):
+        for i in range(1, len(all_dates)):
+            if all_dates[i] - all_dates[i - 1] == timedelta(days=1):
                 run += 1
                 best_streak = max(best_streak, run)
             else:

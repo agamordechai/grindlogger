@@ -152,30 +152,32 @@ export default function HistoryPage() {
         )}
       </div>
 
-      {/* Progress charts */}
-      <div className="space-y-4">
-        {/* Metric toggle */}
-        <div className="flex rounded-xl bg-surface-2 p-0.5">
-          {([
-            { value: 'weight' as const, label: 'Weight' },
-            { value: 'volume' as const, label: 'Volume' },
-            { value: 'one_rep_max' as const, label: '1RM' },
-          ]).map(m => (
-            <button
-              key={m.value}
-              onClick={() => setMetric(m.value)}
-              className={`flex-1 text-xs py-1.5 rounded-lg transition-colors font-medium ${
-                metric === m.value
-                  ? 'bg-ember text-white'
-                  : 'text-steel hover:text-chalk'
-              }`}
-            >
-              {m.label}
-            </button>
-          ))}
+      {/* Progress charts — render after calendar is loaded */}
+      {!sessionsLoading && (
+        <div className="space-y-4">
+          {/* Metric toggle */}
+          <div className="flex rounded-xl bg-surface-2 p-0.5">
+            {([
+              { value: 'weight' as const, label: 'Weight' },
+              { value: 'volume' as const, label: 'Volume' },
+              { value: 'one_rep_max' as const, label: '1RM' },
+            ]).map(m => (
+              <button
+                key={m.value}
+                onClick={() => setMetric(m.value)}
+                className={`flex-1 text-xs py-1.5 rounded-lg transition-colors font-medium ${
+                  metric === m.value
+                    ? 'bg-ember text-white'
+                    : 'text-steel hover:text-chalk'
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+          <ExerciseProgressPanel metric={metric} />
         </div>
-        <ExerciseProgressPanel metric={metric} />
-      </div>
+      )}
       <CompleteWorkoutSheet
         open={showLogWorkout}
         onClose={() => {
