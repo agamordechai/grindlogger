@@ -1,6 +1,5 @@
 import { PageShell } from '../components/ui/PageShell';
 import { ProfileSection } from '../components/settings/ProfileSection';
-import { ThemeSection } from '../components/settings/ThemeSection';
 import { UnitsSection } from '../components/settings/UnitsSection';
 import { ApiKeySection } from '../components/settings/ApiKeySection';
 import { BodyweightSection } from '../components/settings/BodyweightSection';
@@ -16,7 +15,6 @@ export default function SettingsPage() {
 
       <div className="card mt-6 p-0 px-4">
         <ProfileSection />
-        <ThemeSection />
         <UnitsSection />
         <BodyweightSection />
         <ApiKeySection />

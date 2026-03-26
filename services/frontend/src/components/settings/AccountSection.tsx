@@ -6,7 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { clearExercises } from '../../api/client';
 
 export function AccountSection() {
-  const { logout, deleteAccount } = useAuth();
+  const { deleteAccount } = useAuth();
 
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
@@ -42,15 +42,6 @@ export function AccountSection() {
 
   return (
     <>
-      {/* Sign out */}
-      <div className="py-6 border-b border-border">
-        <h3 className="text-sm font-bold text-chalk mb-1">Session</h3>
-        <p className="text-steel text-xs mb-3">Sign out of your account on this device.</p>
-        <GlowButton variant="warning" onClick={logout}>
-          Sign Out
-        </GlowButton>
-      </div>
-
       {/* Danger Zone */}
       <div className="py-6">
         <div className="flex items-center gap-2 mb-1">
