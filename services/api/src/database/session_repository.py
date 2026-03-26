@@ -17,6 +17,7 @@ from services.shared.models.session import (
     ProgressPoint,
     SessionExerciseResponse,
     StreakResponse,
+    WeekSummary,
     WorkoutSessionCreate,
     WorkoutSessionResponse,
     WorkoutSessionSummary,
@@ -308,7 +309,7 @@ class WorkoutSessionRepository:
         ]
 
     def get_streak(self, user_id: int) -> StreakResponse:
-        """Calculate current and best workout streaks."""
+        """Calculate weekly workout trend over the last 4 weeks."""
         # Single query: all distinct workout dates in ascending order
         stmt = (
             select(func.distinct(WorkoutSessionTable.workout_date))
@@ -319,35 +320,29 @@ class WorkoutSessionRepository:
 
         total_workouts = len(all_dates)
         if not all_dates:
-            return StreakResponse(current_streak=0, best_streak=0, total_workouts=0, last_workout_date=None)
+            return StreakResponse(weekly_trend=[], this_week=0, total_workouts=0, last_workout_date=None)
 
         last_workout_date = all_dates[-1]
         today = date.today()
 
-        # Current streak: walk backwards from today/last_workout_date
-        current_streak = 0
-        if last_workout_date >= today - timedelta(days=1):
-            date_set = set(all_dates)
-            check_date = min(today, last_workout_date)
-            while check_date in date_set:
-                current_streak += 1
-                check_date -= timedelta(days=1)
+        # Build 4-week trend (Sunday-based weeks)
+        current_week_start = today - timedelta(days=(today.weekday() + 1) % 7)  # Sunday
+        date_set = set(all_dates)
+        weekly_trend: list[WeekSummary] = []
 
-        # Best streak: scan consecutive dates
-        best_streak = 1
-        run = 1
-        for i in range(1, len(all_dates)):
-            if all_dates[i] - all_dates[i - 1] == timedelta(days=1):
-                run += 1
-                best_streak = max(best_streak, run)
-            else:
-                run = 1
+        for i in range(3, -1, -1):  # 3 weeks ago → this week
+            week_start = current_week_start - timedelta(weeks=i)
+            count = sum(
+                1 for d in range(7)
+                if (week_start + timedelta(days=d)) in date_set
+            )
+            weekly_trend.append(WeekSummary(week_start=week_start, workouts=count))
 
-        best_streak = max(best_streak, current_streak)
+        this_week = weekly_trend[-1].workouts if weekly_trend else 0
 
         return StreakResponse(
-            current_streak=current_streak,
-            best_streak=best_streak,
+            weekly_trend=weekly_trend,
+            this_week=this_week,
             total_workouts=total_workouts,
             last_workout_date=last_workout_date,
         )

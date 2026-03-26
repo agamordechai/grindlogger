@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Dumbbell, Flame, Layers, Weight } from 'lucide-react';
+import { Dumbbell, TrendingUp, Layers, Weight } from 'lucide-react';
 import { StatCard } from '../ui/StatCard';
 import { containerStagger } from '../../lib/motion';
 import { getBodyweightKg } from '../../hooks/useBodyweight';
@@ -50,9 +50,9 @@ export function StatsRow({ exercises }: StatsRowProps) {
         icon={<Weight size={18} />}
       />
       <StatCard
-        label="Streak"
-        value={streak ? `${streak.current_streak}d` : '—'}
-        icon={<Flame size={18} />}
+        label="This Week"
+        value={streak ? `${streak.this_week}` : '—'}
+        icon={<TrendingUp size={18} />}
       />
     </motion.div>
   );

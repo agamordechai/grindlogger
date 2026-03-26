@@ -1,9 +1,15 @@
-import { Flame } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import type { StreakInfo } from '../../types/session';
 
 interface StreakBadgeProps {
   streak: StreakInfo | null;
   loading?: boolean;
+}
+
+function weekLabel(weekStart: string, isThisWeek: boolean): string {
+  if (isThisWeek) return 'This wk';
+  const d = new Date(weekStart + 'T00:00:00');
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 export function StreakBadge({ streak, loading }: StreakBadgeProps) {
@@ -19,42 +25,68 @@ export function StreakBadge({ streak, loading }: StreakBadgeProps) {
     );
   }
 
+  const { weekly_trend, this_week, total_workouts } = streak;
+  const maxWorkouts = Math.max(...weekly_trend.map(w => w.workouts), 1);
+
+  // Determine trend direction
+  const prevWeek = weekly_trend.length >= 2 ? weekly_trend[weekly_trend.length - 2].workouts : 0;
+  const trendUp = this_week >= prevWeek;
+
   return (
     <div className="card p-4">
       <div className="flex items-center gap-4">
-        {/* Flame icon */}
+        {/* Icon */}
         <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-          streak.current_streak > 0 ? 'bg-gradient-to-br from-ember to-ember-dark' : 'bg-surface-2'
+          this_week > 0 ? 'bg-gradient-to-br from-ember to-ember-dark' : 'bg-surface-2'
         }`}>
-          <Flame size={24} className={streak.current_streak > 0 ? 'text-white' : 'text-steel'} />
+          <TrendingUp size={24} className={this_week > 0 ? 'text-white' : 'text-steel'} />
         </div>
 
         {/* Numbers */}
         <div className="flex-1">
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-chalk font-mono">{streak.current_streak}</span>
-            <span className="text-sm text-steel">day streak</span>
+            <span className="text-2xl font-bold text-chalk font-mono">{this_week}</span>
+            <span className="text-sm text-steel">this week</span>
           </div>
           <div className="flex items-center gap-4 mt-0.5 text-xs text-steel">
-            <span>Best: <span className="font-mono text-chalk">{streak.best_streak}</span></span>
-            <span>Total: <span className="font-mono text-chalk">{streak.total_workouts}</span> workouts</span>
+            <span>Total: <span className="font-mono text-chalk">{total_workouts}</span> workouts</span>
+            {weekly_trend.length >= 2 && (
+              <span className={trendUp ? 'text-green-400' : 'text-steel'}>
+                {trendUp ? '↑' : '↓'} vs last week
+              </span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Progress bar toward best streak */}
-      {streak.best_streak > 0 && streak.current_streak > 0 && (
-        <div className="mt-3">
-          <div className="flex justify-between text-[11px] text-steel mb-1">
-            <span>Progress to best</span>
-            <span className="font-mono">{Math.min(100, Math.round((streak.current_streak / streak.best_streak) * 100))}%</span>
-          </div>
-          <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-ember to-amber-500 transition-all duration-500"
-              style={{ width: `${Math.min(100, (streak.current_streak / streak.best_streak) * 100)}%` }}
-            />
-          </div>
+      {/* 4-week trend bars */}
+      {weekly_trend.length > 0 && (
+        <div className="mt-4 flex items-end gap-2">
+          {weekly_trend.map((week, i) => {
+            const isThisWeek = i === weekly_trend.length - 1;
+            const barHeight = week.workouts > 0
+              ? Math.max(16, (week.workouts / maxWorkouts) * 48)
+              : 4;
+
+            return (
+              <div key={week.week_start} className="flex-1 flex flex-col items-center gap-1.5">
+                <span className="text-[11px] font-mono text-chalk">{week.workouts}</span>
+                <div
+                  className={`w-full rounded-md transition-all duration-500 ${
+                    isThisWeek
+                      ? 'bg-gradient-to-t from-ember to-amber-500'
+                      : week.workouts > 0
+                        ? 'bg-surface-3'
+                        : 'bg-surface-2'
+                  }`}
+                  style={{ height: `${barHeight}px` }}
+                />
+                <span className="text-[10px] text-steel whitespace-nowrap">
+                  {weekLabel(week.week_start, isThisWeek)}
+                </span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

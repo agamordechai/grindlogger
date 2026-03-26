@@ -26,11 +26,13 @@
 - [X] **Chat history persistence** — Save conversations to Redis (14-day TTL, auto-eviction)
 - [X] **Workout generator** — AI-powered custom routine generation
 - [X] **Progress analysis** — Muscle balance scoring, strengths/weaknesses, recommendations
+- [ ] **AI actions via API** — Let the coach perform actions on behalf of the user (bulk-add measurements, create/modify exercises, log workouts)
+- [ ] **Custom routine generation** — AI creates unique, personalized workout routine templates based on goals, equipment, and schedule
 - [ ] **Progressive overload suggestions** — AI analyzes logged history and recommends when to increase weight/volume
 - [ ] **Form tips** — Exercise-specific technique cues
 
 ## Social & Motivation
-- [X] **Streak tracking** — Track consecutive workout days/weeks with visual indicators
+- [X] **Weekly workout trend** — 4-week workout frequency trend with visual bar chart
 - [ ] **Workout sharing** — Generate shareable links or images of routines
 - [ ] **Leaderboard** — Opt-in community stats (total volume, consistency, etc.)
 

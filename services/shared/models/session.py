@@ -62,11 +62,18 @@ class WorkoutSessionSummary(BaseModel):
     total_volume: float
 
 
-class StreakResponse(BaseModel):
-    """Streak statistics derived from workout history."""
+class WeekSummary(BaseModel):
+    """Workout count for a single week."""
 
-    current_streak: int
-    best_streak: int
+    week_start: date
+    workouts: int
+
+
+class StreakResponse(BaseModel):
+    """Workout trend and statistics."""
+
+    weekly_trend: list[WeekSummary]
+    this_week: int
     total_workouts: int
     last_workout_date: date | None
 

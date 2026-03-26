@@ -47,9 +47,14 @@ export interface WorkoutSessionSummary {
   total_volume: number;
 }
 
+export interface WeekSummary {
+  week_start: string;
+  workouts: number;
+}
+
 export interface StreakInfo {
-  current_streak: number;
-  best_streak: number;
+  weekly_trend: WeekSummary[];
+  this_week: number;
   total_workouts: number;
   last_workout_date: string | null;
 }
