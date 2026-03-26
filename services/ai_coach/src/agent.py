@@ -1,28 +1,21 @@
-"""AI Coach agent using Pydantic AI."""
+"""AI Coach agent supporting Anthropic and OpenAI-compatible providers."""
 
+import json
 import logging
-from dataclasses import dataclass
+from typing import Any
 
-from pydantic_ai import Agent
-from pydantic_ai.models.anthropic import AnthropicModel
-from pydantic_ai.providers.anthropic import AnthropicProvider
+import anthropic
+from openai import AsyncOpenAI
 
 from services.ai_coach.src.config import get_settings
-from services.ai_coach.src.models import MuscleGroup, ProgressAnalysis, WorkoutContext, WorkoutRecommendation
+from services.ai_coach.src.models import (
+    MuscleGroup,
+    ProgressAnalysis,
+    WorkoutContext,
+    WorkoutRecommendation,
+)
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class CoachDependencies:
-    """Dependencies for the AI coach agent."""
-
-    workout_context: WorkoutContext | None = None
-    focus_area: str | None = None
-    custom_focus: str | None = None
-    equipment: list[str] | None = None
-    session_duration: int = 60
-
 
 # System prompt for the workout coach
 COACH_SYSTEM_PROMPT = """You are an expert fitness coach and personal trainer AI assistant.
@@ -50,114 +43,173 @@ If workout context is provided, analyze it and tailor your responses accordingly
 settings = get_settings()
 
 
-def _build_model(api_key: str | None = None) -> AnthropicModel | None:
-    """Build an AnthropicModel with a per-request key, or None to use the agent default.
-
-    Args:
-        api_key: Anthropic API key to use for this request
-
-    Returns:
-        An AnthropicModel configured with the given key, or None
-    """
-    if api_key is None:
-        return None
-    # Strip the provider prefix (e.g. "anthropic:") for the raw model name
-    model_name = settings.ai_model.split(":", 1)[-1]
-    provider = AnthropicProvider(api_key=api_key)
-    return AnthropicModel(model_name, provider=provider)
+def _is_anthropic(api_key: str, base_url: str | None) -> bool:
+    """Check if we should use the Anthropic SDK based on key or URL."""
+    if api_key.startswith("sk-ant-"):
+        return True
+    if base_url and "anthropic" in base_url:
+        return True
+    if not base_url and "anthropic" in settings.ai_base_url:
+        return True
+    return False
 
 
-# Initialize the coach agent
+def _format_workout_context(workout_context: WorkoutContext | None) -> str:
+    """Format workout context into a string for the system prompt."""
+    if not workout_context or not workout_context.exercises:
+        return ""
 
-# Create the agent - using OpenAI by default
-coach_agent = Agent(
-    system_prompt=COACH_SYSTEM_PROMPT,
-    deps_type=CoachDependencies,
-)
+    ctx = "\n\nCurrent Workout Data:\n"
+    ctx += f"- Total Exercises: {workout_context.exercise_count}\n"
+    ctx += f"- Total Volume: {workout_context.total_volume:.1f} kg\n"
+    muscle_groups = ", ".join(workout_context.muscle_groups_worked) or "Not identified"
+    ctx += f"- Muscle Groups Worked: {muscle_groups}\n"
+
+    workout_days = {ex.workout_day for ex in workout_context.exercises}
+    daily_exercises = [ex for ex in workout_context.exercises if ex.workout_day == "None"]
+    split_days = [day for day in workout_days if day != "None"]
+
+    if daily_exercises:
+        ctx += f"- Daily Exercises (done every day): {len(daily_exercises)} exercise(s)\n"
+
+    if len(split_days) == 0 and daily_exercises:
+        ctx += "- Workout Split: ALL DAILY (no specific day split)\n"
+    elif len(split_days) == 1:
+        ctx += f"- Workout Split: FULL BODY (all exercises on Day {split_days[0]})\n"
+    elif len(split_days) == 2:
+        ctx += f"- Workout Split: A/B SPLIT (Days: {', '.join(sorted(split_days))})\n"
+    elif len(split_days) == 3:
+        ctx += f"- Workout Split: A/B/C SPLIT (Days: {', '.join(sorted(split_days))})\n"
+    elif len(split_days) > 0:
+        ctx += f"- Workout Split: {len(split_days)}-DAY SPLIT (Days: {', '.join(sorted(split_days))})\n"
+
+    ctx += "\nExercises grouped by workout day:\n"
+
+    if daily_exercises:
+        ctx += "\n  Daily (Every Day):\n"
+        for ex in daily_exercises:
+            weight_str = f" @ {ex.weight}kg" if ex.weight else " (bodyweight)"
+            ctx += f"    - {ex.name}: {ex.sets} sets x {ex.reps} reps{weight_str}\n"
+
+    for day in sorted(split_days):
+        day_exercises = [ex for ex in workout_context.exercises if ex.workout_day == day]
+        ctx += f"\n  Day {day}:\n"
+        for ex in day_exercises:
+            weight_str = f" @ {ex.weight}kg" if ex.weight else " (bodyweight)"
+            ctx += f"    - {ex.name}: {ex.sets} sets x {ex.reps} reps{weight_str}\n"
+
+    return ctx
 
 
-@coach_agent.system_prompt
-async def add_workout_context(ctx) -> str:
-    """Add workout context to the system prompt if available.
+async def _anthropic_completion(
+    api_key: str,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    response_format: type | None = None,
+) -> str:
+    """Make a completion request using the Anthropic SDK."""
+    client = anthropic.AsyncAnthropic(api_key=api_key)
 
-    Args:
-        ctx: Pydantic AI agent context containing dependencies
+    if response_format is not None:
+        json_schema = response_format.model_json_schema()
+        user_prompt += (
+            f"\n\nYou MUST respond with valid JSON matching this schema:\n{json.dumps(json_schema, indent=2)}"
+            "\n\nRespond ONLY with the JSON object, no other text."
+        )
 
-    Returns:
-        Formatted string with workout context information
-    """
-    deps: CoachDependencies = ctx.deps
+    message = await client.messages.create(
+        model=model,
+        max_tokens=1024,
+        temperature=settings.ai_temperature,
+        system=system_prompt,
+        messages=[{"role": "user", "content": user_prompt}],
+    )
 
-    if deps.workout_context and deps.workout_context.exercises:
-        context_str = "\n\nCurrent Workout Data:\n"
-        context_str += f"- Total Exercises: {deps.workout_context.exercise_count}\n"
-        context_str += f"- Total Volume: {deps.workout_context.total_volume:.1f} kg\n"
-        muscle_groups = ", ".join(deps.workout_context.muscle_groups_worked) or "Not identified"
-        context_str += f"- Muscle Groups Worked: {muscle_groups}\n"
+    return message.content[0].text
 
-        # Analyze workout split structure
-        workout_days = {ex.workout_day for ex in deps.workout_context.exercises}
-        daily_exercises = [ex for ex in deps.workout_context.exercises if ex.workout_day == "None"]
-        split_days = [day for day in workout_days if day != "None"]
 
-        if daily_exercises:
-            context_str += f"- Daily Exercises (done every day): {len(daily_exercises)} exercise(s)\n"
+async def _openai_completion(
+    api_key: str,
+    base_url: str,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    response_format: type | None = None,
+) -> str:
+    """Make a completion request using the OpenAI-compatible SDK."""
+    client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 
-        if len(split_days) == 0 and daily_exercises:
-            context_str += "- Workout Split: ALL DAILY (no specific day split)\n"
-        elif len(split_days) == 1:
-            context_str += f"- Workout Split: FULL BODY (all exercises on Day {split_days[0]})\n"
-        elif len(split_days) == 2:
-            context_str += f"- Workout Split: A/B SPLIT (Days: {', '.join(sorted(split_days))})\n"
-        elif len(split_days) == 3:
-            context_str += f"- Workout Split: A/B/C SPLIT (Days: {', '.join(sorted(split_days))})\n"
-        elif len(split_days) > 0:
-            context_str += f"- Workout Split: {len(split_days)}-DAY SPLIT (Days: {', '.join(sorted(split_days))})\n"
+    messages: list[dict[str, Any]] = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
 
-        # Group exercises by workout day
-        context_str += "\nExercises grouped by workout day:\n"
+    kwargs: dict[str, Any] = {
+        "model": model,
+        "messages": messages,
+        "temperature": settings.ai_temperature,
+    }
 
-        # Show daily exercises first if any
-        if daily_exercises:
-            context_str += "\n  Daily (Every Day):\n"
-            for ex in daily_exercises:
-                weight_str = f" @ {ex.weight}kg" if ex.weight else " (bodyweight)"
-                context_str += f"    - {ex.name}: {ex.sets} sets x {ex.reps} reps{weight_str}\n"
+    if response_format is not None:
+        json_schema = response_format.model_json_schema()
+        kwargs["messages"][0]["content"] += (
+            f"\n\nYou MUST respond with valid JSON matching this schema:\n{json.dumps(json_schema, indent=2)}"
+        )
+        kwargs["response_format"] = {"type": "json_object"}
 
-        # Show split days
-        for day in sorted(split_days):
-            day_exercises = [ex for ex in deps.workout_context.exercises if ex.workout_day == day]
-            context_str += f"\n  Day {day}:\n"
-            for ex in day_exercises:
-                weight_str = f" @ {ex.weight}kg" if ex.weight else " (bodyweight)"
-                context_str += f"    - {ex.name}: {ex.sets} sets x {ex.reps} reps{weight_str}\n"
+    response = await client.chat.completions.create(**kwargs)
+    return response.choices[0].message.content or ""
 
-        return context_str
 
-    return ""
+async def _chat_completion(
+    api_key: str,
+    base_url: str | None,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    response_format: type | None = None,
+) -> str:
+    """Route to the appropriate SDK based on provider."""
+    if _is_anthropic(api_key, base_url):
+        return await _anthropic_completion(
+            api_key=api_key,
+            model=model,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            response_format=response_format,
+        )
+    return await _openai_completion(
+        api_key=api_key,
+        base_url=base_url or settings.ai_base_url,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        response_format=response_format,
+    )
 
 
 async def chat_with_coach(
     message: str,
     workout_context: WorkoutContext | None = None,
     api_key: str | None = None,
+    base_url: str | None = None,
+    model: str | None = None,
 ) -> str:
-    """Chat with the AI coach.
+    """Chat with the AI coach."""
+    if not api_key:
+        raise ValueError("API key is required")
 
-    Args:
-        message: User message
-        workout_context: Optional workout context for personalized responses
-        api_key: Per-request Anthropic API key override
-
-    Returns:
-        Coach response
-    """
-    deps = CoachDependencies(workout_context=workout_context)
-    model = _build_model(api_key)
+    system_prompt = COACH_SYSTEM_PROMPT + _format_workout_context(workout_context)
 
     try:
-        result = await coach_agent.run(message, deps=deps, model=model)
-        return result.output
+        return await _chat_completion(
+            api_key=api_key,
+            base_url=base_url,
+            model=model or settings.ai_model,
+            system_prompt=system_prompt,
+            user_prompt=message,
+        )
     except Exception as e:
         logger.error(f"Chat error: {e}")
         raise
@@ -170,34 +222,21 @@ async def get_workout_recommendation(
     equipment: list[str] | None = None,
     session_duration: int = 60,
     api_key: str | None = None,
+    base_url: str | None = None,
+    model: str | None = None,
 ) -> WorkoutRecommendation:
-    """Get a workout recommendation from the AI coach.
+    """Get a workout recommendation from the AI coach."""
+    if not api_key:
+        raise ValueError("API key is required")
 
-    Args:
-        workout_context: Current workout data for context
-        focus_area: Target muscle group
-        equipment: Available equipment
-        session_duration: Workout duration in minutes
-        api_key: Per-request Anthropic API key override
-
-    Returns:
-        Structured workout recommendation
-    """
     focus_label = custom_focus_area or (focus_area.value.replace("_", "/").title() if focus_area else "Full Body")
-
-    deps = CoachDependencies(
-        workout_context=workout_context,
-        focus_area=focus_area.value if focus_area else None,
-        custom_focus=custom_focus_area,
-        equipment=equipment or ["barbell", "dumbbells", "cables", "bodyweight"],
-        session_duration=session_duration,
-    )
+    equip = equipment or ["barbell", "dumbbells", "cables", "bodyweight"]
 
     prompt = f"""Generate a complete workout routine recommendation.
 
 Session Duration: {session_duration} minutes per session
 Focus Area: {focus_label}
-Available Equipment: {", ".join(deps.equipment)}
+Available Equipment: {", ".join(equip)}
 
 Please provide:
 1. A catchy workout title
@@ -219,17 +258,18 @@ IMPORTANT - Workout Day Assignment:
 
 If workout context is available, complement existing exercises rather than duplicate them."""
 
-    try:
-        # Use structured output for the recommendation
-        model = _build_model(api_key)
-        recommendation_agent = Agent(
-            output_type=WorkoutRecommendation,
-            system_prompt=COACH_SYSTEM_PROMPT,
-            deps_type=CoachDependencies,
-        )
+    system_prompt = COACH_SYSTEM_PROMPT + _format_workout_context(workout_context)
 
-        result = await recommendation_agent.run(prompt, deps=deps, model=model)
-        return result.output
+    try:
+        raw = await _chat_completion(
+            api_key=api_key,
+            base_url=base_url,
+            model=model or settings.ai_model,
+            system_prompt=system_prompt,
+            user_prompt=prompt,
+            response_format=WorkoutRecommendation,
+        )
+        return WorkoutRecommendation.model_validate_json(raw)
     except Exception as e:
         logger.error(f"Recommendation error: {e}")
         raise
@@ -238,17 +278,12 @@ If workout context is available, complement existing exercises rather than dupli
 async def analyze_progress(
     workout_context: WorkoutContext,
     api_key: str | None = None,
+    base_url: str | None = None,
+    model: str | None = None,
 ) -> ProgressAnalysis:
-    """Analyze workout progress and provide insights.
-
-    Args:
-        workout_context: Current workout data
-        api_key: Per-request Anthropic API key override
-
-    Returns:
-        Progress analysis with recommendations
-    """
-    deps = CoachDependencies(workout_context=workout_context)
+    """Analyze workout progress and provide insights."""
+    if not api_key:
+        raise ValueError("API key is required")
 
     prompt = """Analyze the workout routine provided in the context and give personalized feedback.
 
@@ -264,81 +299,18 @@ Provide:
 
 Be encouraging but honest. Focus on practical improvements specific to this person's actual workout."""
 
+    system_prompt = COACH_SYSTEM_PROMPT + _format_workout_context(workout_context)
+
     try:
-        # Create analysis agent with the same system prompt decorator
-        model = _build_model(api_key)
-        analysis_agent = Agent(
-            output_type=ProgressAnalysis,
-            system_prompt=COACH_SYSTEM_PROMPT,
-            deps_type=CoachDependencies,
+        raw = await _chat_completion(
+            api_key=api_key,
+            base_url=base_url,
+            model=model or settings.ai_model,
+            system_prompt=system_prompt,
+            user_prompt=prompt,
+            response_format=ProgressAnalysis,
         )
-
-        # Register the workout context system prompt
-        @analysis_agent.system_prompt
-        async def add_analysis_workout_context(ctx) -> str:
-            """Add workout context to the analysis system prompt.
-
-            Args:
-                ctx: Pydantic AI agent context containing dependencies
-
-            Returns:
-                Formatted string with workout context information
-            """
-            deps: CoachDependencies = ctx.deps
-
-            if deps.workout_context and deps.workout_context.exercises:
-                context_str = "\n\nCurrent Workout Data:\n"
-                context_str += f"- Total Exercises: {deps.workout_context.exercise_count}\n"
-                context_str += f"- Total Volume: {deps.workout_context.total_volume:.1f} kg\n"
-                muscle_groups = ", ".join(deps.workout_context.muscle_groups_worked) or "Not identified"
-                context_str += f"- Muscle Groups Worked: {muscle_groups}\n"
-
-                # Analyze workout split structure
-                workout_days = {ex.workout_day for ex in deps.workout_context.exercises}
-                daily_exercises = [ex for ex in deps.workout_context.exercises if ex.workout_day == "None"]
-                split_days = [day for day in workout_days if day != "None"]
-
-                if daily_exercises:
-                    context_str += f"- Daily Exercises (done every day): {len(daily_exercises)} exercise(s)\n"
-
-                if len(split_days) == 0 and daily_exercises:
-                    context_str += "- Workout Split: ALL DAILY (no specific day split)\n"
-                elif len(split_days) == 1:
-                    context_str += f"- Workout Split: FULL BODY (all exercises on Day {split_days[0]})\n"
-                elif len(split_days) == 2:
-                    context_str += f"- Workout Split: A/B SPLIT (Days: {', '.join(sorted(split_days))})\n"
-                elif len(split_days) == 3:
-                    context_str += f"- Workout Split: A/B/C SPLIT (Days: {', '.join(sorted(split_days))})\n"
-                elif len(split_days) > 0:
-                    days_str = ", ".join(sorted(split_days))
-                    context_str += f"- Workout Split: {len(split_days)}-DAY SPLIT (Days: {days_str})\n"
-
-                # Group exercises by workout day
-                context_str += "\nExercises grouped by workout day:\n"
-
-                # Show daily exercises first if any
-                if daily_exercises:
-                    context_str += "\n  Daily (Every Day):\n"
-                    for ex in daily_exercises:
-                        weight_str = f" @ {ex.weight}kg" if ex.weight else " (bodyweight)"
-                        context_str += f"    - {ex.name}: {ex.sets} sets x {ex.reps} reps{weight_str}\n"
-
-                # Show split days
-                for day in sorted(split_days):
-                    day_exercises = [ex for ex in deps.workout_context.exercises if ex.workout_day == day]
-                    context_str += f"\n  Day {day}:\n"
-                    for ex in day_exercises:
-                        weight_str = f" @ {ex.weight}kg" if ex.weight else " (bodyweight)"
-                        context_str += f"    - {ex.name}: {ex.sets} sets x {ex.reps} reps{weight_str}\n"
-
-                return context_str
-
-            return ""
-
-        result = await analysis_agent.run(prompt, deps=deps, model=model)
-        return result.output
+        return ProgressAnalysis.model_validate_json(raw)
     except Exception as e:
         logger.error(f"Analysis error: {e}", exc_info=True)
-        logger.error(f"Workout context: {deps.workout_context}")
-        # Re-raise the exception so we can see what's actually wrong
         raise

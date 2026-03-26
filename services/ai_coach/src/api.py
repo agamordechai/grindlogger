@@ -44,49 +44,48 @@ def _get_auth_header(request: Request) -> str | None:
     return request.headers.get("Authorization")
 
 
-def _resolve_anthropic_key(request: Request) -> str:
-    """Resolve the Anthropic API key for this request.
+def _resolve_ai_credentials(request: Request) -> tuple[str, str | None, str | None]:
+    """Resolve AI provider credentials for this request.
 
-    Priority:
-      1. ``X-Anthropic-Key`` header (user-provided key)
-      2. Server ``ANTHROPIC_API_KEY`` env var if the caller is an admin
+    Priority for API key:
+      1. X-AI-Key header (user-provided)
+      2. Server AI_API_KEY env var if caller is admin
       3. Raise 403
 
-    Args:
-        request: The incoming FastAPI request
-
     Returns:
-        The resolved API key string
-
-    Raises:
-        HTTPException: 403 when no key can be resolved
+        Tuple of (api_key, base_url_or_None, model_or_None)
     """
-    # 1. User-provided key
-    user_key = request.headers.get("X-Anthropic-Key")
-    if user_key:
-        return user_key
+    # API key
+    user_key = request.headers.get("X-AI-Key")
+    if not user_key:
+        # Legacy header support
+        user_key = request.headers.get("X-Anthropic-Key")
 
-    # 2. Admin fallback to server key
-    server_key = settings.anthropic_api_key
-    if server_key:
-        auth = request.headers.get("Authorization", "")
-        token = auth.removeprefix("Bearer ").strip() if auth.startswith("Bearer ") else ""
-        if token:
-            try:
-                payload = jwt.decode(
-                    token,
-                    settings.jwt_secret_key,
-                    algorithms=["HS256"],
-                )
-                if payload.get("role") == "admin":
-                    return server_key
-            except jwt.PyJWTError:
-                logger.debug("JWT decode failed during admin check")
+    if not user_key:
+        # Admin fallback to server key
+        server_key = settings.ai_api_key
+        if server_key:
+            auth = request.headers.get("Authorization", "")
+            token = auth.removeprefix("Bearer ").strip() if auth.startswith("Bearer ") else ""
+            if token:
+                try:
+                    payload = jwt.decode(token, settings.jwt_secret_key, algorithms=["HS256"])
+                    if payload.get("role") == "admin":
+                        user_key = server_key
+                except jwt.PyJWTError:
+                    logger.debug("JWT decode failed during admin check")
 
-    raise HTTPException(
-        status_code=403,
-        detail="Anthropic API key required. Please set your API key in Settings.",
-    )
+    if not user_key:
+        raise HTTPException(
+            status_code=403,
+            detail="AI API key required. Please set your API key in Settings.",
+        )
+
+    # Optional overrides from headers
+    base_url = request.headers.get("X-AI-Base-URL") or None
+    model = request.headers.get("X-AI-Model") or None
+
+    return user_key, base_url, model
 
 
 def _get_user_id(request: Request) -> str:
@@ -122,7 +121,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Startup
     logger.info("Starting AI Workout Coach service")
-    logger.info(f"AI Model: {settings.ai_model}")
+    logger.info(f"Default AI Model: {settings.ai_model}")
+    logger.info(f"Default AI Base URL: {settings.ai_base_url}")
     logger.info(f"Workout API URL: {settings.workout_api_url}")
 
     # Initialize Redis connection
@@ -146,8 +146,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 # Initialize FastAPI app
 app = FastAPI(
     title="AI Workout Coach",
-    description="AI-powered workout coaching service using Pydantic AI",
-    version="0.1.0",
+    description="AI-powered workout coaching service using OpenAI-compatible API",
+    version="0.2.0",
     docs_url="/docs",
     openapi_url="/openapi.json",
     lifespan=lifespan,
@@ -188,12 +188,8 @@ async def health_check() -> HealthResponse:
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: Request, chat_request: ChatRequest) -> ChatResponse:
-    """Chat with the AI workout coach.
-
-    Send a message and receive personalized fitness advice.
-    Optionally includes your current workout data for context.
-    """
-    anthropic_key = _resolve_anthropic_key(request)
+    """Chat with the AI workout coach."""
+    api_key, base_url, model = _resolve_ai_credentials(request)
     auth_header = _get_auth_header(request)
     workout_context = None
 
@@ -205,7 +201,13 @@ async def chat(request: Request, chat_request: ChatRequest) -> ChatResponse:
             logger.warning(f"Failed to fetch workout context: {e}")
 
     try:
-        response = await chat_with_coach(chat_request.message, workout_context, api_key=anthropic_key)
+        response = await chat_with_coach(
+            chat_request.message,
+            workout_context,
+            api_key=api_key,
+            base_url=base_url,
+            model=model,
+        )
         return ChatResponse(
             response=response, context_used=workout_context is not None and len(workout_context.exercises) > 0
         )
@@ -216,12 +218,8 @@ async def chat(request: Request, chat_request: ChatRequest) -> ChatResponse:
 
 @app.post("/recommend", response_model=WorkoutRecommendation)
 async def recommend_workout(request: Request, rec_request: RecommendationRequest) -> WorkoutRecommendation:
-    """Get AI-generated workout recommendations.
-
-    Generates a personalized workout plan based on your current exercises,
-    target muscle group, available equipment, and desired session duration.
-    """
-    anthropic_key = _resolve_anthropic_key(request)
+    """Get AI-generated workout recommendations."""
+    api_key, base_url, model = _resolve_ai_credentials(request)
     auth_header = _get_auth_header(request)
 
     # Fetch current workout context
@@ -239,7 +237,9 @@ async def recommend_workout(request: Request, rec_request: RecommendationRequest
             custom_focus_area=rec_request.custom_focus_area,
             equipment=rec_request.equipment_available,
             session_duration=rec_request.session_duration_minutes,
-            api_key=anthropic_key,
+            api_key=api_key,
+            base_url=base_url,
+            model=model,
         )
         return recommendation
     except Exception as e:
@@ -251,12 +251,8 @@ async def recommend_workout(request: Request, rec_request: RecommendationRequest
 
 @app.get("/analyze", response_model=ProgressAnalysis)
 async def analyze_workout(request: Request) -> ProgressAnalysis:
-    """Analyze your current workout routine.
-
-    Provides insights on your training strengths, areas for improvement,
-    and actionable recommendations based on your logged exercises.
-    """
-    anthropic_key = _resolve_anthropic_key(request)
+    """Analyze your current workout routine."""
+    api_key, base_url, model = _resolve_ai_credentials(request)
     auth_header = _get_auth_header(request)
 
     try:
@@ -270,7 +266,12 @@ async def analyze_workout(request: Request) -> ProgressAnalysis:
         raise HTTPException(status_code=400, detail="No exercises found. Add some exercises to get analysis.")
 
     try:
-        analysis = await analyze_progress(workout_context, api_key=anthropic_key)
+        analysis = await analyze_progress(
+            workout_context,
+            api_key=api_key,
+            base_url=base_url,
+            model=model,
+        )
         return analysis
     except Exception as e:
         logger.error(f"Analysis error: {e}", exc_info=True)

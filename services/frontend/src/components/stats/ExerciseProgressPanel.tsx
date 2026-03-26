@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { TrendingUp } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
-import { getExerciseProgressData } from '../../api/client';
+import { getExerciseProgressBatch } from '../../api/client';
 import { getWeightUnit, toDisplayWeight } from '../../hooks/useUnits';
 import { useExercises } from '../../hooks/useExercises';
 
@@ -49,55 +49,55 @@ export function ExerciseProgressPanel({ metric }: ExerciseProgressPanelProps) {
     let cancelled = false;
     setLoading(true);
 
-    // Fetch progress for all exercises across all days
+    // Single batch request for all exercises
     const allNames = days.flatMap(d => exercisesByDay[d]);
-    Promise.all(
-      allNames.map(name => getExerciseProgressData(name, metric).catch(() => null))
-    ).then(results => {
-      if (cancelled) return;
+    getExerciseProgressBatch(allNames, metric)
+      .then(batch => {
+        if (cancelled) return;
 
-      // Build a lookup: exercise name -> progress points
-      const progressMap: Record<string, { date: string; value: number }[]> = {};
-      allNames.forEach((name, i) => {
-        const res = results[i];
-        if (!res) return;
-        progressMap[name] = res.data.map(pt => ({
-          date: pt.date,
-          value: Math.round((toDisplayWeight(pt.value, unit) ?? pt.value) * 10) / 10,
-        }));
-      });
-
-      // Build chart data per day
-      const charts: DayChartData[] = [];
-      for (const day of days.sort()) {
-        const names = exercisesByDay[day];
-        const byDate: Record<string, Record<string, number>> = {};
-
-        for (const name of names) {
-          const pts = progressMap[name];
-          if (!pts) continue;
-          for (const pt of pts) {
-            if (!byDate[pt.date]) byDate[pt.date] = {};
-            byDate[pt.date][name] = pt.value;
-          }
+        // Convert to display units
+        const progressMap: Record<string, { date: string; value: number }[]> = {};
+        for (const [name, points] of Object.entries(batch.exercises)) {
+          progressMap[name] = points.map(pt => ({
+            date: pt.date,
+            value: Math.round((toDisplayWeight(pt.value, unit) ?? pt.value) * 10) / 10,
+          }));
         }
 
-        const sorted = Object.keys(byDate).sort();
-        if (sorted.length === 0) continue;
+        // Build chart data per day
+        const charts: DayChartData[] = [];
+        for (const day of days.sort()) {
+          const names = exercisesByDay[day];
+          const byDate: Record<string, Record<string, number>> = {};
 
-        charts.push({
-          day,
-          exerciseNames: names,
-          rows: sorted.map(date => ({
-            date: new Date(date + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-            ...byDate[date],
-          })),
-        });
-      }
+          for (const name of names) {
+            const pts = progressMap[name];
+            if (!pts) continue;
+            for (const pt of pts) {
+              if (!byDate[pt.date]) byDate[pt.date] = {};
+              byDate[pt.date][name] = pt.value;
+            }
+          }
 
-      setDayCharts(charts);
-      setLoading(false);
-    });
+          const sorted = Object.keys(byDate).sort();
+          if (sorted.length === 0) continue;
+
+          charts.push({
+            day,
+            exerciseNames: names,
+            rows: sorted.map(date => ({
+              date: new Date(date + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+              ...byDate[date],
+            })),
+          });
+        }
+
+        setDayCharts(charts);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!cancelled) setLoading(false);
+      });
 
     return () => { cancelled = true; };
   }, [exercisesByDay, metric, unit]);

@@ -561,6 +561,8 @@ def seed_exercises(
 # ============ Workout Session Endpoints ============
 
 from services.shared.models.session import (  # noqa: E402
+    BatchProgressRequest,
+    BatchProgressResponse,
     ExerciseProgressResponse,
     StreakResponse,
     WorkoutSessionCreate,
@@ -616,6 +618,22 @@ def get_exercise_progress(
 ) -> ExerciseProgressResponse:
     """Get progress time series for an exercise."""
     return session_repo.get_exercise_progress(current_user.id, exercise_name, metric)
+
+
+@app.post("/sessions/progress/batch", response_model=BatchProgressResponse, tags=["Sessions"])
+@limiter.limit("30/minute")
+def get_exercise_progress_batch(
+    request: Request,
+    body: BatchProgressRequest,
+    session_repo: SessionRepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> BatchProgressResponse:
+    """Get progress time series for multiple exercises in a single request."""
+    exercises: dict = {}
+    for name in body.exercise_names:
+        result = session_repo.get_exercise_progress(current_user.id, name, body.metric)
+        exercises[name] = result.data
+    return BatchProgressResponse(metric=body.metric, exercises=exercises)
 
 
 @app.get("/sessions/{session_id}", response_model=WorkoutSessionResponse, tags=["Sessions"])

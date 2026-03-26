@@ -70,13 +70,15 @@ function attachAuthHeader(config: any) {
 client.interceptors.request.use(attachAuthHeader);
 aiCoachClient.interceptors.request.use(attachAuthHeader);
 
-// Attach user-provided Anthropic key for AI Coach requests
+// Attach user-provided AI provider credentials for AI Coach requests
 aiCoachClient.interceptors.request.use((config) => {
-  const key = localStorage.getItem('anthropic_api_key');
-  if (key) {
-    config.headers = config.headers || {};
-    config.headers['X-Anthropic-Key'] = key;
-  }
+  config.headers = config.headers || {};
+  const key = localStorage.getItem('ai_api_key');
+  if (key) config.headers['X-AI-Key'] = key;
+  const baseUrl = localStorage.getItem('ai_base_url');
+  if (baseUrl) config.headers['X-AI-Base-URL'] = baseUrl;
+  const model = localStorage.getItem('ai_model');
+  if (model) config.headers['X-AI-Model'] = model;
   return config;
 });
 
@@ -340,6 +342,17 @@ export async function getExerciseProgressData(
 ): Promise<ExerciseProgress> {
   const response = await client.get<ExerciseProgress>('/sessions/progress', {
     params: { exercise_name: exerciseName, metric },
+  });
+  return response.data;
+}
+
+export async function getExerciseProgressBatch(
+  exerciseNames: string[],
+  metric: 'weight' | 'volume' | 'one_rep_max' = 'weight',
+): Promise<{ metric: string; exercises: Record<string, { date: string; value: number }[]> }> {
+  const response = await client.post('/sessions/progress/batch', {
+    exercise_names: exerciseNames,
+    metric,
   });
   return response.data;
 }

@@ -84,3 +84,17 @@ class ExerciseProgressResponse(BaseModel):
     exercise_name: str
     metric: str
     data: list[ProgressPoint]
+
+
+class BatchProgressRequest(BaseModel):
+    """Request body for batch progress data."""
+
+    exercise_names: list[str] = Field(..., min_length=1, max_length=50)
+    metric: str = Field(default="weight", pattern="^(weight|volume|one_rep_max)$")
+
+
+class BatchProgressResponse(BaseModel):
+    """Batch progress data for multiple exercises."""
+
+    metric: str
+    exercises: dict[str, list[ProgressPoint]]
