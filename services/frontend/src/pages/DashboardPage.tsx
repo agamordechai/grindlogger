@@ -79,7 +79,7 @@ function MoreMenu({ onRefresh, onArchive, onSaveTemplate, onLoadTemplate, refres
 }
 
 export default function DashboardPage() {
-  const { exercises, loading, error, fetchExercises, handleCreate, handleUpdate, handleDelete, handleArchive, handleSeed, handleReorder } = useExercises();
+  const { exercises, loading, error, fetchExercises, handleCreate, handleUpdate, handleDelete, handleArchive, handleSeed, handleReorder, handleCreateSuperset, handleRemoveSuperset } = useExercises();
   const { getNameStatus, fetchNames } = useExerciseNames();
   const { user } = useAuth();
   const [selectedDay, setSelectedDay] = useState(() => {
@@ -377,6 +377,8 @@ export default function DashboardPage() {
               onDelete={handleDelete}
               onArchive={handleArchive}
               onAddToDay={handleAddToDay}
+              onCreateSuperset={handleCreateSuperset}
+              onRemoveSuperset={handleRemoveSuperset}
             />
           ))}
         </motion.div>

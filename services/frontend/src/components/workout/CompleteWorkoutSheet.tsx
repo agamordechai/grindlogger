@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Check, Minus, Plus, Trophy } from 'lucide-react';
+import { Check, Minus, Plus, Trophy, Link } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { GlowButton } from '../ui/GlowButton';
 import { ALL_DAYS } from '../../lib/constants';
@@ -15,6 +15,7 @@ interface ExerciseEntry {
   one_rep_max: number | null;
   order: number;
   selected: boolean;
+  superset_group: number | null;
 }
 
 interface CompleteWorkoutSheetProps {
@@ -65,6 +66,7 @@ export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, de
         one_rep_max: null,
         order: i,
         selected: false,
+        superset_group: ex.superset_group,
       }))
     );
   };
@@ -86,6 +88,7 @@ export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, de
             one_rep_max: ex.one_rep_max != null ? (toDisplayWeight(ex.one_rep_max, unit) ?? 0) : null,
             order: i,
             selected: true,
+            superset_group: null,
           }))
         );
       } else {
@@ -193,12 +196,32 @@ export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, de
               </button>
             )}
           </div>
-          {entries.map((entry, i) => (
+          {entries.map((entry, i) => {
+            // Detect start of a superset group
+            const isFirstInSuperset =
+              entry.superset_group != null &&
+              (i === 0 || entries[i - 1].superset_group !== entry.superset_group);
+            // Count exercises in this superset group
+            const supersetCount = isFirstInSuperset
+              ? entries.filter(e => e.superset_group === entry.superset_group).length
+              : 0;
+
+            return (
+            <div key={i}>
+              {isFirstInSuperset && supersetCount > 1 && (
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Link size={10} className="text-violet-400" />
+                  <span className="text-[10px] font-semibold text-violet-400 uppercase tracking-wider">
+                    Superset
+                  </span>
+                </div>
+              )}
             <div
-              key={i}
               className={`rounded-xl border p-3 space-y-2 transition-colors ${
                 entry.selected
-                  ? 'border-ember/50 bg-surface-2/80'
+                  ? entry.superset_group != null
+                    ? 'border-violet-500/50 bg-violet-500/5'
+                    : 'border-ember/50 bg-surface-2/80'
                   : 'border-border bg-surface-2/30 opacity-60'
               }`}
             >
@@ -299,7 +322,9 @@ export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, de
                 </>
               )}
             </div>
-          ))}
+            </div>
+            );
+          })}
         </div>
 
         {/* Duration */}

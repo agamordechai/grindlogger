@@ -7,6 +7,8 @@ import {
   archiveExercise,
   seedExercises,
   reorderExercises,
+  createSuperset,
+  removeSuperset,
 } from '../api/client';
 import type { Exercise, CreateExerciseRequest, UpdateExerciseRequest } from '../types/exercise';
 import { useAuth } from '../contexts/AuthContext';
@@ -112,6 +114,16 @@ export function useExercises() {
     }
   }, [fetchExercises]);
 
+  const handleCreateSuperset = useCallback(async (exerciseIds: number[]) => {
+    await createSuperset(exerciseIds);
+    await fetchExercises();
+  }, [fetchExercises]);
+
+  const handleRemoveSuperset = useCallback(async (exerciseIds: number[]) => {
+    await removeSuperset(exerciseIds);
+    await fetchExercises();
+  }, [fetchExercises]);
+
   return {
     exercises,
     loading,
@@ -123,5 +135,7 @@ export function useExercises() {
     handleArchive,
     handleSeed,
     handleReorder,
+    handleCreateSuperset,
+    handleRemoveSuperset,
   };
 }

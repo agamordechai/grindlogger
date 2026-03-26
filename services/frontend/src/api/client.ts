@@ -250,6 +250,21 @@ export async function reorderExercises(items: { id: number; sort_order: number }
 }
 
 /**
+ * Group exercises into a superset.
+ */
+export async function createSuperset(exerciseIds: number[]): Promise<{ superset_group: number }> {
+  const response = await client.post<{ superset_group: number }>('/exercises/superset', { exercise_ids: exerciseIds });
+  return response.data;
+}
+
+/**
+ * Remove exercises from their superset group.
+ */
+export async function removeSuperset(exerciseIds: number[]): Promise<void> {
+  await client.post('/exercises/superset/remove', { exercise_ids: exerciseIds });
+}
+
+/**
  * Seed default sample exercises for the current user.
  */
 export async function seedExercises(split: 'ppl' | 'ab' | 'fullbody' = 'ppl'): Promise<{ seeded: number }> {

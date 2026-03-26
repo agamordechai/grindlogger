@@ -12,6 +12,7 @@ export interface Exercise {
   notes: string | null;
   archived: boolean;
   sort_order: number;
+  superset_group: number | null;
 }
 
 export interface ExerciseNameStatus {

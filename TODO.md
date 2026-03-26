@@ -18,7 +18,7 @@
 - [X] **Workout history/logging** — Record completed workouts with actual sets/reps/weight per session, auto-log on exercise edits, edit/delete sessions, mark day complete for streaks
 - [X] **Progress charts** — Visualize weight/volume/1RM progression over time, grouped by workout day with color-coded exercises
 - [ ] **Personal records (PRs)** — Automatically detect and celebrate new 1RM estimates or volume PRs
-- [ ] **Superset / circuit grouping** — Group exercises that are performed back-to-back
+- [X] **Superset / circuit grouping** — Group exercises that are performed back-to-back
 - [X] **Exercise notes** — Per-exercise notes (cues, reminders) and per-session free-text notes
 
 ## AI Coach

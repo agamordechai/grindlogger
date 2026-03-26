@@ -357,6 +357,55 @@ class ExerciseRepository:
             for ex in results
         ]
 
+    def set_superset_group(self, user_id: int, exercise_ids: list[int], group_id: int | None) -> None:
+        """Set superset_group for a list of exercises owned by a user.
+
+        When ungrouping (group_id=None), also collects the old group IDs
+        and auto-unlinks any group left with only one member.
+
+        Args:
+            user_id: Owner's user ID
+            exercise_ids: List of exercise IDs to update
+            group_id: The superset group ID (or None to ungroup)
+        """
+        old_groups: set[int] = set()
+        for eid in exercise_ids:
+            statement = select(ExerciseTable).where(
+                ExerciseTable.id == eid,
+                ExerciseTable.user_id == user_id,
+            )
+            exercise = self.session.exec(statement).first()
+            if exercise:
+                if exercise.superset_group is not None:
+                    old_groups.add(exercise.superset_group)
+                exercise.superset_group = group_id
+                self.session.add(exercise)
+        self.session.flush()
+
+        # Auto-unlink any old group left with a single member
+        if group_id is None:
+            for old_gid in old_groups:
+                remaining = self.session.exec(
+                    select(ExerciseTable).where(
+                        ExerciseTable.user_id == user_id,
+                        ExerciseTable.superset_group == old_gid,
+                    )
+                ).all()
+                if len(remaining) == 1:
+                    remaining[0].superset_group = None
+                    self.session.add(remaining[0])
+
+        self.session.commit()
+
+    def next_superset_group(self, user_id: int) -> int:
+        """Return the next available superset_group ID for a user."""
+        result = self.session.execute(
+            select(func.max(ExerciseTable.superset_group)).where(
+                ExerciseTable.user_id == user_id
+            )
+        ).scalar()
+        return (result or 0) + 1
+
     def update_sort_orders(self, user_id: int, orders: list[tuple[int, int]]) -> None:
         """Bulk-update sort_order for a list of exercises owned by a user.
 

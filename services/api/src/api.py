@@ -14,6 +14,7 @@ from io import StringIO
 from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
+from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from slowapi import Limiter
@@ -436,6 +437,44 @@ def reorder_exercises(
         current_user.id,
         [(item.id, item.sort_order) for item in body.items],
     )
+
+
+class SupersetRequest(BaseModel):
+    """Request to group exercises into a superset."""
+
+    exercise_ids: list[int] = Field(..., min_length=2, description="Exercise IDs to group")
+
+
+@app.post("/exercises/superset", status_code=200, tags=["Exercises"])
+@limiter.limit("60/minute")
+def create_superset(
+    request: Request,
+    body: SupersetRequest,
+    repository: RepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> dict[str, int]:
+    """Group exercises into a superset. Returns the assigned group ID."""
+    group_id = repository.next_superset_group(current_user.id)
+    repository.set_superset_group(current_user.id, body.exercise_ids, group_id)
+    return {"superset_group": group_id}
+
+
+class SupersetRemoveRequest(BaseModel):
+    """Request to remove exercises from their superset."""
+
+    exercise_ids: list[int] = Field(..., min_length=1, description="Exercise IDs to ungroup")
+
+
+@app.post("/exercises/superset/remove", status_code=204, tags=["Exercises"])
+@limiter.limit("60/minute")
+def remove_superset(
+    request: Request,
+    body: SupersetRemoveRequest,
+    repository: RepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> None:
+    """Remove exercises from their superset group."""
+    repository.set_superset_group(current_user.id, body.exercise_ids, None)
 
 
 @app.patch("/exercises/{exercise_id}", response_model=ExerciseResponse, tags=["Exercises"])
