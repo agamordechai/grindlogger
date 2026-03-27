@@ -7,14 +7,15 @@ import { createContext, useContext, useState, useRef, useCallback, useEffect, ty
 
 let audioCtx: AudioContext | null = null;
 
-function getAudioContext(): AudioContext | null {
+async function getAudioContext(): Promise<AudioContext | null> {
   try {
     if (!audioCtx) {
       audioCtx = new AudioContext();
     }
-    // Resume if suspended (happens after tab backgrounding on some browsers)
+    // Resume if suspended (happens after tab backgrounding on mobile browsers).
+    // Must be awaited — oscillators started before resume completes produce silence.
     if (audioCtx.state === 'suspended') {
-      audioCtx.resume();
+      await audioCtx.resume();
     }
     return audioCtx;
   } catch {
@@ -23,8 +24,8 @@ function getAudioContext(): AudioContext | null {
 }
 
 /** Unlock audio on user gesture — play a silent buffer so the context is "warm" */
-function unlockAudio() {
-  const ctx = getAudioContext();
+async function unlockAudio() {
+  const ctx = await getAudioContext();
   if (!ctx) return;
   // Play a silent buffer to satisfy the user-gesture requirement
   const buf = ctx.createBuffer(1, 1, ctx.sampleRate);
@@ -35,8 +36,8 @@ function unlockAudio() {
 }
 
 /** Play a two-tone chime using the pre-unlocked AudioContext */
-function playChime() {
-  const ctx = getAudioContext();
+async function playChime() {
+  const ctx = await getAudioContext();
   if (!ctx) return;
 
   const now = ctx.currentTime;
@@ -67,8 +68,8 @@ function playChime() {
 }
 
 /** Play a short single beep for step transitions */
-function playBeep() {
-  const ctx = getAudioContext();
+async function playBeep() {
+  const ctx = await getAudioContext();
   if (!ctx) return;
 
   const now = ctx.currentTime;
@@ -94,23 +95,30 @@ async function ensureNotificationPermission(): Promise<boolean> {
   return result === 'granted';
 }
 
-function showNotification() {
+async function showNotification() {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  try {
-    new Notification('Rest Over', {
+  // Prefer service worker notifications — they surface on the lock screen.
+  // The Notification() constructor is foreground-only and will be delayed until
+  // the user unlocks their phone.
+  const swReg = await navigator.serviceWorker?.ready.catch(() => null);
+  if (swReg) {
+    swReg.showNotification('Rest Over', {
       body: 'Get back to it! 💪',
       icon: '/favicon-192.png',
       tag: 'rest-timer',
       requireInteraction: false,
     });
-  } catch {
-    navigator.serviceWorker?.ready.then(reg => {
-      reg.showNotification('Rest Over', {
+  } else {
+    try {
+      new Notification('Rest Over', {
         body: 'Get back to it! 💪',
         icon: '/favicon-192.png',
         tag: 'rest-timer',
+        requireInteraction: false,
       });
-    });
+    } catch {
+      // Notification API unavailable
+    }
   }
 }
 
