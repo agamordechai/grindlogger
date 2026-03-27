@@ -332,10 +332,7 @@ class WorkoutSessionRepository:
 
         for i in range(3, -1, -1):  # 3 weeks ago → this week
             week_start = current_week_start - timedelta(weeks=i)
-            count = sum(
-                1 for d in range(7)
-                if (week_start + timedelta(days=d)) in date_set
-            )
+            count = sum(1 for d in range(7) if (week_start + timedelta(days=d)) in date_set)
             weekly_trend.append(WeekSummary(week_start=week_start, workouts=count))
 
         this_week = weekly_trend[-1].workouts if weekly_trend else 0

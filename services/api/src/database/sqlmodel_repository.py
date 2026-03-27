@@ -400,9 +400,7 @@ class ExerciseRepository:
     def next_superset_group(self, user_id: int) -> int:
         """Return the next available superset_group ID for a user."""
         result = self.session.execute(
-            select(func.max(ExerciseTable.superset_group)).where(
-                ExerciseTable.user_id == user_id
-            )
+            select(func.max(ExerciseTable.superset_group)).where(ExerciseTable.user_id == user_id)
         ).scalar()
         return (result or 0) + 1
 
