@@ -66,7 +66,9 @@ class ExerciseResponse(ExerciseBase):
     id: int = Field(..., ge=1, description="Unique identifier of the exercise")
     archived: bool = Field(default=False, description="Whether the exercise is archived")
     sort_order: int = Field(default=0, ge=0, description="User-defined display order")
-    superset_group: int | None = Field(default=None, description="Group ID for superset/circuit grouping (null = standalone)")
+    superset_group: int | None = Field(
+        default=None, description="Group ID for superset/circuit grouping (null = standalone)"
+    )
 
     model_config = {"from_attributes": True}
 
