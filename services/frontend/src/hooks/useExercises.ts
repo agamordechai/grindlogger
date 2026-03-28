@@ -62,7 +62,13 @@ export function useExercises() {
     if (!isAuthenticated) return;
     fetchExercises();
     const interval = setInterval(fetchExercises, 30000);
-    return () => clearInterval(interval);
+    // Refresh immediately when the AI coach performs actions
+    const onCoachAction = () => fetchExercises();
+    window.addEventListener('coach-action', onCoachAction);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('coach-action', onCoachAction);
+    };
   }, [fetchExercises, isAuthenticated]);
 
   const handleCreate = async (data: CreateExerciseRequest) => {

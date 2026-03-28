@@ -434,8 +434,11 @@ class ExerciseRepository:
         Returns:
             Number of exercises seeded (0 if user already has exercises)
         """
-        # Check if user already has exercises
-        statement = select(ExerciseTable).where(ExerciseTable.user_id == user_id)
+        # Check if user already has active (non-archived) exercises
+        statement = select(ExerciseTable).where(
+            ExerciseTable.user_id == user_id,
+            ExerciseTable.archived == False,  # noqa: E712
+        )
         existing = self.session.exec(statement).first()
         if existing:
             return 0

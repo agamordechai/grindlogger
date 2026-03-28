@@ -1,6 +1,7 @@
 """HTTP client for communicating with the Workout Tracker API."""
 
 import logging
+from typing import Any
 
 import httpx
 
@@ -101,6 +102,46 @@ class WorkoutAPIClient:
             exercise_count=len(exercises),
             muscle_groups_worked=muscle_groups,
         )
+
+    async def create_exercise(self, data: dict[str, Any], auth_header: str | None = None) -> dict[str, Any]:
+        """Create a new exercise via the Workout API."""
+        client = await self._get_client()
+        headers = {}
+        if auth_header:
+            headers["Authorization"] = auth_header
+        response = await client.post("/exercises", json=data, headers=headers)
+        response.raise_for_status()
+        return response.json()
+
+    async def edit_exercise(self, exercise_id: int, data: dict[str, Any], auth_header: str | None = None) -> dict[str, Any]:
+        """Edit an existing exercise via the Workout API."""
+        client = await self._get_client()
+        headers = {}
+        if auth_header:
+            headers["Authorization"] = auth_header
+        response = await client.patch(f"/exercises/{exercise_id}", json=data, headers=headers)
+        response.raise_for_status()
+        return response.json()
+
+    async def create_session(self, data: dict[str, Any], auth_header: str | None = None) -> dict[str, Any]:
+        """Log a workout session via the Workout API."""
+        client = await self._get_client()
+        headers = {}
+        if auth_header:
+            headers["Authorization"] = auth_header
+        response = await client.post("/sessions", json=data, headers=headers)
+        response.raise_for_status()
+        return response.json()
+
+    async def create_measurement(self, data: dict[str, Any], auth_header: str | None = None) -> dict[str, Any]:
+        """Add a body measurement via the Workout API."""
+        client = await self._get_client()
+        headers = {}
+        if auth_header:
+            headers["Authorization"] = auth_header
+        response = await client.post("/measurements", json=data, headers=headers)
+        response.raise_for_status()
+        return response.json()
 
     def _identify_muscle_groups(self, exercises: list[ExerciseFromAPI]) -> list[str]:
         """Identify muscle groups from exercise names.

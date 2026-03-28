@@ -9,11 +9,14 @@ from openai import AsyncOpenAI
 
 from services.ai_coach.src.config import get_settings
 from services.ai_coach.src.models import (
+    ActionPerformed,
+    ChatMessage,
     MuscleGroup,
     ProgressAnalysis,
     WorkoutContext,
     WorkoutRecommendation,
 )
+from services.ai_coach.src.workout_client import WorkoutAPIClient
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +31,7 @@ Key responsibilities:
 3. Offer form tips and safety advice
 4. Help users understand proper training volume and progression
 5. Motivate and encourage users in their fitness journey
+6. Perform actions on behalf of the user when asked — add exercises, log workouts, record measurements
 
 Guidelines:
 - Be encouraging but honest
@@ -36,9 +40,127 @@ Guidelines:
 - Provide specific, actionable advice
 - Use clear, simple language avoiding excessive jargon
 - When suggesting weights, be conservative and emphasize starting light
+- Today's date is {today}
+
+Action guidelines:
+- When the user asks you to add, create, modify, or log something, USE THE TOOLS immediately. Do not just describe what you would do — actually do it.
+- You can call multiple tools in one turn (e.g. bulk-add several exercises at once).
+- After performing actions, briefly confirm what you did.
+- Do NOT ask excessive clarifying questions. If the user's intent is clear, act on it. Use reasonable defaults for anything unspecified (e.g. default workout_day "A", today's date for logging).
+- Only ask for clarification when genuinely ambiguous (e.g. "add an exercise" with no details).
+- Keep responses concise and focused. Avoid repeating back what the user said or listing things they already know.
 
 If workout context is provided, analyze it and tailor your responses accordingly.
 """
+
+# Tool definitions for Claude function calling
+COACH_TOOLS = [
+    {
+        "name": "create_exercise",
+        "description": "Add a new exercise to the user's workout plan. Use this when the user asks to add an exercise.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Exercise name (e.g. 'Bench Press', 'Squat')"},
+                "sets": {"type": "integer", "description": "Number of sets (1-100)"},
+                "reps": {"type": "integer", "description": "Number of reps per set (1-1000)"},
+                "weight": {
+                    "type": "number",
+                    "description": "Weight in kg (omit or null for bodyweight exercises)",
+                },
+                "workout_day": {
+                    "type": "string",
+                    "enum": ["A", "B", "C", "D", "E", "F", "G", "None"],
+                    "description": "Workout day letter. Use 'None' for daily exercises.",
+                    "default": "A",
+                },
+                "notes": {
+                    "type": "string",
+                    "description": "Optional notes or cues for the exercise",
+                },
+            },
+            "required": ["name", "sets", "reps"],
+        },
+    },
+    {
+        "name": "edit_exercise",
+        "description": "Modify an existing exercise. Use this when the user asks to change sets, reps, weight, name, or day of an exercise. Requires the exercise ID from the workout context.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "exercise_id": {"type": "integer", "description": "ID of the exercise to edit (from workout context)"},
+                "name": {"type": "string", "description": "New exercise name"},
+                "sets": {"type": "integer", "description": "New number of sets"},
+                "reps": {"type": "integer", "description": "New number of reps"},
+                "weight": {"type": "number", "description": "New weight in kg"},
+                "workout_day": {
+                    "type": "string",
+                    "enum": ["A", "B", "C", "D", "E", "F", "G", "None"],
+                    "description": "New workout day letter. Use 'None' for daily exercises.",
+                },
+                "notes": {"type": "string", "description": "New notes"},
+            },
+            "required": ["exercise_id"],
+        },
+    },
+    {
+        "name": "log_workout",
+        "description": "Log a completed workout session. Use this when the user says they finished a workout or wants to log exercises they did today.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "date": {"type": "string", "description": "Workout date in YYYY-MM-DD format"},
+                "workout_day": {
+                    "type": "string",
+                    "enum": ["A", "B", "C", "D", "E", "F", "G"],
+                    "description": "Which workout day was performed.",
+                },
+                "notes": {"type": "string", "description": "Optional session notes"},
+                "duration_minutes": {"type": "integer", "description": "Workout duration in minutes"},
+                "exercises": {
+                    "type": "array",
+                    "description": "Exercises performed in this session",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "exercise_name": {"type": "string"},
+                            "sets_completed": {"type": "integer"},
+                            "reps_completed": {"type": "integer"},
+                            "weight_used": {"type": "number", "description": "Weight in kg"},
+                        },
+                        "required": ["exercise_name", "sets_completed", "reps_completed"],
+                    },
+                },
+            },
+            "required": ["date", "workout_day", "exercises"],
+        },
+    },
+    {
+        "name": "add_measurement",
+        "description": "Record a body measurement entry. Use this when the user provides body measurements like weight, body fat, or tape measurements.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "date": {"type": "string", "description": "Measurement date in YYYY-MM-DD format"},
+                "weight_kg": {"type": "number", "description": "Body weight in kg"},
+                "body_fat_pct": {"type": "number", "description": "Body fat percentage"},
+                "chest_cm": {"type": "number", "description": "Chest circumference in cm"},
+                "waist_cm": {"type": "number", "description": "Waist circumference in cm"},
+                "hips_cm": {"type": "number", "description": "Hips circumference in cm"},
+                "bicep_left_cm": {"type": "number", "description": "Left bicep circumference in cm"},
+                "bicep_right_cm": {"type": "number", "description": "Right bicep circumference in cm"},
+                "thigh_left_cm": {"type": "number", "description": "Left thigh circumference in cm"},
+                "thigh_right_cm": {"type": "number", "description": "Right thigh circumference in cm"},
+                "neck_cm": {"type": "number", "description": "Neck circumference in cm"},
+                "shoulders_cm": {"type": "number", "description": "Shoulders circumference in cm"},
+                "forearm_cm": {"type": "number", "description": "Forearm circumference in cm"},
+                "calf_cm": {"type": "number", "description": "Calf circumference in cm"},
+                "notes": {"type": "string", "description": "Optional notes"},
+            },
+            "required": ["date"],
+        },
+    },
+]
 
 settings = get_settings()
 
@@ -89,16 +211,196 @@ def _format_workout_context(workout_context: WorkoutContext | None) -> str:
         ctx += "\n  Daily (Every Day):\n"
         for ex in daily_exercises:
             weight_str = f" @ {ex.weight}kg" if ex.weight else " (bodyweight)"
-            ctx += f"    - {ex.name}: {ex.sets} sets x {ex.reps} reps{weight_str}\n"
+            ctx += f"    - [ID:{ex.id}] {ex.name}: {ex.sets} sets x {ex.reps} reps{weight_str}\n"
 
     for day in sorted(split_days):
         day_exercises = [ex for ex in workout_context.exercises if ex.workout_day == day]
         ctx += f"\n  Day {day}:\n"
         for ex in day_exercises:
             weight_str = f" @ {ex.weight}kg" if ex.weight else " (bodyweight)"
-            ctx += f"    - {ex.name}: {ex.sets} sets x {ex.reps} reps{weight_str}\n"
+            ctx += f"    - [ID:{ex.id}] {ex.name}: {ex.sets} sets x {ex.reps} reps{weight_str}\n"
 
     return ctx
+
+
+def _build_messages(history: list[ChatMessage], user_prompt: str) -> list[dict[str, Any]]:
+    """Build a messages list from conversation history + the current user message."""
+    messages: list[dict[str, Any]] = []
+    for msg in history:
+        messages.append({"role": msg.role, "content": msg.content})
+    messages.append({"role": "user", "content": user_prompt})
+    return messages
+
+
+async def _execute_tool(
+    tool_name: str,
+    tool_input: dict[str, Any],
+    workout_client: WorkoutAPIClient,
+    auth_header: str | None,
+) -> tuple[str, ActionPerformed | None]:
+    """Execute a single tool call and return (result_text, action_performed)."""
+    try:
+        if tool_name == "create_exercise":
+            result = await workout_client.create_exercise(tool_input, auth_header)
+            action = ActionPerformed(
+                action="create_exercise",
+                description=f"Added exercise: {tool_input['name']} ({tool_input['sets']}x{tool_input['reps']})",
+                details=result,
+            )
+            return json.dumps(result), action
+
+        elif tool_name == "edit_exercise":
+            eid = tool_input["exercise_id"]
+            payload = {k: v for k, v in tool_input.items() if k != "exercise_id"}
+            result = await workout_client.edit_exercise(eid, payload, auth_header)
+            changed = ", ".join(f"{k}={v}" for k, v in payload.items())
+            action = ActionPerformed(
+                action="edit_exercise",
+                description=f"Updated exercise #{eid}: {changed}",
+                details=result,
+            )
+            return json.dumps(result), action
+
+        elif tool_name == "log_workout":
+            result = await workout_client.create_session(tool_input, auth_header)
+            n = len(tool_input.get("exercises", []))
+            action = ActionPerformed(
+                action="log_workout",
+                description=f"Logged workout on {tool_input['date']} (day {tool_input['workout_day']}, {n} exercises)",
+                details=result,
+            )
+            return json.dumps(result), action
+
+        elif tool_name == "add_measurement":
+            result = await workout_client.create_measurement(tool_input, auth_header)
+            metrics = [k for k, v in tool_input.items() if v is not None and k not in ("date", "notes")]
+            action = ActionPerformed(
+                action="add_measurement",
+                description=f"Recorded measurements on {tool_input['date']}: {', '.join(metrics)}",
+                details=result,
+            )
+            return json.dumps(result), action
+
+        else:
+            return json.dumps({"error": f"Unknown tool: {tool_name}"}), None
+
+    except Exception as e:
+        logger.error(f"Tool execution error ({tool_name}): {e}")
+        return json.dumps({"error": str(e)}), None
+
+
+async def _anthropic_chat_with_tools(
+    api_key: str,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    workout_client: WorkoutAPIClient,
+    auth_header: str | None,
+    history: list[ChatMessage] | None = None,
+) -> tuple[str, list[ActionPerformed]]:
+    """Anthropic chat with tool-use loop. Returns (response_text, actions_performed)."""
+    client = anthropic.AsyncAnthropic(api_key=api_key)
+    messages: list[dict[str, Any]] = _build_messages(history or [], user_prompt)
+    actions: list[ActionPerformed] = []
+
+    max_iterations = 10
+    for _ in range(max_iterations):
+        response = await client.messages.create(
+            model=model,
+            max_tokens=2048,
+            temperature=settings.ai_temperature,
+            system=system_prompt,
+            messages=messages,
+            tools=COACH_TOOLS,
+        )
+
+        # If no tool use, extract final text and return
+        if response.stop_reason != "tool_use":
+            text_parts = [block.text for block in response.content if block.type == "text"]
+            return "\n".join(text_parts), actions
+
+        # Process tool calls
+        tool_results = []
+        for block in response.content:
+            if block.type == "tool_use":
+                result_text, action = await _execute_tool(
+                    block.name, block.input, workout_client, auth_header
+                )
+                if action:
+                    actions.append(action)
+                tool_results.append(
+                    {"type": "tool_result", "tool_use_id": block.id, "content": result_text}
+                )
+
+        # Append assistant response and tool results for next iteration
+        messages.append({"role": "assistant", "content": response.content})
+        messages.append({"role": "user", "content": tool_results})
+
+    # Fallback if we hit max iterations
+    return "I performed several actions but reached the processing limit. Please check your data.", actions
+
+
+async def _openai_chat_with_tools(
+    api_key: str,
+    base_url: str,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    workout_client: WorkoutAPIClient,
+    auth_header: str | None,
+    history: list[ChatMessage] | None = None,
+) -> tuple[str, list[ActionPerformed]]:
+    """OpenAI-compatible chat with tool-use loop. Returns (response_text, actions_performed)."""
+    client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+    actions: list[ActionPerformed] = []
+
+    openai_tools = []
+    for tool in COACH_TOOLS:
+        openai_tools.append({
+            "type": "function",
+            "function": {
+                "name": tool["name"],
+                "description": tool["description"],
+                "parameters": tool["input_schema"],
+            },
+        })
+
+    messages: list[dict[str, Any]] = [
+        {"role": "system", "content": system_prompt},
+        *_build_messages(history or [], user_prompt),
+    ]
+
+    max_iterations = 10
+    for _ in range(max_iterations):
+        response = await client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=settings.ai_temperature,
+            tools=openai_tools,
+        )
+        choice = response.choices[0]
+
+        if choice.finish_reason != "tool_calls" or not choice.message.tool_calls:
+            return choice.message.content or "", actions
+
+        # Append assistant message with tool calls
+        messages.append(choice.message)
+
+        # Execute each tool call
+        for tc in choice.message.tool_calls:
+            tool_input = json.loads(tc.function.arguments)
+            result_text, action = await _execute_tool(
+                tc.function.name, tool_input, workout_client, auth_header
+            )
+            if action:
+                actions.append(action)
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tc.id,
+                "content": result_text,
+            })
+
+    return "I performed several actions but reached the processing limit. Please check your data.", actions
 
 
 async def _anthropic_completion(
@@ -108,7 +410,7 @@ async def _anthropic_completion(
     user_prompt: str,
     response_format: type | None = None,
 ) -> str:
-    """Make a completion request using the Anthropic SDK."""
+    """Make a completion request using the Anthropic SDK (no tools)."""
     client = anthropic.AsyncAnthropic(api_key=api_key)
 
     if response_format is not None:
@@ -195,21 +497,54 @@ async def chat_with_coach(
     api_key: str | None = None,
     base_url: str | None = None,
     model: str | None = None,
-) -> str:
-    """Chat with the AI coach."""
+    workout_client: WorkoutAPIClient | None = None,
+    auth_header: str | None = None,
+    history: list[ChatMessage] | None = None,
+) -> tuple[str, list[ActionPerformed]]:
+    """Chat with the AI coach. Returns (response_text, actions_performed)."""
     if not api_key:
         raise ValueError("API key is required")
 
-    system_prompt = COACH_SYSTEM_PROMPT + _format_workout_context(workout_context)
+    from datetime import date
+
+    system_prompt = COACH_SYSTEM_PROMPT.format(today=date.today().isoformat()) + _format_workout_context(
+        workout_context
+    )
 
     try:
-        return await _chat_completion(
-            api_key=api_key,
-            base_url=base_url,
-            model=model or settings.ai_model,
-            system_prompt=system_prompt,
-            user_prompt=message,
-        )
+        if workout_client and auth_header:
+            # Use tool-enabled flow
+            if _is_anthropic(api_key, base_url):
+                return await _anthropic_chat_with_tools(
+                    api_key=api_key,
+                    model=model or settings.ai_model,
+                    system_prompt=system_prompt,
+                    user_prompt=message,
+                    workout_client=workout_client,
+                    auth_header=auth_header,
+                    history=history,
+                )
+            else:
+                return await _openai_chat_with_tools(
+                    api_key=api_key,
+                    base_url=base_url or settings.ai_base_url,
+                    model=model or settings.ai_model,
+                    system_prompt=system_prompt,
+                    user_prompt=message,
+                    workout_client=workout_client,
+                    auth_header=auth_header,
+                    history=history,
+                )
+        else:
+            # Fallback to simple completion (no tools)
+            result = await _chat_completion(
+                api_key=api_key,
+                base_url=base_url,
+                model=model or settings.ai_model,
+                system_prompt=system_prompt,
+                user_prompt=message,
+            )
+            return result, []
     except Exception as e:
         logger.error(f"Chat error: {e}")
         raise
@@ -258,7 +593,11 @@ IMPORTANT - Workout Day Assignment:
 
 If workout context is available, complement existing exercises rather than duplicate them."""
 
-    system_prompt = COACH_SYSTEM_PROMPT + _format_workout_context(workout_context)
+    from datetime import date as date_cls
+
+    system_prompt = COACH_SYSTEM_PROMPT.format(today=date_cls.today().isoformat()) + _format_workout_context(
+        workout_context
+    )
 
     try:
         raw = await _chat_completion(
@@ -299,7 +638,11 @@ Provide:
 
 Be encouraging but honest. Focus on practical improvements specific to this person's actual workout."""
 
-    system_prompt = COACH_SYSTEM_PROMPT + _format_workout_context(workout_context)
+    from datetime import date as date_cls
+
+    system_prompt = COACH_SYSTEM_PROMPT.format(today=date_cls.today().isoformat()) + _format_workout_context(
+        workout_context
+    )
 
     try:
         raw = await _chat_completion(

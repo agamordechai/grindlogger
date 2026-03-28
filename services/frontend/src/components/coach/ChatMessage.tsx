@@ -1,13 +1,29 @@
 import { motion } from 'framer-motion';
-import { Bot } from 'lucide-react';
+import { Bot, Dumbbell, ClipboardCheck, Ruler } from 'lucide-react';
+import type { ActionPerformed } from '../../types/aiCoach';
+
+const ACTION_ICONS: Record<string, typeof Dumbbell> = {
+  create_exercise: Dumbbell,
+  edit_exercise: Dumbbell,
+  log_workout: ClipboardCheck,
+  add_measurement: Ruler,
+};
+
+const ACTION_LABELS: Record<string, string> = {
+  create_exercise: 'Exercise added',
+  edit_exercise: 'Exercise updated',
+  log_workout: 'Workout logged',
+  add_measurement: 'Measurement recorded',
+};
 
 interface ChatMessageProps {
   role: 'user' | 'assistant';
   content: string;
   index: number;
+  actions?: ActionPerformed[];
 }
 
-export function ChatMessage({ role, content, index }: ChatMessageProps) {
+export function ChatMessage({ role, content, index, actions }: ChatMessageProps) {
   const isAssistant = role === 'assistant';
 
   return (
@@ -31,6 +47,22 @@ export function ChatMessage({ role, content, index }: ChatMessageProps) {
           ? 'bg-surface-2 text-chalk border border-border'
           : 'bg-gradient-to-br from-ember to-ember-dark text-white'
       }`}>
+        {actions && actions.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {actions.map((action, i) => {
+              const Icon = ACTION_ICONS[action.action] ?? Dumbbell;
+              return (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"
+                >
+                  <Icon size={12} />
+                  {ACTION_LABELS[action.action] ?? action.action}
+                </span>
+              );
+            })}
+          </div>
+        )}
         <p className="whitespace-pre-wrap">{content}</p>
       </div>
     </motion.div>

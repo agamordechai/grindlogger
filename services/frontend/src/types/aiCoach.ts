@@ -17,11 +17,19 @@ export type MuscleGroup =
 export interface ChatRequest {
   message: string;
   include_workout_context: boolean;
+  history?: ChatMessage[];
+}
+
+export interface ActionPerformed {
+  action: string;
+  description: string;
+  details: Record<string, unknown>;
 }
 
 export interface ChatResponse {
   response: string;
   context_used: boolean;
+  actions_performed: ActionPerformed[];
 }
 
 export interface RecommendationRequest {

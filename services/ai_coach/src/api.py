@@ -191,25 +191,30 @@ async def chat(request: Request, chat_request: ChatRequest) -> ChatResponse:
     """Chat with the AI workout coach."""
     api_key, base_url, model = _resolve_ai_credentials(request)
     auth_header = _get_auth_header(request)
+    workout_client = get_workout_client()
     workout_context = None
 
     if chat_request.include_workout_context:
         try:
-            workout_client = get_workout_client()
             workout_context = await workout_client.get_workout_context(auth_header=auth_header)
         except Exception as e:
             logger.warning(f"Failed to fetch workout context: {e}")
 
     try:
-        response = await chat_with_coach(
+        response_text, actions_performed = await chat_with_coach(
             chat_request.message,
             workout_context,
             api_key=api_key,
             base_url=base_url,
             model=model,
+            workout_client=workout_client,
+            auth_header=auth_header,
+            history=chat_request.history or None,
         )
         return ChatResponse(
-            response=response, context_used=workout_context is not None and len(workout_context.exercises) > 0
+            response=response_text,
+            context_used=workout_context is not None and len(workout_context.exercises) > 0,
+            actions_performed=actions_performed,
         )
     except Exception as e:
         logger.error(f"Chat error: {e}")

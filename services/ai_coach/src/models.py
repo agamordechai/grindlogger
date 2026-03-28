@@ -1,6 +1,7 @@
 """Pydantic models for the AI Coach service."""
 
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -9,6 +10,14 @@ from services.shared.models import ExerciseResponse
 
 # Alias for backward compatibility
 ExerciseFromAPI = ExerciseResponse
+
+
+class ActionPerformed(BaseModel):
+    """An action the AI coach performed on behalf of the user."""
+
+    action: str = Field(..., description="Action type: create_exercise, edit_exercise, log_workout, add_measurement")
+    description: str = Field(..., description="Human-readable summary of what was done")
+    details: dict[str, Any] = Field(default_factory=dict, description="API response data")
 
 
 class MuscleGroup(str, Enum):
@@ -47,6 +56,10 @@ class ChatRequest(BaseModel):
 
     message: str = Field(..., min_length=1, max_length=2000, description="User message")
     include_workout_context: bool = Field(default=True, description="Include current workout data")
+    history: list[ChatMessage] = Field(
+        default_factory=list,
+        description="Prior conversation messages for multi-turn context",
+    )
 
 
 class ChatResponse(BaseModel):
@@ -54,6 +67,9 @@ class ChatResponse(BaseModel):
 
     response: str = Field(..., description="AI coach response")
     context_used: bool = Field(..., description="Whether workout context was included")
+    actions_performed: list[ActionPerformed] = Field(
+        default_factory=list, description="Actions the coach performed on behalf of the user"
+    )
 
 
 class RecommendationRequest(BaseModel):

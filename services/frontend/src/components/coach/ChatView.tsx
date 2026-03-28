@@ -2,20 +2,24 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, MessageSquarePlus, History, Trash2, X, ChevronLeft } from 'lucide-react';
 import { chatWithCoach, listConversations, getConversation, saveConversation, deleteConversation } from '../../api/client';
 import { ChatMessage } from './ChatMessage';
-import type { ChatMessage as ChatMessageType, ConversationSummary } from '../../types/aiCoach';
+import type { ChatMessage as ChatMessageType, ConversationSummary, ActionPerformed } from '../../types/aiCoach';
 
-const WELCOME_MESSAGE: ChatMessageType = {
+interface ChatMessageWithActions extends ChatMessageType {
+  actions?: ActionPerformed[];
+}
+
+const WELCOME_MESSAGE: ChatMessageWithActions = {
   role: 'assistant',
-  content: "Hey! I'm your AI fitness coach. Ask me anything about your routine, form tips, or training strategy. I can see your current exercises and give personalized advice.",
+  content: "Hey! I'm your AI fitness coach. Ask me anything about your routine, form tips, or training strategy. I can see your current exercises and give personalized advice. I can also add exercises, log workouts, and record measurements for you — just ask!",
 };
 
-const DEFAULT_MESSAGES: ChatMessageType[] = [WELCOME_MESSAGE];
+const DEFAULT_MESSAGES: ChatMessageWithActions[] = [WELCOME_MESSAGE];
 
 const SUGGESTIONS = [
   "What exercises should I add for balance?",
   "How can I improve my bench press?",
-  "Am I doing enough volume for back?",
-  "What's a good warm-up routine?",
+  "Add 3 sets of 10 bicep curls at 15kg to day B",
+  "Log today's workout: day A, 45 minutes",
 ];
 
 function generateId(): string {
@@ -23,7 +27,7 @@ function generateId(): string {
 }
 
 export function ChatView() {
-  const [messages, setMessages] = useState<ChatMessageType[]>(DEFAULT_MESSAGES);
+  const [messages, setMessages] = useState<ChatMessageWithActions[]>(DEFAULT_MESSAGES);
   const [conversationId, setConversationId] = useState<string>(generateId);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -38,7 +42,7 @@ export function ChatView() {
   }, [messages]);
 
   // Debounced save to Redis after messages change (only if there are user messages)
-  const persistMessages = useCallback((msgs: ChatMessageType[], convId: string) => {
+  const persistMessages = useCallback((msgs: ChatMessageWithActions[], convId: string) => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     // Only save if there are user messages
     if (!msgs.some(m => m.role === 'user')) return;
@@ -65,12 +69,26 @@ export function ChatView() {
 
     const userMessage = input.trim();
     setInput('');
+
+    // Capture history before adding the new user message — skip the welcome message
+    const history = messages
+      .filter((_, i) => i > 0)
+      .map(({ role, content }) => ({ role, content }));
+
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setLoading(true);
 
     try {
-      const response = await chatWithCoach(userMessage, includeContext);
-      setMessages(prev => [...prev, { role: 'assistant', content: response.response }]);
+      const response = await chatWithCoach(userMessage, includeContext, history);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: response.response,
+        actions: response.actions_performed?.length ? response.actions_performed : undefined,
+      }]);
+      // If the coach performed actions, dispatch an event so other components can refresh
+      if (response.actions_performed?.length) {
+        window.dispatchEvent(new CustomEvent('coach-action', { detail: response.actions_performed }));
+      }
     } catch (err: any) {
       if (err?.response?.status === 403) {
         setMessages(prev => [
@@ -211,7 +229,7 @@ export function ChatView() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto space-y-4 p-4">
         {messages.map((msg, idx) => (
-          <ChatMessage key={idx} role={msg.role} content={msg.content} index={idx} />
+          <ChatMessage key={idx} role={msg.role} content={msg.content} index={idx} actions={msg.actions} />
         ))}
         {loading && (
           <div className="flex gap-2.5">

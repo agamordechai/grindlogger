@@ -20,21 +20,30 @@
 - [ ] **Personal records (PRs)** — Automatically detect and celebrate new 1RM estimates or volume PRs
 - [X] **Superset / circuit grouping** — Group exercises that are performed back-to-back
 - [X] **Exercise notes** — Per-exercise notes (cues, reminders) and per-session free-text notes
+- [ ] **Exercise variant tracking** — Link exercise variations (Barbell Bench → Dumbbell Bench → Machine Bench) and compare progression across variants
+- [ ] **Advanced set types** — Toggle sets as warm-up, drop-set, AMRAP, or failure
 
 ## AI Coach
 - [X] **AI chat** — Conversation-based coaching with workout context awareness
 - [X] **Chat history persistence** — Save conversations to Redis (14-day TTL, auto-eviction)
 - [X] **Workout generator** — AI-powered custom routine generation
 - [X] **Progress analysis** — Muscle balance scoring, strengths/weaknesses, recommendations
-- [ ] **AI actions via API** — Let the coach perform actions on behalf of the user (bulk-add measurements, create/modify exercises, log workouts)
+- [X] **AI actions via API** — Let the coach perform actions on behalf of the user (bulk-add measurements, create/modify exercises, log workouts)
 - [ ] **Custom routine generation** — AI creates unique, personalized workout routine templates based on goals, equipment, and schedule
 - [ ] **Progressive overload suggestions** — AI analyzes logged history and recommends when to increase weight/volume
 - [ ] **Form tips** — Exercise-specific technique cues
+### AI Coach - Advanced
+- [ ] **Auto-program design** *(low priority)* — AI periodizes training automatically (linear progression, wave loading, etc.)
+- [ ] **Injury risk assessment** — AI monitors for exercise patterns that might indicate injury risk
+- [ ] **Plateau breaker** — Suggest exercise swaps when progress stalls on lifts
+- [ ] **AI volume load distribution** — Show optimal muscle group volume ranges and where you deviate
+- [ ] **Goal auto-tracking** — Set goals (deadlift 405, lose 10 lbs) and auto-update progress percentage
 
 ## Social & Motivation
 - [X] **Weekly workout trend** — 4-week workout frequency trend with visual bar chart
 - [ ] **Workout sharing** — Generate shareable links or images of routines
 - [ ] **Leaderboard** — Opt-in community stats (total volume, consistency, etc.)
+- [ ] **Anonymous stats comparison** — See how you rank vs similar users without exposing identity
 
 ## Quality of Life
 - [X] **Dark/light theme toggle** — User-selectable theme
@@ -55,3 +64,13 @@
 - [ ] **Import from other apps** — Import workout data from Strong, JEFIT, or other common CSV formats
 - [x] **Body measurements tracking** — Weight, body fat %, measurements over time
 - [ ] **Webhook/Zapier integration** — Trigger external actions on workout completion
+- [ ] **Apple Health / Health Connect** — Bi-directional sync for bodyweight, active energy, and workout durations
+- [ ] **Data export** — Allow users to download all their history in CSV/JSON format
+- [ ] **Smartwatch companion** — Apple Watch / Wear OS extension for logging sets and triggering timers from the wrist
+- [ ] **Spotify integration** — Log which playlist was used for workouts, correlate with performance
+- [ ] **Calendar sync** — Sync workout schedule to Google Calendar/Outlook
+### Data & Integration - Advanced(after application deployment)
+- [ ] **Offline mode** — Work out without internet, sync when reconnected
+- [ ] **Wearable timers** — Send rest timers to connected smartwatches
+- [ ] **Haptic feedback** — Phone vibrates on set completion reminders
+

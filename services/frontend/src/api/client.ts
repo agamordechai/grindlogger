@@ -49,7 +49,7 @@ const client: AxiosInstance = axios.create({
 
 const aiCoachClient: AxiosInstance = axios.create({
   baseURL: AI_COACH_BASE_URL,
-  timeout: 60000, // Longer timeout for AI responses
+  timeout: 120000, // Longer timeout for AI responses (tool-use loops can take multiple iterations)
   headers: {
     'Content-Type': 'application/json',
     'X-Trace-Id': TRACE_ID,
@@ -444,11 +444,13 @@ export async function getAICoachHealth(): Promise<AICoachHealthResponse> {
  */
 export async function chatWithCoach(
   message: string,
-  includeWorkoutContext: boolean = true
+  includeWorkoutContext: boolean = true,
+  history?: ChatMessage[]
 ): Promise<ChatResponse> {
   const request: ChatRequest = {
     message,
     include_workout_context: includeWorkoutContext,
+    history,
   };
   const response = await aiCoachClient.post<ChatResponse>('/chat', request);
   return response.data;
