@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, CalendarDays, Ruler, Bot, Settings, Shield } from 'lucide-react';
+import { Home, CalendarDays, Ruler, Bot, Shield } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const BASE_TABS = [
@@ -9,7 +9,6 @@ const BASE_TABS = [
   { to: '/history', label: 'History', icon: CalendarDays },
   { to: '/measurements', label: 'Body', icon: Ruler },
   { to: '/coach', label: 'Coach', icon: Bot },
-  { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
 export function BottomNav() {

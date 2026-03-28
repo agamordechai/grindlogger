@@ -11,7 +11,6 @@ const BASE_NAV_ITEMS = [
   { to: '/history', label: 'History', icon: CalendarDays },
   { to: '/measurements', label: 'Body', icon: Ruler },
   { to: '/coach', label: 'Coach', icon: Bot },
-  { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
 export function TopBar() {
