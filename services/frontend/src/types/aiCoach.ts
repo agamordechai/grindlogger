@@ -37,6 +37,9 @@ export interface RecommendationRequest {
   custom_focus_area?: string;
   equipment_available?: string[];
   session_duration_minutes?: number;
+  training_goal?: string;
+  training_days_per_week?: number;
+  experience_level?: string;
 }
 
 export interface ExerciseRecommendation {

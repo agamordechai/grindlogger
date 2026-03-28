@@ -82,7 +82,18 @@ class RecommendationRequest(BaseModel):
     equipment_available: list[str] = Field(
         default_factory=lambda: ["barbell", "dumbbells", "cables", "bodyweight"], description="Available equipment"
     )
-    session_duration_minutes: int = Field(default=60, ge=15, le=180, description="Workout duration")
+    session_duration_minutes: int = Field(default=60, ge=5, le=180, description="Workout duration per session")
+    training_goal: str | None = Field(
+        default=None,
+        description="Primary training goal: hypertrophy, strength, endurance, fat_loss, general_fitness",
+    )
+    training_days_per_week: int | None = Field(
+        default=None, ge=2, le=7, description="How many days per week the user can train"
+    )
+    experience_level: str | None = Field(
+        default=None,
+        description="Experience level: beginner, intermediate, advanced",
+    )
 
 
 class ExerciseRecommendation(BaseModel):

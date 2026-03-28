@@ -223,6 +223,18 @@ def _format_workout_context(workout_context: WorkoutContext | None) -> str:
     return ctx
 
 
+def _strip_json_fences(text: str) -> str:
+    """Strip markdown code fences from JSON responses."""
+    text = text.strip()
+    if text.startswith("```"):
+        # Remove opening fence (```json or ```)
+        first_newline = text.index("\n")
+        text = text[first_newline + 1 :]
+    if text.endswith("```"):
+        text = text[:-3]
+    return text.strip()
+
+
 def _build_messages(history: list[ChatMessage], user_prompt: str) -> list[dict[str, Any]]:
     """Build a messages list from conversation history + the current user message."""
     messages: list[dict[str, Any]] = []
@@ -422,7 +434,7 @@ async def _anthropic_completion(
 
     message = await client.messages.create(
         model=model,
-        max_tokens=1024,
+        max_tokens=4096,
         temperature=settings.ai_temperature,
         system=system_prompt,
         messages=[{"role": "user", "content": user_prompt}],
@@ -556,6 +568,9 @@ async def get_workout_recommendation(
     custom_focus_area: str | None = None,
     equipment: list[str] | None = None,
     session_duration: int = 60,
+    training_goal: str | None = None,
+    training_days_per_week: int | None = None,
+    experience_level: str | None = None,
     api_key: str | None = None,
     base_url: str | None = None,
     model: str | None = None,
@@ -566,32 +581,58 @@ async def get_workout_recommendation(
 
     focus_label = custom_focus_area or (focus_area.value.replace("_", "/").title() if focus_area else "Full Body")
     equip = equipment or ["barbell", "dumbbells", "cables", "bodyweight"]
+    goal_label = (training_goal or "general_fitness").replace("_", " ").title()
+    level_label = (experience_level or "intermediate").title()
+    days = training_days_per_week or 3
 
-    prompt = f"""Generate a complete workout routine recommendation.
+    prompt = f"""Generate a complete, personalized workout routine.
 
+Training Goal: {goal_label}
+Experience Level: {level_label}
+Training Days Per Week: {days}
 Session Duration: {session_duration} minutes per session
 Focus Area: {focus_label}
-Available Equipment: {", ".join(equip)}
+Available Equipment: ONLY {", ".join(equip)}
 
-Please provide:
-1. A catchy workout title
-2. Brief description of the routine
-3. 4-8 exercises, structured as a proper training split if full-body, or a single day if focused
-4. Estimated session duration in minutes
-5. Difficulty level (Beginner/Intermediate/Advanced)
-6. 2-3 general tips
-7. A split_type label (e.g. "Push/Pull/Legs", "Upper/Lower", "Full Body", "Single Day - Chest")
+Create a full {days}-day training program tailored to {goal_label.lower()}.
 
-IMPORTANT - Workout Day Assignment:
-- For a focused session (single muscle group): assign all exercises to workout_day "A"
-- For full body or multi-muscle routines: create a proper multi-day split:
-  * 2-day split: days "A" and "B"
-  * 3-day split: days "A", "B", and "C"
-  * Each exercise must have a workout_day field set to "A", "B", or "C"
-- Distribute exercises logically across days (e.g. push muscles on Day A, pull on B, legs on C)
+Requirements:
+1. A catchy workout title reflecting the goal and split
+2. Brief description explaining the program philosophy and why this split suits the goal
+3. Generate exercises across all {days} days — use workout days "A" through "{chr(64 + days)}"
+4. Each day should have 4-7 exercises appropriate for the split
+5. Estimated session duration in minutes
+6. Difficulty level matching {level_label}
+7. A split_type label (e.g. "Push/Pull/Legs", "Upper/Lower", "Full Body", "Bro Split", "Arnold Split")
+8. 3-5 practical tips specific to {goal_label.lower()} training
+
+STRICT equipment rule:
+- ONLY use exercises that can be performed with: {", ".join(equip)}
+- Do NOT include exercises requiring equipment NOT in this list
+- If "machines" is not listed, do NOT suggest any machine-based exercises (no cable machine, no leg press machine, no smith machine, etc.)
+- Prefer free-weight and bodyweight alternatives when machines are unavailable
+
+Goal-specific guidelines:
+- Hypertrophy: 8-12 reps, moderate weight, 3-4 sets, focus on time under tension
+- Strength: 3-6 reps, heavier weight, 4-5 sets, prioritize compound lifts
+- Endurance: 15-20 reps, lighter weight, 2-3 sets, shorter rest periods
+- Fat Loss: mix of compound movements, supersets, 10-15 reps, higher volume
+- General Fitness: balanced approach, 8-12 reps, full-body coverage
+
+Split selection guide for {days} days:
+- 2 days: Upper/Lower
+- 3 days: Push/Pull/Legs or Full Body x3
+- 4 days: Upper/Lower x2 or Push/Pull/Legs + Upper
+- 5 days: Push/Pull/Legs + Upper/Lower, or Bro Split
+- 6 days: Push/Pull/Legs x2
+Choose the split that best matches the focus area "{focus_label}" and {days} training days.
+
+Day assignment rules:
+- MUST use workout days "A" through "{chr(64 + days)}" — exactly {days} days, no more, no less
+- Distribute muscle groups logically across the {days} days
 - Each exercise reps field must be a string like "8" or "8-12"
 
-If workout context is available, complement existing exercises rather than duplicate them."""
+If workout context is available, base weights on the user's current lifts."""
 
     from datetime import date as date_cls
 
@@ -608,7 +649,7 @@ If workout context is available, complement existing exercises rather than dupli
             user_prompt=prompt,
             response_format=WorkoutRecommendation,
         )
-        return WorkoutRecommendation.model_validate_json(raw)
+        return WorkoutRecommendation.model_validate_json(_strip_json_fences(raw))
     except Exception as e:
         logger.error(f"Recommendation error: {e}")
         raise
@@ -653,7 +694,7 @@ Be encouraging but honest. Focus on practical improvements specific to this pers
             user_prompt=prompt,
             response_format=ProgressAnalysis,
         )
-        return ProgressAnalysis.model_validate_json(raw)
+        return ProgressAnalysis.model_validate_json(_strip_json_fences(raw))
     except Exception as e:
         logger.error(f"Analysis error: {e}", exc_info=True)
         raise

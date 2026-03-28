@@ -46,3 +46,17 @@ export const EQUIPMENT_OPTIONS = [
   'barbell', 'dumbbells', 'cables', 'machines',
   'pull-up bar', 'bodyweight', 'kettlebells', 'resistance bands',
 ] as const;
+
+export const TRAINING_GOALS = [
+  { value: 'hypertrophy', label: 'Muscle Growth' },
+  { value: 'strength', label: 'Strength' },
+  { value: 'endurance', label: 'Endurance' },
+  { value: 'fat_loss', label: 'Fat Loss' },
+  { value: 'general_fitness', label: 'General Fitness' },
+] as const;
+
+export const EXPERIENCE_LEVELS = [
+  { value: 'beginner', label: 'Beginner' },
+  { value: 'intermediate', label: 'Intermediate' },
+  { value: 'advanced', label: 'Advanced' },
+] as const;
