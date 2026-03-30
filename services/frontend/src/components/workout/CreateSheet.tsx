@@ -30,6 +30,7 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
   const [day, setDay] = useState(defaultDay);
   const [saving, setSaving] = useState(false);
   const [suggestions, setSuggestions] = useState<ArchivedExerciseSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const unit = getWeightUnit();
   const librarySuggestions = useMemo(() => searchLibrary(name), [name]);
@@ -143,6 +144,7 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
     setSets(ex.defaultSets);
     setReps(ex.defaultReps);
     setWeight(0);
+    setShowSuggestions(false);
   };
 
   return (
@@ -150,73 +152,66 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-xs font-medium text-steel mb-1.5">Exercise Name</label>
-          <input
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="e.g. Bench Press"
-            className={`input ${borderClass ? `border-2 ${borderClass}` : ''}`}
-            autoFocus
-          />
+          <div className="relative">
+            <input
+              value={name}
+              onChange={e => { setName(e.target.value); setShowSuggestions(true); }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 100)}
+              placeholder="e.g. Bench Press"
+              className={`input ${borderClass ? `border-2 ${borderClass}` : ''}`}
+              autoFocus
+            />
+            {showSuggestions && (librarySuggestions.length > 0 || suggestions.length > 0) && nameStatus !== 'active' && (
+              <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-lg border border-border bg-surface-1 shadow-lg overflow-y-auto max-h-[min(16rem,40dvh)]">
+                {librarySuggestions.map((ex) => (
+                  <button
+                    key={ex.name}
+                    type="button"
+                    onClick={() => handleSelectLibrary(ex)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-2 transition-colors"
+                  >
+                    <Dumbbell size={14} className="text-ember shrink-0" />
+                    <span className="text-sm text-chalk flex-1 min-w-0 truncate">{ex.name}</span>
+                    <span className={`text-[11px] ${getMuscleGroupColor(ex.muscleGroup)} shrink-0`}>
+                      {ex.muscleGroup}
+                    </span>
+                    <span className="text-xs text-steel font-mono shrink-0">
+                      {ex.defaultSets}&times;{ex.defaultReps}
+                    </span>
+                  </button>
+                ))}
+                {suggestions.length > 0 && onRestore && (
+                  <>
+                    {librarySuggestions.length > 0 && <div className="border-t border-border/50" />}
+                    {suggestions.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => handleRestore(s.id)}
+                        disabled={saving}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-2 transition-colors"
+                      >
+                        <RotateCcw size={14} className="text-amber-500 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm text-chalk">{s.name}</span>
+                          <span className="text-xs text-steel ml-2 font-mono">
+                            {s.sets}&times;{s.reps}
+                            {s.weight != null && s.weight > 0 && ` ${toDisplayWeight(s.weight, unit)}${unit}`}
+                            {' · Day '}{s.workout_day}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
           {nameStatus && (
             <div className="flex items-center gap-1.5 mt-1">
               <div className={`w-2 h-2 rounded-full ${dotClass}`} />
               <span className="text-[11px] text-steel">{statusText}</span>
-            </div>
-          )}
-
-          {/* Library suggestions */}
-          {librarySuggestions.length > 0 && nameStatus !== 'active' && (
-            <div className="mt-2 rounded-lg border border-border bg-surface-2/50 overflow-hidden">
-              <p className="px-3 py-1.5 text-[11px] font-medium text-steel border-b border-border/50">
-                Exercise library
-              </p>
-              {librarySuggestions.map((ex) => (
-                <button
-                  key={ex.name}
-                  type="button"
-                  onClick={() => handleSelectLibrary(ex)}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-2 transition-colors"
-                >
-                  <Dumbbell size={14} className="text-ember shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm text-chalk">{ex.name}</span>
-                    <span className={`text-[11px] ml-2 ${getMuscleGroupColor(ex.muscleGroup)}`}>
-                      {ex.muscleGroup}
-                    </span>
-                  </div>
-                  <span className="text-xs text-steel font-mono shrink-0">
-                    {ex.defaultSets}&times;{ex.defaultReps}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Archived suggestions */}
-          {suggestions.length > 0 && onRestore && (
-            <div className="mt-2 rounded-lg border border-border bg-surface-2/50 overflow-hidden">
-              <p className="px-3 py-1.5 text-[11px] font-medium text-steel border-b border-border/50">
-                Restore from archive
-              </p>
-              {suggestions.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => handleRestore(s.id)}
-                  disabled={saving}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-2 transition-colors"
-                >
-                  <RotateCcw size={14} className="text-amber-500 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm text-chalk">{s.name}</span>
-                    <span className="text-xs text-steel ml-2 font-mono">
-                      {s.sets}&times;{s.reps}
-                      {s.weight != null && s.weight > 0 && ` ${toDisplayWeight(s.weight, unit)}${unit}`}
-                      {' · Day '}{s.workout_day}
-                    </span>
-                  </div>
-                </button>
-              ))}
             </div>
           )}
         </div>
