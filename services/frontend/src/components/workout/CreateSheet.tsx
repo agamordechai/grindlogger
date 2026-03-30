@@ -142,7 +142,7 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
     setName(ex.name);
     setSets(ex.defaultSets);
     setReps(ex.defaultReps);
-    setWeight(toDisplayWeight(ex.defaultWeight, unit) ?? 0);
+    setWeight(0);
   };
 
   return (
@@ -186,7 +186,6 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
                   </div>
                   <span className="text-xs text-steel font-mono shrink-0">
                     {ex.defaultSets}&times;{ex.defaultReps}
-                    {ex.defaultWeight != null && ` ${toDisplayWeight(ex.defaultWeight, unit)}${unit}`}
                   </span>
                 </button>
               ))}
