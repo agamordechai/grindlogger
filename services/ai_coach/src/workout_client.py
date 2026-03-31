@@ -113,7 +113,9 @@ class WorkoutAPIClient:
         response.raise_for_status()
         return response.json()
 
-    async def edit_exercise(self, exercise_id: int, data: dict[str, Any], auth_header: str | None = None) -> dict[str, Any]:
+    async def edit_exercise(
+        self, exercise_id: int, data: dict[str, Any], auth_header: str | None = None
+    ) -> dict[str, Any]:
         """Edit an existing exercise via the Workout API."""
         client = await self._get_client()
         headers = {}

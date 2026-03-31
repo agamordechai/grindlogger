@@ -43,10 +43,12 @@ Guidelines:
 - Today's date is {today}
 
 Action guidelines:
-- When the user asks you to add, create, modify, or log something, USE THE TOOLS immediately. Do not just describe what you would do — actually do it.
+- When the user asks you to add, create, modify, or log something, USE THE TOOLS immediately.
+  Do not just describe what you would do — actually do it.
 - You can call multiple tools in one turn (e.g. bulk-add several exercises at once).
 - After performing actions, briefly confirm what you did.
-- Do NOT ask excessive clarifying questions. If the user's intent is clear, act on it. Use reasonable defaults for anything unspecified (e.g. default workout_day "A", today's date for logging).
+- Do NOT ask excessive clarifying questions. If the user's intent is clear, act on it.
+  Use reasonable defaults for anything unspecified (e.g. default workout_day "A", today's date for logging).
 - Only ask for clarification when genuinely ambiguous (e.g. "add an exercise" with no details).
 - Keep responses concise and focused. Avoid repeating back what the user said or listing things they already know.
 
@@ -84,7 +86,10 @@ COACH_TOOLS = [
     },
     {
         "name": "edit_exercise",
-        "description": "Modify an existing exercise. Use this when the user asks to change sets, reps, weight, name, or day of an exercise. Requires the exercise ID from the workout context.",
+        "description": (
+            "Modify an existing exercise. Use this when the user asks to change sets, reps, weight, name, "
+            "or day of an exercise. Requires the exercise ID from the workout context."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -105,7 +110,10 @@ COACH_TOOLS = [
     },
     {
         "name": "log_workout",
-        "description": "Log a completed workout session. Use this when the user says they finished a workout or wants to log exercises they did today.",
+        "description": (
+            "Log a completed workout session. Use this when the user says they finished a workout "
+            "or wants to log exercises they did today."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -137,7 +145,10 @@ COACH_TOOLS = [
     },
     {
         "name": "add_measurement",
-        "description": "Record a body measurement entry. Use this when the user provides body measurements like weight, body fat, or tape measurements.",
+        "description": (
+            "Record a body measurement entry. Use this when the user provides body measurements "
+            "like weight, body fat, or tape measurements."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -335,14 +346,10 @@ async def _anthropic_chat_with_tools(
         tool_results = []
         for block in response.content:
             if block.type == "tool_use":
-                result_text, action = await _execute_tool(
-                    block.name, block.input, workout_client, auth_header
-                )
+                result_text, action = await _execute_tool(block.name, block.input, workout_client, auth_header)
                 if action:
                     actions.append(action)
-                tool_results.append(
-                    {"type": "tool_result", "tool_use_id": block.id, "content": result_text}
-                )
+                tool_results.append({"type": "tool_result", "tool_use_id": block.id, "content": result_text})
 
         # Append assistant response and tool results for next iteration
         messages.append({"role": "assistant", "content": response.content})
@@ -368,14 +375,16 @@ async def _openai_chat_with_tools(
 
     openai_tools = []
     for tool in COACH_TOOLS:
-        openai_tools.append({
-            "type": "function",
-            "function": {
-                "name": tool["name"],
-                "description": tool["description"],
-                "parameters": tool["input_schema"],
-            },
-        })
+        openai_tools.append(
+            {
+                "type": "function",
+                "function": {
+                    "name": tool["name"],
+                    "description": tool["description"],
+                    "parameters": tool["input_schema"],
+                },
+            }
+        )
 
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": system_prompt},
@@ -401,16 +410,16 @@ async def _openai_chat_with_tools(
         # Execute each tool call
         for tc in choice.message.tool_calls:
             tool_input = json.loads(tc.function.arguments)
-            result_text, action = await _execute_tool(
-                tc.function.name, tool_input, workout_client, auth_header
-            )
+            result_text, action = await _execute_tool(tc.function.name, tool_input, workout_client, auth_header)
             if action:
                 actions.append(action)
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tc.id,
-                "content": result_text,
-            })
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tc.id,
+                    "content": result_text,
+                }
+            )
 
     return "I performed several actions but reached the processing limit. Please check your data.", actions
 
@@ -609,7 +618,8 @@ Requirements:
 STRICT equipment rule:
 - ONLY use exercises that can be performed with: {", ".join(equip)}
 - Do NOT include exercises requiring equipment NOT in this list
-- If "machines" is not listed, do NOT suggest any machine-based exercises (no cable machine, no leg press machine, no smith machine, etc.)
+- If "machines" is not listed, do NOT suggest any machine-based exercises
+  (no cable machine, no leg press machine, no smith machine, etc.)
 - Prefer free-weight and bodyweight alternatives when machines are unavailable
 
 Goal-specific guidelines:
