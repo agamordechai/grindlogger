@@ -139,8 +139,8 @@ jobs:
             cd ~/GrindLogger
 
             echo "Pulling latest code..."
-            git fetch origin main
-            git reset --hard origin/main
+            git fetch https://${{ secrets.GH_DEPLOY_TOKEN }}@github.com/agamordechai/eass_a_workouttracker.git main
+            git reset --hard FETCH_HEAD
 
             echo "Writing .env from GitHub secrets..."
             cat > .env <<'ENVEOF'
