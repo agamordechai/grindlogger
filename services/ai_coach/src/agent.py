@@ -326,11 +326,11 @@ async def _anthropic_chat_with_tools(
     messages: list[dict[str, Any]] = _build_messages(history or [], user_prompt)
     actions: list[ActionPerformed] = []
 
-    max_iterations = 10
+    max_iterations = 25
     for _ in range(max_iterations):
         response = await client.messages.create(
             model=model,
-            max_tokens=2048,
+            max_tokens=4096,
             temperature=settings.ai_temperature,
             system=system_prompt,
             messages=messages,
@@ -391,7 +391,7 @@ async def _openai_chat_with_tools(
         *_build_messages(history or [], user_prompt),
     ]
 
-    max_iterations = 10
+    max_iterations = 25
     for _ in range(max_iterations):
         response = await client.chat.completions.create(
             model=model,

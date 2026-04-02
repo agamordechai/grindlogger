@@ -49,7 +49,7 @@ const client: AxiosInstance = axios.create({
 
 const aiCoachClient: AxiosInstance = axios.create({
   baseURL: AI_COACH_BASE_URL,
-  timeout: 120000, // Longer timeout for AI responses (tool-use loops can take multiple iterations)
+  timeout: 300000, // 5 min timeout for AI responses (bulk tool-use loops can take many iterations)
   headers: {
     'Content-Type': 'application/json',
     'X-Trace-Id': TRACE_ID,
