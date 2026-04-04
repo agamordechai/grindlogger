@@ -119,9 +119,12 @@ export function RestTimerButton() {
     if (finished) setOpen(true);
   }, [finished]);
 
-  // Reset view when closing
+  // Reset view when closing; auto-dismiss finished timer
   useEffect(() => {
-    if (!open) setView('timer');
+    if (!open) {
+      setView('timer');
+      if (finished) dismissFinished();
+    }
   }, [open]);
 
   const progress = total > 0 ? remaining / total : 0;
