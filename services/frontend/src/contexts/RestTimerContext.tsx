@@ -176,6 +176,26 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
   const stepsRef = useRef<number[]>([]);
   const stepIndexRef = useRef(0);
   const pausedRemainingRef = useRef<number>(0);
+  const notifyTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+
+  /** Schedule a notification via setTimeout for the exact end time.
+   *  On iOS, setInterval gets throttled when backgrounded/locked but a
+   *  single setTimeout scheduled while the page was still active has a
+   *  much better chance of firing on time. */
+  const scheduleNotification = useCallback((ms: number) => {
+    if (notifyTimeoutRef.current) clearTimeout(notifyTimeoutRef.current);
+    notifyTimeoutRef.current = setTimeout(() => {
+      showNotification();
+      vibrate();
+    }, ms);
+  }, []);
+
+  const clearScheduledNotification = useCallback(() => {
+    if (notifyTimeoutRef.current) {
+      clearTimeout(notifyTimeoutRef.current);
+      notifyTimeoutRef.current = undefined;
+    }
+  }, []);
 
   const clearTimer = useCallback(() => {
     if (intervalRef.current) {
@@ -204,12 +224,17 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
         setRemaining(nextDuration);
         endTimeRef.current = Date.now() + nextDuration * 1000;
 
+        // Schedule notification for remaining steps
+        const remainingMs = stepsRef.current.slice(nextIndex).reduce((a, s) => a + s, 0) * 1000;
+        scheduleNotification(remainingMs);
+
         // Short beep for step transition
         if (!document.hidden) playBeep();
         vibrate();
       } else {
         // Final step or single timer — done
         clearTimer();
+        clearScheduledNotification();
         setRunning(false);
         setFinished(true);
 
@@ -236,11 +261,14 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
     endTimeRef.current = Date.now() + seconds * 1000;
     intervalRef.current = setInterval(tick, 250);
 
+    // Pre-schedule notification so it fires even if the browser throttles setInterval
+    scheduleNotification(seconds * 1000);
+
     // Unlock audio + vibration during this user gesture so they work when timer fires
     unlockAudio();
     primeVibration();
     ensureNotificationPermission();
-  }, [clearTimer, tick]);
+  }, [clearTimer, tick, scheduleNotification]);
 
   const startSequence = useCallback((seq: number[]) => {
     if (seq.length === 0) return;
@@ -260,35 +288,45 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
     endTimeRef.current = Date.now() + firstDuration * 1000;
     intervalRef.current = setInterval(tick, 250);
 
+    // Pre-schedule notification for the total sequence duration
+    const totalMs = seq.reduce((a, s) => a + s, 0) * 1000;
+    scheduleNotification(totalMs);
+
     unlockAudio();
     primeVibration();
     ensureNotificationPermission();
-  }, [clearTimer, tick]);
+  }, [clearTimer, tick, scheduleNotification]);
 
   const pause = useCallback(() => {
     if (!running || paused) return;
     clearTimer();
+    clearScheduledNotification();
     // Snapshot the remaining ms so resume can rebuild endTime
     pausedRemainingRef.current = Math.max(0, endTimeRef.current - Date.now());
     setPaused(true);
-  }, [running, paused, clearTimer]);
+  }, [running, paused, clearTimer, clearScheduledNotification]);
 
   const resume = useCallback(() => {
     if (!paused) return;
     endTimeRef.current = Date.now() + pausedRemainingRef.current;
     intervalRef.current = setInterval(tick, 250);
+    scheduleNotification(pausedRemainingRef.current);
     setPaused(false);
-  }, [paused, tick]);
+  }, [paused, tick, scheduleNotification]);
 
   const extend = useCallback((seconds: number) => {
     if (!running) return;
     endTimeRef.current += seconds * 1000;
     setTotal(prev => prev + seconds);
+    // Reschedule notification for new end time
+    const msLeft = Math.max(0, endTimeRef.current - Date.now());
+    scheduleNotification(msLeft);
     tick();
-  }, [running, tick]);
+  }, [running, tick, scheduleNotification]);
 
   const skip = useCallback(() => {
     clearTimer();
+    clearScheduledNotification();
     setRunning(false);
     setPaused(false);
     setRemaining(0);
@@ -298,7 +336,7 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
     stepsRef.current = [];
     stepIndexRef.current = 0;
     setCurrentStepIndex(0);
-  }, [clearTimer]);
+  }, [clearTimer, clearScheduledNotification]);
 
   const dismissFinished = useCallback(() => {
     setFinished(false);
@@ -311,7 +349,7 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
     setCurrentStepIndex(0);
   }, []);
 
-  useEffect(() => clearTimer, [clearTimer]);
+  useEffect(() => () => { clearTimer(); clearScheduledNotification(); }, [clearTimer, clearScheduledNotification]);
 
   return (
     <RestTimerContext.Provider value={{
