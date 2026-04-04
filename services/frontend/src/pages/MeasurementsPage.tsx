@@ -146,20 +146,17 @@ export default function MeasurementsPage() {
         <h2 className="text-sm font-medium text-chalk">Progress</h2>
 
         {/* Metric selector */}
-        <div className="flex flex-wrap gap-1">
-          {MEASUREMENT_METRICS.map(m => (
-            <button
-              key={m.value}
-              onClick={() => setChartMetric(m.value)}
-              className={`text-xs px-2.5 py-1 rounded-lg transition-colors font-medium ${
-                chartMetric === m.value
-                  ? 'bg-ember text-white'
-                  : 'bg-surface-2 text-steel hover:text-chalk'
-              }`}
-            >
-              {m.label}
-            </button>
-          ))}
+        <div className="relative w-fit">
+          <select
+            value={chartMetric}
+            onChange={e => setChartMetric(e.target.value as MeasurementMetric)}
+            className="appearance-none bg-surface-2 text-chalk text-xs font-medium pl-3 pr-8 py-2 rounded-xl border border-ember/60 focus:outline-none focus:ring-1 focus:ring-ember/50 cursor-pointer"
+          >
+            {MEASUREMENT_METRICS.map(m => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
+          </select>
+          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-steel pointer-events-none" />
         </div>
 
         {chartData.length > 1 ? (
