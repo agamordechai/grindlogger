@@ -76,7 +76,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              className="relative w-[calc(100%-2rem)] max-w-sm bg-surface-1 border border-border rounded-2xl p-6 shadow-2xl"
+              className="relative w-[calc(100%-2rem)] max-w-sm bg-surface-1 border border-ember/60 rounded-2xl p-6 shadow-2xl"
             >
               <button
                 onClick={() => handleClose(false)}

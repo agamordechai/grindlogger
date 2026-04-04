@@ -108,7 +108,7 @@ export function TopBar() {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -4 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-full mt-2 w-56 bg-surface-1 border border-border rounded-xl py-1 shadow-xl shadow-black/30 z-[60]"
+                  className="absolute right-0 top-full mt-2 w-56 bg-surface-1 border border-ember/60 rounded-xl py-1 shadow-xl shadow-black/30 z-[60]"
                 >
                   {/* User info */}
                   <div className="px-3 py-2.5 border-b border-border">

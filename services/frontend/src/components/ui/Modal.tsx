@@ -81,7 +81,7 @@ export function Modal({ open, onClose, title, description, children }: ModalProp
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 60 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="relative w-full lg:max-w-md bg-surface-1 border border-border rounded-t-2xl lg:rounded-2xl p-6 max-h-[85%] overflow-y-auto"
+              className="relative w-full lg:max-w-md bg-surface-1 border border-ember/60 rounded-t-2xl lg:rounded-2xl p-6 max-h-[85%] overflow-y-auto"
             >
               <button
                 onClick={onClose}

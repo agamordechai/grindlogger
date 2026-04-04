@@ -214,7 +214,7 @@ export function RestTimerButton() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            className="absolute right-0 top-full mt-2 w-72 bg-surface-1 border border-border rounded-2xl p-5 shadow-xl shadow-black/30 z-[60]"
+            className="absolute right-0 top-full mt-2 w-72 bg-surface-1 border border-ember/60 rounded-2xl p-5 shadow-xl shadow-black/30 z-[60]"
           >
             <AnimatePresence mode="wait">
               {/* ─── Timer View ─── */}

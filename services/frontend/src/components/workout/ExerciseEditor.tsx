@@ -63,7 +63,7 @@ export function ExerciseEditor({ exercise, days, onSave, onCancel }: ExerciseEdi
             className="input"
           />
           {showSuggestions && nameChanged && librarySuggestions.length > 0 && (
-            <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-lg border border-border bg-surface-1 shadow-lg overflow-y-auto max-h-[min(16rem,40dvh)]">
+            <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-lg border border-ember/60 bg-surface-1 shadow-lg overflow-y-auto max-h-[min(16rem,40dvh)]">
               {librarySuggestions.map((ex) => (
                 <button
                   key={ex.name}
