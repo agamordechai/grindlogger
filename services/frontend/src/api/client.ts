@@ -478,8 +478,9 @@ export async function getProgressAnalysis(): Promise<ProgressAnalysis> {
 /**
  * Get progressive overload suggestions from AI Coach.
  */
-export async function getOverloadSuggestions(): Promise<OverloadSuggestions> {
-  const response = await aiCoachClient.get<OverloadSuggestions>('/overload');
+export async function getOverloadSuggestions(exerciseNames?: string[]): Promise<OverloadSuggestions> {
+  const body = exerciseNames ? { exercise_names: exerciseNames } : {};
+  const response = await aiCoachClient.post<OverloadSuggestions>('/overload', body);
   return response.data;
 }
 

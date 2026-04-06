@@ -166,10 +166,20 @@ class WorkoutAPIClient:
         return response.json()
 
     async def get_overload_data(
-        self, auth_header: str | None = None
+        self,
+        auth_header: str | None = None,
+        exercise_names: list[str] | None = None,
     ) -> tuple[WorkoutContext, dict[str, Any], dict[str, Any]]:
-        """Fetch workout context + weight and volume progress for all exercises."""
+        """Fetch workout context + weight and volume progress for exercises.
+
+        Args:
+            auth_header: Authorization header to forward.
+            exercise_names: If provided, only analyze these exercises.
+        """
         exercises = await self.get_exercises(auth_header=auth_header)
+        if exercise_names:
+            filter_set = {n.lower() for n in exercise_names}
+            exercises = [ex for ex in exercises if ex.name.lower() in filter_set]
         if not exercises:
             ctx = WorkoutContext(exercises=[], total_volume=0, exercise_count=0, muscle_groups_worked=[])
             return ctx, {}, {}

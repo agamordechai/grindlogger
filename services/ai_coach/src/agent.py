@@ -11,9 +11,11 @@ from services.ai_coach.src.config import get_settings
 from services.ai_coach.src.models import (
     ActionPerformed,
     ChatMessage,
+    ExerciseOverloadSuggestion,
     MuscleGroup,
     OverloadSuggestions,
     ProgressAnalysis,
+    ReadinessStatus,
     WorkoutContext,
     WorkoutRecommendation,
 )
@@ -719,25 +721,61 @@ async def suggest_overload(
     base_url: str | None = None,
     model: str | None = None,
 ) -> OverloadSuggestions:
-    """Analyze workout history and suggest progressive overload adjustments."""
+    """Analyze workout history and suggest progressive overload adjustments.
+
+    Exercises with no logged history are auto-marked as needs_more_data
+    without being sent to the LLM, reducing token usage.
+    """
     if not api_key:
         raise ValueError("API key is required")
 
     settings = get_settings()
+
+    # Split exercises into those with history vs without
+    weight_exercises = weight_progress.get("exercises", {})
+    all_exercise_names = [ex.name for ex in workout_context.exercises]
+
+    exercises_with_data: list[str] = []
+    no_data_suggestions: list[ExerciseOverloadSuggestion] = []
+
+    for name in all_exercise_names:
+        points = weight_exercises.get(name, [])
+        if len(points) >= 1:
+            exercises_with_data.append(name)
+        else:
+            no_data_suggestions.append(
+                ExerciseOverloadSuggestion(
+                    exercise_name=name,
+                    readiness=ReadinessStatus.NEEDS_MORE_DATA,
+                    reasoning="No logged sessions yet. Start logging workouts to get recommendations.",
+                )
+            )
+
+    # If no exercises have data, skip the LLM call entirely
+    if not exercises_with_data:
+        return OverloadSuggestions(
+            summary="Not enough workout history to analyze. Log some sessions first!",
+            suggestions=no_data_suggestions,
+            general_tips=["Log at least 3 sessions per exercise to get meaningful overload recommendations."],
+        )
 
     # Truncate to last 20 data points per exercise to limit token usage
     def _truncate(progress: dict[str, Any]) -> dict[str, Any]:
         exercises = progress.get("exercises", {})
         return {
             "metric": progress.get("metric", ""),
-            "exercises": {name: points[-20:] for name, points in exercises.items()},
+            "exercises": {
+                name: points[-20:]
+                for name, points in exercises.items()
+                if name in exercises_with_data
+            },
         }
 
     weight_data = _truncate(weight_progress)
     volume_data = _truncate(volume_progress)
 
     prompt = f"""Analyze the following workout history and provide progressive overload recommendations
-for each exercise.
+for each exercise listed below.
 
 ## Weight Progress (per exercise, chronological)
 {json.dumps(weight_data, indent=2)}
@@ -746,7 +784,7 @@ for each exercise.
 {json.dumps(volume_data, indent=2)}
 
 ## Instructions
-For EACH exercise in the workout context, analyze its weight and volume time series and provide
+For EACH exercise in the data above, analyze its weight and volume time series and provide
 a recommendation:
 
 1. **ready_to_increase** — The user has performed 3+ sessions at the same weight with consistent
@@ -766,7 +804,9 @@ a recommendation:
 
 Be specific with numbers. All weights are in kg. Include the number of sessions at current weight.
 Focus on practical, conservative recommendations. Do NOT suggest increases if the user has only
-done 1-2 sessions at a weight — they need consistency first."""
+done 1-2 sessions at a weight — they need consistency first.
+
+ONLY include exercises that appear in the progress data above. Do not invent exercises."""
 
     from datetime import date as date_cls
 
@@ -783,7 +823,10 @@ done 1-2 sessions at a weight — they need consistency first."""
             user_prompt=prompt,
             response_format=OverloadSuggestions,
         )
-        return OverloadSuggestions.model_validate_json(_strip_json_fences(raw))
+        result = OverloadSuggestions.model_validate_json(_strip_json_fences(raw))
+        # Append no-data exercises at the end
+        result.suggestions.extend(no_data_suggestions)
+        return result
     except Exception as e:
         logger.error(f"Overload suggestion error: {e}", exc_info=True)
         raise

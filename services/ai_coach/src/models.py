@@ -154,6 +154,14 @@ class ExerciseOverloadSuggestion(BaseModel):
     sessions_at_current: int | None = Field(default=None, description="Sessions at current weight/volume")
 
 
+class OverloadRequest(BaseModel):
+    """Optional filters for overload suggestions."""
+
+    exercise_names: list[str] | None = Field(
+        default=None, description="Specific exercises to analyze (None = all active exercises)"
+    )
+
+
 class OverloadSuggestions(BaseModel):
     """AI-generated progressive overload recommendations."""
 

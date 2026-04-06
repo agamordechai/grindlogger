@@ -20,6 +20,7 @@ from services.ai_coach.src.models import (
     Conversation,
     ConversationSummary,
     HealthResponse,
+    OverloadRequest,
     OverloadSuggestions,
     ProgressAnalysis,
     RecommendationRequest,
@@ -287,16 +288,19 @@ async def analyze_workout(request: Request) -> ProgressAnalysis:
         raise HTTPException(status_code=500, detail=f"Failed to analyze workout: {str(e)}") from e
 
 
-@app.get("/overload", response_model=OverloadSuggestions)
-async def overload_suggestions(request: Request) -> OverloadSuggestions:
+@app.post("/overload", response_model=OverloadSuggestions)
+async def overload_suggestions(request: Request, body: OverloadRequest | None = None) -> OverloadSuggestions:
     """Get progressive overload suggestions based on workout history."""
     api_key, base_url, model = _resolve_ai_credentials(request)
     auth_header = _get_auth_header(request)
 
+    exercise_names = body.exercise_names if body else None
+
     try:
         workout_client = get_workout_client()
         ctx, weight_progress, volume_progress = await workout_client.get_overload_data(
-            auth_header=auth_header
+            auth_header=auth_header,
+            exercise_names=exercise_names,
         )
     except Exception as e:
         logger.error(f"Failed to fetch overload data: {e}")
