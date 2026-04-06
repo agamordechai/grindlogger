@@ -5,25 +5,61 @@ exercises in exercise.py). Used for history, calendar, streaks, and progress tra
 """
 
 from datetime import date, datetime
+from enum import Enum
 
 from pydantic import BaseModel, Field
+
+
+class SetType(str, Enum):
+    """Classification for individual sets within an exercise."""
+
+    NORMAL = "normal"
+    WARM_UP = "warm_up"
+    DROP_SET = "drop_set"
+    AMRAP = "amrap"
+    FAILURE = "failure"
+
+
+class SetDetailCreate(BaseModel):
+    """A single set within an exercise."""
+
+    set_number: int = Field(..., ge=1, le=100)
+    reps: int = Field(..., ge=0, le=1000)
+    weight: float | None = Field(default=None, ge=0)
+    set_type: SetType = Field(default=SetType.NORMAL)
+
+
+class SetDetailResponse(SetDetailCreate):
+    """Set detail with database ID."""
+
+    id: int
+
+    model_config = {"from_attributes": True}
 
 
 class SessionExerciseCreate(BaseModel):
     """An exercise performed within a session."""
 
     exercise_name: str = Field(..., min_length=1, max_length=100)
-    sets_completed: int = Field(..., ge=0, le=100)
-    reps_completed: int = Field(..., ge=0, le=1000)
+    sets_completed: int | None = Field(default=None, ge=0, le=100)
+    reps_completed: int | None = Field(default=None, ge=0, le=1000)
     weight_used: float | None = Field(default=None, ge=0)
     one_rep_max: float | None = Field(default=None, ge=0)
     order: int = Field(default=0, ge=0)
+    sets: list[SetDetailCreate] = Field(default_factory=list)
 
 
-class SessionExerciseResponse(SessionExerciseCreate):
+class SessionExerciseResponse(BaseModel):
     """Session exercise with database ID."""
 
     id: int
+    exercise_name: str
+    sets_completed: int
+    reps_completed: int
+    weight_used: float | None
+    one_rep_max: float | None
+    order: int
+    sets: list[SetDetailResponse] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
 

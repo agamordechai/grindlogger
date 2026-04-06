@@ -2,6 +2,23 @@
  * Workout session type definitions matching the FastAPI backend models.
  */
 
+export type SetType = 'normal' | 'warm_up' | 'drop_set' | 'amrap' | 'failure';
+
+export interface SetDetail {
+  id: number;
+  set_number: number;
+  reps: number;
+  weight: number | null;
+  set_type: SetType;
+}
+
+export interface CreateSetDetail {
+  set_number: number;
+  reps: number;
+  weight?: number | null;
+  set_type?: SetType;
+}
+
 export interface SessionExercise {
   id: number;
   exercise_name: string;
@@ -10,15 +27,17 @@ export interface SessionExercise {
   weight_used: number | null;
   one_rep_max: number | null;
   order: number;
+  sets: SetDetail[];
 }
 
 export interface CreateSessionExercise {
   exercise_name: string;
-  sets_completed: number;
-  reps_completed: number;
+  sets_completed?: number;
+  reps_completed?: number;
   weight_used?: number | null;
   one_rep_max?: number | null;
   order: number;
+  sets?: CreateSetDetail[];
 }
 
 export interface WorkoutSession {

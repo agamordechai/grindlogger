@@ -1,17 +1,29 @@
 import { useState, useEffect } from 'react';
-import { Check, Minus, Plus, Trophy, Link } from 'lucide-react';
+import { Check, Plus, Trophy, Link, Trash2 } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { GlowButton } from '../ui/GlowButton';
 import { ALL_DAYS } from '../../lib/constants';
 import { getWeightUnit, toDisplayWeight, toKg } from '../../hooks/useUnits';
 import type { Exercise } from '../../types/exercise';
-import type { CreateWorkoutSession, CreateSessionExercise, WorkoutSession } from '../../types/session';
+import type { CreateWorkoutSession, CreateSessionExercise, WorkoutSession, SetType } from '../../types/session';
+
+const SET_TYPE_OPTIONS: { value: SetType; label: string }[] = [
+  { value: 'normal', label: 'Normal' },
+  { value: 'warm_up', label: 'Warm-up' },
+  { value: 'drop_set', label: 'Drop' },
+  { value: 'amrap', label: 'AMRAP' },
+  { value: 'failure', label: 'Failure' },
+];
+
+interface SetRow {
+  reps: number;
+  weight: number | null;
+  set_type: SetType;
+}
 
 interface ExerciseEntry {
   exercise_name: string;
-  sets_completed: number;
-  reps_completed: number;
-  weight_used: number | null;
+  sets: SetRow[];
   one_rep_max: number | null;
   order: number;
   selected: boolean;
@@ -25,7 +37,6 @@ interface CompleteWorkoutSheetProps {
   allExercises: Exercise[];
   defaultDay?: string;
   defaultDate?: string;
-  /** When set, the sheet opens in edit mode pre-filled with this session's data. */
   editSession?: WorkoutSession | null;
 }
 
@@ -38,7 +49,6 @@ export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, de
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [selectedDay, setSelectedDay] = useState('');
 
-  // Get available days that have exercises
   const availableDays = [...new Set(allExercises.map(ex => {
     const d = (!ex.workout_day || ex.workout_day === 'None') ? 'Daily' : ex.workout_day;
     return d;
@@ -47,7 +57,6 @@ export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, de
     return order.indexOf(a) - order.indexOf(b);
   });
 
-  // Build entries for a day — all unchecked by default
   const fillEntries = (day: string) => {
     if (!day) {
       setEntries([]);
@@ -60,9 +69,11 @@ export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, de
     setEntries(
       dayExercises.map((ex, i) => ({
         exercise_name: ex.name,
-        sets_completed: ex.sets,
-        reps_completed: ex.reps,
-        weight_used: ex.weight != null ? (toDisplayWeight(ex.weight, unit) ?? 0) : null,
+        sets: Array.from({ length: ex.sets }, () => ({
+          reps: ex.reps,
+          weight: ex.weight != null ? (toDisplayWeight(ex.weight, unit) ?? 0) : null,
+          set_type: 'normal' as SetType,
+        })),
         one_rep_max: null,
         order: i,
         selected: false,
@@ -74,7 +85,6 @@ export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, de
   useEffect(() => {
     if (open) {
       if (editSession) {
-        // Edit mode: pre-fill from existing session
         setSelectedDay(editSession.workout_day);
         setDate(editSession.date);
         setNotes(editSession.notes || '');
@@ -82,9 +92,17 @@ export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, de
         setEntries(
           editSession.exercises.map((ex, i) => ({
             exercise_name: ex.exercise_name,
-            sets_completed: ex.sets_completed,
-            reps_completed: ex.reps_completed,
-            weight_used: ex.weight_used != null ? (toDisplayWeight(ex.weight_used, unit) ?? 0) : null,
+            sets: ex.sets && ex.sets.length > 0
+              ? ex.sets.map(s => ({
+                  reps: s.reps,
+                  weight: s.weight != null ? (toDisplayWeight(s.weight, unit) ?? 0) : null,
+                  set_type: s.set_type,
+                }))
+              : Array.from({ length: ex.sets_completed || 1 }, () => ({
+                  reps: ex.sets_completed > 0 ? Math.round(ex.reps_completed / ex.sets_completed) : ex.reps_completed,
+                  weight: ex.weight_used != null ? (toDisplayWeight(ex.weight_used, unit) ?? 0) : null,
+                  set_type: 'normal' as SetType,
+                })),
             one_rep_max: ex.one_rep_max != null ? (toDisplayWeight(ex.one_rep_max, unit) ?? 0) : null,
             order: i,
             selected: true,
@@ -92,7 +110,6 @@ export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, de
           }))
         );
       } else {
-        // Create mode: blank slate
         setSelectedDay('');
         setEntries([]);
         setNotes('');
@@ -116,25 +133,59 @@ export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, de
     setEntries(prev => prev.map(e => ({ ...e, selected: !allSelected })));
   };
 
-  const updateEntry = (index: number, field: keyof ExerciseEntry, value: number | null) => {
-    setEntries(prev => prev.map((e, i) => i === index ? { ...e, [field]: value } : e));
+  const addSet = (exIndex: number) => {
+    setEntries(prev => prev.map((e, i) => {
+      if (i !== exIndex) return e;
+      const lastSet = e.sets[e.sets.length - 1];
+      return {
+        ...e,
+        sets: [...e.sets, {
+          reps: lastSet?.reps ?? 0,
+          weight: lastSet?.weight ?? null,
+          set_type: 'normal' as SetType,
+        }],
+      };
+    }));
+  };
+
+  const removeSet = (exIndex: number, setIndex: number) => {
+    setEntries(prev => prev.map((e, i) => {
+      if (i !== exIndex || e.sets.length <= 1) return e;
+      return { ...e, sets: e.sets.filter((_, j) => j !== setIndex) };
+    }));
+  };
+
+  const updateSet = (exIndex: number, setIndex: number, field: keyof SetRow, value: number | string | null) => {
+    setEntries(prev => prev.map((e, i) => {
+      if (i !== exIndex) return e;
+      return {
+        ...e,
+        sets: e.sets.map((s, j) => j === setIndex ? { ...s, [field]: value } : s),
+      };
+    }));
+  };
+
+  const updateOneRepMax = (exIndex: number, value: number | null) => {
+    setEntries(prev => prev.map((e, i) => i === exIndex ? { ...e, one_rep_max: value } : e));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     setSaving(true);
     try {
       const selected = entries.filter(e => e.selected);
       const sessionExercises: CreateSessionExercise[] = selected.map((entry, i) => ({
         exercise_name: entry.exercise_name,
-        sets_completed: entry.sets_completed,
-        reps_completed: entry.reps_completed,
-        weight_used: entry.weight_used != null ? toKg(entry.weight_used, unit) : null,
         one_rep_max: entry.one_rep_max != null && entry.one_rep_max > 0
           ? toKg(entry.one_rep_max, unit)
           : null,
         order: i,
+        sets: entry.sets.map((s, j) => ({
+          set_number: j + 1,
+          reps: s.reps,
+          weight: s.weight != null ? toKg(s.weight, unit) : null,
+          set_type: s.set_type,
+        })),
       }));
 
       await onSubmit({
@@ -197,11 +248,9 @@ export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, de
             )}
           </div>
           {entries.map((entry, i) => {
-            // Detect start of a superset group
             const isFirstInSuperset =
               entry.superset_group != null &&
               (i === 0 || entries[i - 1].superset_group !== entry.superset_group);
-            // Count exercises in this superset group
             const supersetCount = isFirstInSuperset
               ? entries.filter(e => e.superset_group === entry.superset_group).length
               : 0;
@@ -236,77 +285,70 @@ export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, de
                 <span className="text-sm font-medium text-chalk truncate">{entry.exercise_name}</span>
               </label>
 
-              {/* Fields — only shown when selected */}
+              {/* Per-set rows — only shown when selected */}
               {entry.selected && (
                 <>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <label className="block text-[11px] text-steel mb-1">Sets</label>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => updateEntry(i, 'sets_completed', Math.max(0, entry.sets_completed - 1))}
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-steel hover:text-chalk hover:bg-surface-3 transition-colors"
-                        >
-                          <Minus size={12} />
-                        </button>
-                        <input
-                          type="number"
-                          min={0}
-                          value={entry.sets_completed}
-                          onChange={e => updateEntry(i, 'sets_completed', Number(e.target.value))}
-                          className="input font-mono text-center text-sm flex-1 min-w-0 px-1"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => updateEntry(i, 'sets_completed', entry.sets_completed + 1)}
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-steel hover:text-chalk hover:bg-surface-3 transition-colors"
-                        >
-                          <Plus size={12} />
-                        </button>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-steel mb-1">Reps</label>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => updateEntry(i, 'reps_completed', Math.max(0, entry.reps_completed - 1))}
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-steel hover:text-chalk hover:bg-surface-3 transition-colors"
-                        >
-                          <Minus size={12} />
-                        </button>
-                        <input
-                          type="number"
-                          min={0}
-                          value={entry.reps_completed}
-                          onChange={e => updateEntry(i, 'reps_completed', Number(e.target.value))}
-                          className="input font-mono text-center text-sm flex-1 min-w-0 px-1"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => updateEntry(i, 'reps_completed', entry.reps_completed + 1)}
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-steel hover:text-chalk hover:bg-surface-3 transition-colors"
-                        >
-                          <Plus size={12} />
-                        </button>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-steel mb-1">Weight ({unit})</label>
+                  {/* Set header */}
+                  <div className="grid grid-cols-[2rem_1fr_1fr_5rem_1.5rem] gap-1.5 items-center px-0.5">
+                    <span className="text-[10px] text-steel text-center">#</span>
+                    <span className="text-[10px] text-steel">Reps</span>
+                    <span className="text-[10px] text-steel">Weight ({unit})</span>
+                    <span className="text-[10px] text-steel">Type</span>
+                    <span />
+                  </div>
+
+                  {/* Set rows */}
+                  {entry.sets.map((set, j) => (
+                    <div key={j} className="grid grid-cols-[2rem_1fr_1fr_5rem_1.5rem] gap-1.5 items-center">
+                      <span className="text-xs text-steel text-center font-mono">{j + 1}</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={set.reps}
+                        onChange={e => updateSet(i, j, 'reps', Number(e.target.value))}
+                        className="input font-mono text-center text-sm px-1"
+                      />
                       <input
                         type="number"
                         min={0}
                         step={0.5}
-                        value={entry.weight_used ?? ''}
-                        onChange={e => updateEntry(i, 'weight_used', e.target.value ? Number(e.target.value) : null)}
+                        value={set.weight ?? ''}
+                        onChange={e => updateSet(i, j, 'weight', e.target.value ? Number(e.target.value) : null)}
                         placeholder="BW"
-                        className="input font-mono text-center text-sm"
+                        className="input font-mono text-center text-sm px-1"
                       />
+                      <select
+                        value={set.set_type}
+                        onChange={e => updateSet(i, j, 'set_type', e.target.value)}
+                        className="input text-[11px] px-1 py-1"
+                      >
+                        {SET_TYPE_OPTIONS.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => removeSet(i, j)}
+                        disabled={entry.sets.length <= 1}
+                        className="w-5 h-5 flex items-center justify-center text-steel hover:text-red-400 disabled:opacity-20 disabled:hover:text-steel transition-colors"
+                      >
+                        <Trash2 size={11} />
+                      </button>
                     </div>
-                  </div>
+                  ))}
+
+                  {/* Add set button */}
+                  <button
+                    type="button"
+                    onClick={() => addSet(i)}
+                    className="flex items-center gap-1 text-xs text-ember hover:text-ember-dark transition-colors mt-1"
+                  >
+                    <Plus size={12} />
+                    Add Set
+                  </button>
+
                   {/* 1RM row */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 pt-1 border-t border-border/30">
                     <Trophy size={12} className="text-amber-500 shrink-0" />
                     <label className="text-[11px] text-steel shrink-0">1RM ({unit})</label>
                     <input
@@ -314,7 +356,7 @@ export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, de
                       min={0}
                       step={0.5}
                       value={entry.one_rep_max ?? ''}
-                      onChange={e => updateEntry(i, 'one_rep_max', e.target.value ? Number(e.target.value) : null)}
+                      onChange={e => updateOneRepMax(i, e.target.value ? Number(e.target.value) : null)}
                       placeholder="Optional"
                       className="input font-mono text-center text-sm flex-1"
                     />

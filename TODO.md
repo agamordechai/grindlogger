@@ -20,8 +20,8 @@
 - [ ] **Personal records (PRs)** — Automatically detect and celebrate new 1RM estimates or volume PRs
 - [X] **Superset / circuit grouping** — Group exercises that are performed back-to-back
 - [X] **Exercise notes** — Per-exercise notes (cues, reminders) and per-session free-text notes
-- [ ] **Exercise variant tracking** — Link exercise variations (Barbell Bench → Dumbbell Bench → Machine Bench) and compare progression across variants
-- [ ] **Advanced set types** — Toggle sets as warm-up, drop-set, AMRAP, or failure
+- [X] **Exercise variant tracking** — Link exercise variations (Barbell Bench → Dumbbell Bench → Machine Bench) and compare progression across variants
+- [X] **Advanced set types** — Toggle sets as warm-up, drop-set, AMRAP, or failure
 
 ## AI Coach
 - [X] **AI chat** — Conversation-based coaching with workout context awareness

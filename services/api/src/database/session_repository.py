@@ -11,11 +11,13 @@ from datetime import date, timedelta
 from sqlalchemy import func
 from sqlmodel import Session, select
 
-from services.api.src.database.db_models import SessionExerciseTable, WorkoutSessionTable
+from services.api.src.database.db_models import SessionExerciseTable, SetDetailTable, WorkoutSessionTable
 from services.shared.models.session import (
     ExerciseProgressResponse,
     ProgressPoint,
+    SessionExerciseCreate,
     SessionExerciseResponse,
+    SetDetailResponse,
     StreakResponse,
     WeekSummary,
     WorkoutSessionCreate,
@@ -29,6 +31,92 @@ class WorkoutSessionRepository:
 
     def __init__(self, session: Session):
         self.session = session
+
+    @staticmethod
+    def _compute_aggregates(
+        sets: list,
+    ) -> tuple[int, int, float | None]:
+        """Derive sets_completed, reps_completed, weight_used from per-set data."""
+        sets_completed = len(sets)
+        reps_completed = sum(s.reps for s in sets)
+        weights = [s.weight for s in sets if s.weight is not None]
+        weight_used = max(weights) if weights else None
+        return sets_completed, reps_completed, weight_used
+
+    def _save_set_details(self, session_exercise_id: int, sets: list) -> None:
+        """Persist SetDetailTable rows for an exercise."""
+        for s in sets:
+            detail = SetDetailTable(
+                session_exercise_id=session_exercise_id,
+                set_number=s.set_number,
+                reps=s.reps,
+                weight=s.weight,
+                set_type=s.set_type,
+            )
+            self.session.add(detail)
+
+    def _build_exercise_response(self, db_ex: SessionExerciseTable) -> SessionExerciseResponse:
+        """Build a SessionExerciseResponse including nested set details."""
+        detail_stmt = (
+            select(SetDetailTable)
+            .where(SetDetailTable.session_exercise_id == db_ex.id)
+            .order_by(SetDetailTable.set_number)
+        )
+        details = self.session.exec(detail_stmt).all()
+        return SessionExerciseResponse(
+            id=db_ex.id,
+            exercise_name=db_ex.exercise_name,
+            sets_completed=db_ex.sets_completed,
+            reps_completed=db_ex.reps_completed,
+            weight_used=db_ex.weight_used,
+            one_rep_max=db_ex.one_rep_max,
+            order=db_ex.order,
+            sets=[SetDetailResponse.model_validate(d) for d in details],
+        )
+
+    def _upsert_exercise(self, db_session_id: int, ex: SessionExerciseCreate) -> SessionExerciseTable:
+        """Upsert a session exercise and its set details."""
+        # Compute aggregates from per-set data if provided
+        if ex.sets:
+            sets_completed, reps_completed, weight_used = self._compute_aggregates(ex.sets)
+        else:
+            sets_completed = ex.sets_completed or 0
+            reps_completed = ex.reps_completed or 0
+            weight_used = ex.weight_used
+
+        ex_stmt = select(SessionExerciseTable).where(
+            SessionExerciseTable.session_id == db_session_id,
+            func.lower(SessionExerciseTable.exercise_name) == ex.exercise_name.lower(),
+        )
+        db_ex = self.session.exec(ex_stmt).first()
+        if db_ex:
+            db_ex.sets_completed = sets_completed
+            db_ex.reps_completed = reps_completed
+            db_ex.weight_used = weight_used
+            db_ex.one_rep_max = ex.one_rep_max
+            db_ex.order = ex.order
+            # Delete old set details before replacing
+            old_details = select(SetDetailTable).where(SetDetailTable.session_exercise_id == db_ex.id)
+            for d in self.session.exec(old_details).all():
+                self.session.delete(d)
+            self.session.flush()
+        else:
+            db_ex = SessionExerciseTable(
+                session_id=db_session_id,
+                exercise_name=ex.exercise_name,
+                sets_completed=sets_completed,
+                reps_completed=reps_completed,
+                weight_used=weight_used,
+                one_rep_max=ex.one_rep_max,
+                order=ex.order,
+            )
+            self.session.add(db_ex)
+            self.session.flush()
+
+        if ex.sets:
+            self._save_set_details(db_ex.id, ex.sets)
+
+        return db_ex
 
     def create_session(self, user_id: int, data: WorkoutSessionCreate) -> WorkoutSessionResponse:
         """Log a completed workout, merging into an existing session for the same day+workout_day."""
@@ -57,30 +145,9 @@ class WorkoutSessionRepository:
             self.session.add(db_session)
             self.session.flush()
 
-        # Upsert exercises
+        # Upsert exercises (with per-set details)
         for ex in data.exercises:
-            ex_stmt = select(SessionExerciseTable).where(
-                SessionExerciseTable.session_id == db_session.id,
-                func.lower(SessionExerciseTable.exercise_name) == ex.exercise_name.lower(),
-            )
-            db_ex = self.session.exec(ex_stmt).first()
-            if db_ex:
-                db_ex.sets_completed = ex.sets_completed
-                db_ex.reps_completed = ex.reps_completed
-                db_ex.weight_used = ex.weight_used
-                db_ex.one_rep_max = ex.one_rep_max
-                db_ex.order = ex.order
-            else:
-                db_ex = SessionExerciseTable(
-                    session_id=db_session.id,
-                    exercise_name=ex.exercise_name,
-                    sets_completed=ex.sets_completed,
-                    reps_completed=ex.reps_completed,
-                    weight_used=ex.weight_used,
-                    one_rep_max=ex.one_rep_max,
-                    order=ex.order,
-                )
-                self.session.add(db_ex)
+            self._upsert_exercise(db_session.id, ex)
 
         self.session.commit()
         self.session.refresh(db_session)
@@ -100,7 +167,7 @@ class WorkoutSessionRepository:
             notes=db_session.notes,
             duration_minutes=db_session.duration_minutes,
             created_at=db_session.created_at,
-            exercises=[SessionExerciseResponse.model_validate(ex) for ex in all_exercises],
+            exercises=[self._build_exercise_response(ex) for ex in all_exercises],
         )
 
     def auto_log_exercise(
@@ -181,24 +248,41 @@ class WorkoutSessionRepository:
         db_session.notes = data.notes
         db_session.duration_minutes = data.duration_minutes
 
-        # Delete old exercises
+        # Delete old exercises (CASCADE deletes set_details)
         old_ex_stmt = select(SessionExerciseTable).where(SessionExerciseTable.session_id == session_id)
         for ex in self.session.exec(old_ex_stmt).all():
+            # Manually delete set details (SQLite may not enforce CASCADE)
+            old_details = select(SetDetailTable).where(SetDetailTable.session_exercise_id == ex.id)
+            for d in self.session.exec(old_details).all():
+                self.session.delete(d)
             self.session.delete(ex)
+        self.session.flush()
 
-        # Add new exercises
+        # Add new exercises with per-set details
         db_exercises = []
         for ex in data.exercises:
+            if ex.sets:
+                sets_completed, reps_completed, weight_used = self._compute_aggregates(ex.sets)
+            else:
+                sets_completed = ex.sets_completed or 0
+                reps_completed = ex.reps_completed or 0
+                weight_used = ex.weight_used
+
             db_ex = SessionExerciseTable(
                 session_id=session_id,
                 exercise_name=ex.exercise_name,
-                sets_completed=ex.sets_completed,
-                reps_completed=ex.reps_completed,
-                weight_used=ex.weight_used,
+                sets_completed=sets_completed,
+                reps_completed=reps_completed,
+                weight_used=weight_used,
                 one_rep_max=ex.one_rep_max,
                 order=ex.order,
             )
             self.session.add(db_ex)
+            self.session.flush()
+
+            if ex.sets:
+                self._save_set_details(db_ex.id, ex.sets)
+
             db_exercises.append(db_ex)
 
         self.session.commit()
@@ -213,7 +297,7 @@ class WorkoutSessionRepository:
             notes=db_session.notes,
             duration_minutes=db_session.duration_minutes,
             created_at=db_session.created_at,
-            exercises=[SessionExerciseResponse.model_validate(ex) for ex in db_exercises],
+            exercises=[self._build_exercise_response(ex) for ex in db_exercises],
         )
 
     def get_session(self, session_id: int, user_id: int) -> WorkoutSessionResponse | None:
@@ -240,7 +324,7 @@ class WorkoutSessionRepository:
             notes=db_session.notes,
             duration_minutes=db_session.duration_minutes,
             created_at=db_session.created_at,
-            exercises=[SessionExerciseResponse.model_validate(ex) for ex in exercises],
+            exercises=[self._build_exercise_response(ex) for ex in exercises],
         )
 
     def delete_session(self, session_id: int, user_id: int) -> bool:
@@ -253,9 +337,12 @@ class WorkoutSessionRepository:
         if not db_session:
             return False
 
-        # Delete exercises first
+        # Delete set details then exercises
         ex_stmt = select(SessionExerciseTable).where(SessionExerciseTable.session_id == session_id)
         for ex in self.session.exec(ex_stmt).all():
+            detail_stmt = select(SetDetailTable).where(SetDetailTable.session_exercise_id == ex.id)
+            for d in self.session.exec(detail_stmt).all():
+                self.session.delete(d)
             self.session.delete(ex)
 
         self.session.delete(db_session)

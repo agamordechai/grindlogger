@@ -6,8 +6,19 @@ database layer and API layer.
 """
 
 import datetime as dt
+from enum import Enum
 
 from sqlmodel import Field, SQLModel
+
+
+class SetType(str, Enum):
+    """Classification for individual sets within an exercise."""
+
+    NORMAL = "normal"
+    WARM_UP = "warm_up"
+    DROP_SET = "drop_set"
+    AMRAP = "amrap"
+    FAILURE = "failure"
 
 
 class UserTable(SQLModel, table=True):
@@ -124,4 +135,18 @@ class SessionExerciseTable(SQLModel, table=True):
     weight_used: float | None = Field(default=None, ge=0)
     one_rep_max: float | None = Field(default=None, ge=0)
     order: int = Field(default=0, ge=0)
+    created_at: dt.datetime = Field(default_factory=lambda: dt.datetime.now(dt.UTC))
+
+
+class SetDetailTable(SQLModel, table=True):
+    """Individual set performed within a session exercise."""
+
+    __tablename__ = "set_details"
+
+    id: int | None = Field(default=None, primary_key=True)
+    session_exercise_id: int = Field(foreign_key="session_exercises.id", index=True)
+    set_number: int = Field(ge=1, le=100)
+    reps: int = Field(ge=0, le=1000)
+    weight: float | None = Field(default=None, ge=0)
+    set_type: str = Field(default=SetType.NORMAL, max_length=20)
     created_at: dt.datetime = Field(default_factory=lambda: dt.datetime.now(dt.UTC))
