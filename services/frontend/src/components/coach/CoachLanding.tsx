@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
-import { MessageCircle, Zap, BarChart3 } from 'lucide-react';
+import { MessageCircle, Zap, BarChart3, TrendingUp } from 'lucide-react';
 
-type CoachView = 'landing' | 'chat' | 'workout' | 'progress';
+type CoachView = 'landing' | 'chat' | 'workout' | 'progress' | 'overload';
 
 const CARDS: { view: CoachView; title: string; description: string; icon: typeof MessageCircle; gradient: string }[] = [
   {
@@ -24,6 +24,13 @@ const CARDS: { view: CoachView; title: string; description: string; icon: typeof
     description: 'AI-powered insights on training balance and improvements.',
     icon: BarChart3,
     gradient: 'from-emerald-500/20 to-green-500/20',
+  },
+  {
+    view: 'overload',
+    title: 'Overload Suggestions',
+    description: 'AI recommendations for when to increase weight or volume.',
+    icon: TrendingUp,
+    gradient: 'from-purple-500/20 to-violet-500/20',
   },
 ];
 

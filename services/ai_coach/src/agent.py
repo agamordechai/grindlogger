@@ -12,6 +12,7 @@ from services.ai_coach.src.models import (
     ActionPerformed,
     ChatMessage,
     MuscleGroup,
+    OverloadSuggestions,
     ProgressAnalysis,
     WorkoutContext,
     WorkoutRecommendation,
@@ -707,4 +708,82 @@ Be encouraging but honest. Focus on practical improvements specific to this pers
         return ProgressAnalysis.model_validate_json(_strip_json_fences(raw))
     except Exception as e:
         logger.error(f"Analysis error: {e}", exc_info=True)
+        raise
+
+
+async def suggest_overload(
+    workout_context: WorkoutContext,
+    weight_progress: dict[str, Any],
+    volume_progress: dict[str, Any],
+    api_key: str | None = None,
+    base_url: str | None = None,
+    model: str | None = None,
+) -> OverloadSuggestions:
+    """Analyze workout history and suggest progressive overload adjustments."""
+    if not api_key:
+        raise ValueError("API key is required")
+
+    settings = get_settings()
+
+    # Truncate to last 20 data points per exercise to limit token usage
+    def _truncate(progress: dict[str, Any]) -> dict[str, Any]:
+        exercises = progress.get("exercises", {})
+        return {
+            "metric": progress.get("metric", ""),
+            "exercises": {name: points[-20:] for name, points in exercises.items()},
+        }
+
+    weight_data = _truncate(weight_progress)
+    volume_data = _truncate(volume_progress)
+
+    prompt = f"""Analyze the following workout history and provide progressive overload recommendations
+for each exercise.
+
+## Weight Progress (per exercise, chronological)
+{json.dumps(weight_data, indent=2)}
+
+## Volume Progress (per exercise, chronological — value = sets × reps × weight)
+{json.dumps(volume_data, indent=2)}
+
+## Instructions
+For EACH exercise in the workout context, analyze its weight and volume time series and provide
+a recommendation:
+
+1. **ready_to_increase** — The user has performed 3+ sessions at the same weight with consistent
+   reps. Suggest a specific weight increase:
+   - Compound lifts (squat, bench, deadlift, row, press): increase by 2.5–5 kg
+   - Isolation lifts (curl, extension, fly, raise): increase by 1–2.5 kg
+   - Also suggest volume increases (extra set or reps) if appropriate
+
+2. **maintaining** — The user is progressing steadily and should continue current programming.
+   No change needed yet.
+
+3. **needs_more_data** — Fewer than 3 logged sessions for this exercise. Cannot make a reliable
+   recommendation yet.
+
+4. **deload_suggested** — Weight or volume has been declining over recent sessions, suggesting
+   fatigue or overreaching. Suggest reducing weight by 10-15%.
+
+Be specific with numbers. All weights are in kg. Include the number of sessions at current weight.
+Focus on practical, conservative recommendations. Do NOT suggest increases if the user has only
+done 1-2 sessions at a weight — they need consistency first."""
+
+    from datetime import date as date_cls
+
+    system_prompt = COACH_SYSTEM_PROMPT.format(today=date_cls.today().isoformat()) + _format_workout_context(
+        workout_context
+    )
+
+    try:
+        raw = await _chat_completion(
+            api_key=api_key,
+            base_url=base_url,
+            model=model or settings.ai_model,
+            system_prompt=system_prompt,
+            user_prompt=prompt,
+            response_format=OverloadSuggestions,
+        )
+        return OverloadSuggestions.model_validate_json(_strip_json_fences(raw))
+    except Exception as e:
+        logger.error(f"Overload suggestion error: {e}", exc_info=True)
         raise

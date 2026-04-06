@@ -1,5 +1,6 @@
 """HTTP client for communicating with the Workout Tracker API."""
 
+import asyncio
 import logging
 from typing import Any
 
@@ -144,6 +145,50 @@ class WorkoutAPIClient:
         response = await client.post("/measurements", json=data, headers=headers)
         response.raise_for_status()
         return response.json()
+
+    async def get_batch_progress(
+        self,
+        exercise_names: list[str],
+        metric: str = "weight",
+        auth_header: str | None = None,
+    ) -> dict[str, Any]:
+        """Fetch batch progress time series for multiple exercises."""
+        client = await self._get_client()
+        headers = {}
+        if auth_header:
+            headers["Authorization"] = auth_header
+        response = await client.post(
+            "/sessions/progress/batch",
+            json={"exercise_names": exercise_names, "metric": metric},
+            headers=headers,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    async def get_overload_data(
+        self, auth_header: str | None = None
+    ) -> tuple[WorkoutContext, dict[str, Any], dict[str, Any]]:
+        """Fetch workout context + weight and volume progress for all exercises."""
+        exercises = await self.get_exercises(auth_header=auth_header)
+        if not exercises:
+            ctx = WorkoutContext(exercises=[], total_volume=0, exercise_count=0, muscle_groups_worked=[])
+            return ctx, {}, {}
+
+        names = [ex.name for ex in exercises]
+        total_volume = sum(ex.sets * ex.reps * (ex.weight or 0) for ex in exercises)
+        muscle_groups = self._identify_muscle_groups(exercises)
+        ctx = WorkoutContext(
+            exercises=exercises,
+            total_volume=total_volume,
+            exercise_count=len(exercises),
+            muscle_groups_worked=muscle_groups,
+        )
+
+        weight_progress, volume_progress = await asyncio.gather(
+            self.get_batch_progress(names, "weight", auth_header),
+            self.get_batch_progress(names, "volume", auth_header),
+        )
+        return ctx, weight_progress, volume_progress
 
     def _identify_muscle_groups(self, exercises: list[ExerciseFromAPI]) -> list[str]:
         """Identify muscle groups from exercise names.

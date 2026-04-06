@@ -11,6 +11,7 @@ import type {
   RecommendationRequest,
   WorkoutRecommendation,
   ProgressAnalysis,
+  OverloadSuggestions,
   AICoachHealthResponse,
   Conversation,
   ConversationSummary,
@@ -471,6 +472,14 @@ export async function getWorkoutRecommendation(
  */
 export async function getProgressAnalysis(): Promise<ProgressAnalysis> {
   const response = await aiCoachClient.get<ProgressAnalysis>('/analyze');
+  return response.data;
+}
+
+/**
+ * Get progressive overload suggestions from AI Coach.
+ */
+export async function getOverloadSuggestions(): Promise<OverloadSuggestions> {
+  const response = await aiCoachClient.get<OverloadSuggestions>('/overload');
   return response.data;
 }
 

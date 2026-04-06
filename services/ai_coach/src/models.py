@@ -132,6 +132,36 @@ class ProgressAnalysis(BaseModel):
     muscle_balance_score: float | None = Field(default=None, ge=0, le=100, description="Balance score")
 
 
+class ReadinessStatus(str, Enum):
+    """How ready an exercise is for progressive overload."""
+
+    READY_TO_INCREASE = "ready_to_increase"
+    MAINTAINING = "maintaining"
+    NEEDS_MORE_DATA = "needs_more_data"
+    DELOAD_SUGGESTED = "deload_suggested"
+
+
+class ExerciseOverloadSuggestion(BaseModel):
+    """Progressive overload recommendation for a single exercise."""
+
+    exercise_name: str = Field(..., description="Name of the exercise")
+    current_weight: float | None = Field(default=None, description="Current working weight in kg")
+    suggested_weight: float | None = Field(default=None, description="Suggested new weight in kg")
+    current_volume: str | None = Field(default=None, description="Current sets x reps summary")
+    suggested_volume: str | None = Field(default=None, description="Suggested new sets x reps")
+    readiness: ReadinessStatus = Field(..., description="Readiness to increase")
+    reasoning: str = Field(..., description="Brief explanation of the recommendation")
+    sessions_at_current: int | None = Field(default=None, description="Sessions at current weight/volume")
+
+
+class OverloadSuggestions(BaseModel):
+    """AI-generated progressive overload recommendations."""
+
+    summary: str = Field(..., description="Overall progressive overload assessment")
+    suggestions: list[ExerciseOverloadSuggestion] = Field(default_factory=list)
+    general_tips: list[str] = Field(default_factory=list, description="General progressive overload tips")
+
+
 class Conversation(BaseModel):
     """A stored conversation."""
 

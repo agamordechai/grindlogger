@@ -5,9 +5,10 @@ import { CoachLanding } from '../components/coach/CoachLanding';
 import { ChatView } from '../components/coach/ChatView';
 import { WorkoutGenerator } from '../components/coach/WorkoutGenerator';
 import { AnalysisReport } from '../components/coach/AnalysisReport';
+import { OverloadReport } from '../components/coach/OverloadReport';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
-type View = 'landing' | 'chat' | 'workout' | 'progress';
+type View = 'landing' | 'chat' | 'workout' | 'progress' | 'overload';
 
 export default function CoachPage() {
   const [activeView, setActiveView] = useLocalStorage<View>('coach_active_view', 'landing');
@@ -35,6 +36,7 @@ export default function CoachPage() {
             {activeView === 'chat' && <ChatView />}
             {activeView === 'workout' && <WorkoutGenerator />}
             {activeView === 'progress' && <AnalysisReport />}
+            {activeView === 'overload' && <OverloadReport />}
           </motion.div>
         ) : (
           <motion.div

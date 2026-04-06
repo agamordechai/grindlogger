@@ -11,7 +11,7 @@ import redis.asyncio as redis
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from services.ai_coach.src.agent import analyze_progress, chat_with_coach, get_workout_recommendation
+from services.ai_coach.src.agent import analyze_progress, chat_with_coach, get_workout_recommendation, suggest_overload
 from services.ai_coach.src.config import get_settings
 from services.ai_coach.src.models import (
     ChatMessage,
@@ -20,6 +20,7 @@ from services.ai_coach.src.models import (
     Conversation,
     ConversationSummary,
     HealthResponse,
+    OverloadSuggestions,
     ProgressAnalysis,
     RecommendationRequest,
     WorkoutRecommendation,
@@ -284,6 +285,39 @@ async def analyze_workout(request: Request) -> ProgressAnalysis:
     except Exception as e:
         logger.error(f"Analysis error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to analyze workout: {str(e)}") from e
+
+
+@app.get("/overload", response_model=OverloadSuggestions)
+async def overload_suggestions(request: Request) -> OverloadSuggestions:
+    """Get progressive overload suggestions based on workout history."""
+    api_key, base_url, model = _resolve_ai_credentials(request)
+    auth_header = _get_auth_header(request)
+
+    try:
+        workout_client = get_workout_client()
+        ctx, weight_progress, volume_progress = await workout_client.get_overload_data(
+            auth_header=auth_header
+        )
+    except Exception as e:
+        logger.error(f"Failed to fetch overload data: {e}")
+        raise HTTPException(status_code=503, detail="Unable to connect to workout API. Please try again.") from e
+
+    if not ctx.exercises:
+        raise HTTPException(status_code=400, detail="No exercises found. Add exercises to get overload suggestions.")
+
+    try:
+        result = await suggest_overload(
+            ctx,
+            weight_progress,
+            volume_progress,
+            api_key=api_key,
+            base_url=base_url,
+            model=model,
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Overload suggestion error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to generate overload suggestions: {str(e)}") from e
 
 
 @app.get("/exercises")

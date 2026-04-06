@@ -30,7 +30,7 @@
 - [X] **Progress analysis** — Muscle balance scoring, strengths/weaknesses, recommendations
 - [X] **AI actions via API** — Let the coach perform actions on behalf of the user (bulk-add measurements, create/modify exercises, log workouts)
 - [X] **Custom routine generation** — AI creates unique, personalized workout routine templates based on goals, equipment, and schedule
-- [ ] **Progressive overload suggestions** — AI analyzes logged history and recommends when to increase weight/volume
+- [X] **Progressive overload suggestions** — AI analyzes logged history and recommends when to increase weight/volume
 - [ ] **Form tips** — Exercise-specific technique cues
 ### AI Coach - Advanced
 - [ ] **Auto-program design** *(low priority)* — AI periodizes training automatically (linear progression, wave loading, etc.)

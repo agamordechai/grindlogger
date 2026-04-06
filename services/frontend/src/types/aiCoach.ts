@@ -70,6 +70,25 @@ export interface ProgressAnalysis {
   muscle_balance_score?: number;
 }
 
+export type ReadinessStatus = 'ready_to_increase' | 'maintaining' | 'needs_more_data' | 'deload_suggested';
+
+export interface ExerciseOverloadSuggestion {
+  exercise_name: string;
+  current_weight?: number;
+  suggested_weight?: number;
+  current_volume?: string;
+  suggested_volume?: string;
+  readiness: ReadinessStatus;
+  reasoning: string;
+  sessions_at_current?: number;
+}
+
+export interface OverloadSuggestions {
+  summary: string;
+  suggestions: ExerciseOverloadSuggestion[];
+  general_tips: string[];
+}
+
 export interface AICoachHealthResponse {
   status: string;
   service: string;
