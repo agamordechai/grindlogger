@@ -147,6 +147,8 @@ jobs:
             DOMAIN_NAME=${{ secrets.DOMAIN_NAME }}
             JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
             GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            TOKEN_ENCRYPTION_KEY=${{ secrets.TOKEN_ENCRYPTION_KEY }}
             GH_CLIENT_ID=${{ secrets.GH_CLIENT_ID }}
             GH_CLIENT_SECRET=${{ secrets.GH_CLIENT_SECRET }}
             DISCORD_CLIENT_ID=${{ secrets.DISCORD_CLIENT_ID }}

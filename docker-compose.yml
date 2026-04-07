@@ -66,6 +66,10 @@ services:
 
       # Google OAuth
       - APP_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - APP_GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+
+      # Token encryption (for stored OAuth tokens)
+      - TOKEN_ENCRYPTION_KEY=${TOKEN_ENCRYPTION_KEY:-}
 
       # GitHub OAuth
       - APP_GITHUB_CLIENT_ID=${GH_CLIENT_ID:-}

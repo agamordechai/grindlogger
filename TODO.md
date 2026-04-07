@@ -31,6 +31,7 @@
 - [X] **AI actions via API** — Let the coach perform actions on behalf of the user (bulk-add measurements, create/modify exercises, log workouts)
 - [X] **Custom routine generation** — AI creates unique, personalized workout routine templates based on goals, equipment, and schedule
 - [X] **Progressive overload suggestions** — AI analyzes logged history and recommends when to increase weight/volume
+- [ ] **Server-side AI API key storage** — Move AI coach API keys from localStorage to encrypted server-side storage
 - [ ] **Form tips** — Exercise-specific technique cues
 ### AI Coach - Advanced
 - [ ] **Auto-program design** *(low priority)* — AI periodizes training automatically (linear progression, wave loading, etc.)
@@ -68,7 +69,7 @@
 - [ ] **Data export** — Allow users to download all their history in CSV/JSON format
 - [ ] **Smartwatch companion** — Apple Watch / Wear OS extension for logging sets and triggering timers from the wrist
 - [ ] **Spotify integration** — Log which playlist was used for workouts, correlate with performance
-- [ ] **Calendar sync** — Sync workout schedule to Google Calendar/Outlook
+- [x] **Calendar sync** — Sync workout schedule to Google Calendar (encrypted server-side token storage)
 ### Data & Integration - Advanced(after application deployment)
 - [ ] **Offline mode** — Work out without internet, sync when reconnected
 - [ ] **Wearable timers** — Send rest timers to connected smartwatches

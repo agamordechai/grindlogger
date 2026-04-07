@@ -406,6 +406,53 @@ export async function deleteMeasurement(id: number): Promise<void> {
   await client.delete(`/measurements/${id}`);
 }
 
+// ============ Google Calendar Sync API ============
+
+interface CalendarSyncStatus {
+  connected: boolean;
+  enabled: boolean;
+  calendar_id: string | null;
+}
+
+interface CalendarOption {
+  id: string;
+  summary: string;
+  primary: boolean;
+}
+
+export async function getCalendarSyncStatus(): Promise<CalendarSyncStatus> {
+  const response = await client.get<CalendarSyncStatus>('/auth/google-calendar/status');
+  return response.data;
+}
+
+export async function connectGoogleCalendar(code: string, redirectUri: string): Promise<CalendarSyncStatus> {
+  const response = await client.post<CalendarSyncStatus>('/auth/google-calendar/connect', {
+    code,
+    redirect_uri: redirectUri,
+  });
+  return response.data;
+}
+
+export async function disconnectGoogleCalendar(): Promise<void> {
+  await client.post('/auth/google-calendar/disconnect');
+}
+
+export async function getGoogleCalendars(): Promise<CalendarOption[]> {
+  const response = await client.get<CalendarOption[]>('/auth/google-calendar/calendars');
+  return response.data;
+}
+
+export async function updateCalendarSyncSettings(
+  calendarId: string | null,
+  enabled: boolean | null,
+): Promise<CalendarSyncStatus> {
+  const response = await client.put<CalendarSyncStatus>('/auth/google-calendar/settings', {
+    calendar_id: calendarId,
+    enabled,
+  });
+  return response.data;
+}
+
 // ============ Admin API ============
 
 export async function getAdminUsers(): Promise<AdminUser[]> {

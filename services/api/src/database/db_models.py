@@ -51,6 +51,11 @@ class UserTable(SQLModel, table=True):
     disabled: bool = Field(default=False)
     created_at: dt.datetime = Field(default_factory=lambda: dt.datetime.now(dt.UTC))
 
+    # Google Calendar sync
+    google_calendar_refresh_token: str | None = Field(default=None, max_length=2048)
+    google_calendar_id: str | None = Field(default=None, max_length=255)
+    google_calendar_enabled: bool = Field(default=False)
+
 
 class BodyMeasurementTable(SQLModel, table=True):
     """Body measurement entry — tracks weight, body fat %, and tape measurements over time."""
@@ -120,6 +125,7 @@ class WorkoutSessionTable(SQLModel, table=True):
     notes: str | None = Field(default=None, max_length=1000)
     duration_minutes: int | None = Field(default=None, ge=0)
     created_at: dt.datetime = Field(default_factory=lambda: dt.datetime.now(dt.UTC))
+    google_calendar_event_id: str | None = Field(default=None, max_length=1024)
 
 
 class SessionExerciseTable(SQLModel, table=True):

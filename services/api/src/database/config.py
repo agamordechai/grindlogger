@@ -135,6 +135,10 @@ class AppSettings(BaseSettings):
 
     # Google OAuth
     google_client_id: str = Field(default="", description="Google OAuth 2.0 Client ID for sign-in verification")
+    google_client_secret: str = Field(default="", description="Google OAuth 2.0 Client Secret for calendar auth code exchange")
+
+    # Token encryption
+    token_encryption_key: str = Field(default="", description="Fernet key for encrypting stored OAuth tokens")
 
     # GitHub OAuth
     github_client_id: str = Field(default="", description="GitHub OAuth App Client ID")

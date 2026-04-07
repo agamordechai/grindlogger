@@ -32,6 +32,9 @@ from services.api.src.auth import (
     DiscordLoginRequest,
     EmailLoginRequest,
     GitHubLoginRequest,
+    GoogleCalendarConnectRequest,
+    GoogleCalendarSettingsRequest,
+    GoogleCalendarStatusResponse,
     GoogleLoginRequest,
     RedditLoginRequest,
     RefreshRequest,
@@ -51,9 +54,17 @@ from services.api.src.auth import (
     verify_password,
     verify_reddit_token,
 )
+from services.api.src.calendar_sync import (
+    delete_calendar_event,
+    exchange_code_for_tokens,
+    list_calendars,
+    revoke_token,
+    sync_session_to_calendar,
+)
+from services.api.src.crypto import encrypt_token
 from services.api.src.database.config import get_settings
 from services.api.src.database.database import get_session, init_db
-from services.api.src.database.db_models import ExerciseTable, UserTable
+from services.api.src.database.db_models import ExerciseTable, SessionExerciseTable, UserTable, WorkoutSessionTable
 from services.api.src.database.dependencies import (
     MeasurementRepositoryDep,
     RepositoryDep,
@@ -617,9 +628,21 @@ def create_workout_session(
     data: WorkoutSessionCreate,
     session_repo: SessionRepositoryDep,
     current_user: Annotated[UserTable, Depends(get_current_user)],
+    db_session: Session = Depends(get_session),
 ) -> WorkoutSessionResponse:
     """Log a completed workout session with exercises."""
-    return session_repo.create_session(current_user.id, data)
+    result = session_repo.create_session(current_user.id, data)
+
+    # Sync to Google Calendar if enabled
+    if current_user.google_calendar_enabled:
+        session_row = db_session.get(WorkoutSessionTable, result.id)
+        if session_row:
+            exercises = db_session.exec(
+                select(SessionExerciseTable).where(SessionExerciseTable.session_id == result.id)
+            ).all()
+            sync_session_to_calendar(current_user, session_row, exercises, db_session)
+
+    return result
 
 
 @app.get("/sessions/calendar", response_model=list[WorkoutSessionSummary], tags=["Sessions"])
@@ -698,11 +721,22 @@ def update_workout_session(
     data: WorkoutSessionCreate,
     session_repo: SessionRepositoryDep,
     current_user: Annotated[UserTable, Depends(get_current_user)],
+    db_session: Session = Depends(get_session),
 ) -> WorkoutSessionResponse:
     """Update a logged workout session."""
     result = session_repo.update_session(session_id, current_user.id, data)
     if not result:
         raise HTTPException(status_code=404, detail="Session not found")
+
+    # Sync to Google Calendar if enabled
+    if current_user.google_calendar_enabled:
+        session_row = db_session.get(WorkoutSessionTable, result.id)
+        if session_row:
+            exercises = db_session.exec(
+                select(SessionExerciseTable).where(SessionExerciseTable.session_id == result.id)
+            ).all()
+            sync_session_to_calendar(current_user, session_row, exercises, db_session)
+
     return result
 
 
@@ -713,8 +747,14 @@ def delete_workout_session(
     session_id: int,
     session_repo: SessionRepositoryDep,
     current_user: Annotated[UserTable, Depends(get_current_user)],
+    db_session: Session = Depends(get_session),
 ) -> None:
     """Delete a logged workout session."""
+    # Fetch session before deletion for calendar cleanup
+    session_row = db_session.get(WorkoutSessionTable, session_id)
+    if session_row and session_row.user_id == current_user.id:
+        delete_calendar_event(current_user, session_row)
+
     success = session_repo.delete_session(session_id, current_user.id)
     if not success:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -1224,6 +1264,121 @@ async def delete_me(
     repository.delete_all(current_user.id)
     session.delete(current_user)
     session.commit()
+
+
+# ============ Google Calendar Sync Endpoints ============
+
+
+@app.post("/auth/google-calendar/connect", response_model=GoogleCalendarStatusResponse, tags=["Calendar"])
+@limiter.limit("10/minute")
+def connect_google_calendar(
+    request: Request,
+    data: GoogleCalendarConnectRequest,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+    session: Session = Depends(get_session),
+) -> GoogleCalendarStatusResponse:
+    """Connect Google Calendar by exchanging an authorization code for tokens."""
+    try:
+        tokens = exchange_code_for_tokens(data.code, data.redirect_uri)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    refresh_token = tokens.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(
+            status_code=400,
+            detail="No refresh token received. You may need to re-authorize with prompt=consent.",
+        )
+
+    current_user.google_calendar_refresh_token = encrypt_token(refresh_token)
+    current_user.google_calendar_enabled = True
+    current_user.google_calendar_id = "primary"
+    session.add(current_user)
+    session.commit()
+
+    return GoogleCalendarStatusResponse(connected=True, enabled=True, calendar_id="primary")
+
+
+@app.post("/auth/google-calendar/disconnect", status_code=204, tags=["Calendar"])
+@limiter.limit("10/minute")
+def disconnect_google_calendar(
+    request: Request,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+    session: Session = Depends(get_session),
+) -> None:
+    """Disconnect Google Calendar and revoke tokens."""
+    revoke_token(current_user)
+
+    current_user.google_calendar_refresh_token = None
+    current_user.google_calendar_enabled = False
+    current_user.google_calendar_id = None
+    session.add(current_user)
+
+    # Clear event IDs from all user sessions
+    sessions = session.exec(
+        select(WorkoutSessionTable).where(
+            WorkoutSessionTable.user_id == current_user.id,
+            WorkoutSessionTable.google_calendar_event_id.isnot(None),
+        )
+    ).all()
+    for s in sessions:
+        s.google_calendar_event_id = None
+        session.add(s)
+
+    session.commit()
+
+
+@app.get("/auth/google-calendar/status", response_model=GoogleCalendarStatusResponse, tags=["Calendar"])
+@limiter.limit("60/minute")
+def get_google_calendar_status(
+    request: Request,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> GoogleCalendarStatusResponse:
+    """Get the current user's Google Calendar connection status."""
+    return GoogleCalendarStatusResponse(
+        connected=current_user.google_calendar_refresh_token is not None,
+        enabled=current_user.google_calendar_enabled,
+        calendar_id=current_user.google_calendar_id,
+    )
+
+
+@app.put("/auth/google-calendar/settings", response_model=GoogleCalendarStatusResponse, tags=["Calendar"])
+@limiter.limit("30/minute")
+def update_google_calendar_settings(
+    request: Request,
+    data: GoogleCalendarSettingsRequest,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+    session: Session = Depends(get_session),
+) -> GoogleCalendarStatusResponse:
+    """Update Google Calendar sync settings (calendar ID, enable/disable)."""
+    if not current_user.google_calendar_refresh_token:
+        raise HTTPException(status_code=400, detail="Google Calendar is not connected")
+
+    if data.calendar_id is not None:
+        current_user.google_calendar_id = data.calendar_id
+    if data.enabled is not None:
+        current_user.google_calendar_enabled = data.enabled
+
+    session.add(current_user)
+    session.commit()
+
+    return GoogleCalendarStatusResponse(
+        connected=True,
+        enabled=current_user.google_calendar_enabled,
+        calendar_id=current_user.google_calendar_id,
+    )
+
+
+@app.get("/auth/google-calendar/calendars", tags=["Calendar"])
+@limiter.limit("10/minute")
+def get_google_calendars(
+    request: Request,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> list[dict]:
+    """List the user's Google Calendars for selection."""
+    if not current_user.google_calendar_refresh_token:
+        raise HTTPException(status_code=400, detail="Google Calendar is not connected")
+    return list_calendars(current_user)
 
 
 @app.get("/admin/users", response_model=list[AdminUserResponse], tags=["Admin"])

@@ -162,6 +162,28 @@ class EmailLoginRequest(BaseModel):
     password: str = Field(..., description="User password")
 
 
+class GoogleCalendarConnectRequest(BaseModel):
+    """Request to connect Google Calendar via authorization code."""
+
+    code: str = Field(..., description="Google OAuth authorization code from frontend")
+    redirect_uri: str = Field(..., description="Redirect URI used in the OAuth flow")
+
+
+class GoogleCalendarStatusResponse(BaseModel):
+    """Response for Google Calendar connection status."""
+
+    connected: bool
+    enabled: bool = False
+    calendar_id: str | None = None
+
+
+class GoogleCalendarSettingsRequest(BaseModel):
+    """Request to update Google Calendar sync settings."""
+
+    calendar_id: str | None = Field(None, max_length=255, description="Google Calendar ID to sync to")
+    enabled: bool | None = Field(None, description="Enable or disable calendar sync")
+
+
 class UpdateProfileRequest(BaseModel):
     """Profile update request model."""
 
