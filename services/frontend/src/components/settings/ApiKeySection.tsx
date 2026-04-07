@@ -21,7 +21,14 @@ export function ApiKeySection() {
 
   // Migrate localStorage keys to server on first load
   useEffect(() => {
-    if (loading || status?.has_key) return;
+    if (loading) return;
+    if (status?.has_key) {
+      // Server already has a key — just clean up any stale localStorage keys
+      localStorage.removeItem('ai_api_key');
+      localStorage.removeItem('ai_base_url');
+      localStorage.removeItem('ai_model');
+      return;
+    }
     const legacyKey = localStorage.getItem('ai_api_key');
     if (legacyKey) {
       const legacyUrl = localStorage.getItem('ai_base_url');
