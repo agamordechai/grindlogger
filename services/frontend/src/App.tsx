@@ -7,6 +7,7 @@ import OAuthCallback from './components/auth/OAuthCallback';
 import { TopBar } from './components/nav/TopBar';
 import { BottomNav } from './components/nav/BottomNav';
 import { Skeleton } from './components/ui/Skeleton';
+import { ScrollToTop } from './components/ui/ScrollToTop';
 import DashboardPage from './pages/DashboardPage';
 import CoachPage from './pages/CoachPage';
 import SettingsPage from './pages/SettingsPage';
@@ -95,6 +96,7 @@ function AuthenticatedApp() {
           </Routes>
         </AnimatePresence>
       </main>
+      <ScrollToTop />
       <BottomNav />
     </div>
   );

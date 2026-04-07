@@ -26,11 +26,11 @@ from starlette.middleware.base import RequestResponseEndpoint
 
 from services.api.src.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
-    AIProviderRequest,
-    AIProviderStatusResponse,
     AdminStatsResponse,
     AdminUpdateUserRequest,
     AdminUserResponse,
+    AIProviderRequest,
+    AIProviderStatusResponse,
     DiscordLoginRequest,
     EmailLoginRequest,
     GitHubLoginRequest,
@@ -1467,8 +1467,11 @@ def get_ai_provider_credentials(
         raise HTTPException(status_code=404, detail="No AI provider configured")
     try:
         api_key = decrypt_token(current_user.ai_api_key_encrypted)
-    except RuntimeError:
-        raise HTTPException(status_code=500, detail="Failed to decrypt AI key — encryption key may have changed")
+    except RuntimeError as err:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to decrypt AI key — encryption key may have changed",
+        ) from err
     return {
         "api_key": api_key,
         "base_url": current_user.ai_base_url,

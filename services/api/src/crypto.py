@@ -16,7 +16,8 @@ def _get_fernet() -> Fernet:
     if not _KEY:
         raise RuntimeError(
             "TOKEN_ENCRYPTION_KEY environment variable is not set. "
-            "Generate one with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+            "Generate one with: python -c "
+            '"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
         )
     return Fernet(_KEY.encode())
 

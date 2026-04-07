@@ -59,6 +59,8 @@
 - [X] **Page transitions** — Framer Motion animations throughout the app
 - [X] **Styled modals** — Custom modal dialogs replacing native browser dialogs
 - [X] **Settings page** — Profile editing, theme, units, bodyweight, API key management
+- [X] **Back navigation on Settings** — Back arrow button at top of Settings page
+- [X] **Scroll-to-top button** — Floating arrow button appears after scrolling on any page
 - [ ] **Notifications/reminders** — Remind users to work out on scheduled days
 
 ## Data & Integration

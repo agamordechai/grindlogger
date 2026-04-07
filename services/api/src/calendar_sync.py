@@ -13,7 +13,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from sqlmodel import Session
 
-from services.api.src.crypto import decrypt_token, encrypt_token
+from services.api.src.crypto import decrypt_token
 from services.api.src.database.config import get_settings
 from services.api.src.database.db_models import UserTable, WorkoutSessionTable
 
@@ -143,7 +143,9 @@ def sync_session_to_calendar(
                 eventId=session_row.google_calendar_event_id,
                 body=event_body,
             ).execute()
-            logger.info("Updated calendar event %s for session %s", session_row.google_calendar_event_id, session_row.id)
+            logger.info(
+                "Updated calendar event %s for session %s", session_row.google_calendar_event_id, session_row.id
+            )
         else:
             # Create new event
             created = service.events().insert(calendarId=calendar_id, body=event_body).execute()

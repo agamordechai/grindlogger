@@ -764,11 +764,7 @@ async def suggest_overload(
         exercises = progress.get("exercises", {})
         return {
             "metric": progress.get("metric", ""),
-            "exercises": {
-                name: points[-20:]
-                for name, points in exercises.items()
-                if name in exercises_with_data
-            },
+            "exercises": {name: points[-20:] for name, points in exercises.items() if name in exercises_with_data},
         }
 
     weight_data = _truncate(weight_progress)
