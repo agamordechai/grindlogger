@@ -26,6 +26,8 @@ from starlette.middleware.base import RequestResponseEndpoint
 
 from services.api.src.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
+    AIProviderRequest,
+    AIProviderStatusResponse,
     AdminStatsResponse,
     AdminUpdateUserRequest,
     AdminUserResponse,
@@ -61,7 +63,7 @@ from services.api.src.calendar_sync import (
     revoke_token,
     sync_session_to_calendar,
 )
-from services.api.src.crypto import encrypt_token
+from services.api.src.crypto import decrypt_token, encrypt_token
 from services.api.src.database.config import get_settings
 from services.api.src.database.database import get_session, init_db
 from services.api.src.database.db_models import ExerciseTable, SessionExerciseTable, UserTable, WorkoutSessionTable
@@ -1379,6 +1381,99 @@ def get_google_calendars(
     if not current_user.google_calendar_refresh_token:
         raise HTTPException(status_code=400, detail="Google Calendar is not connected")
     return list_calendars(current_user)
+
+
+# ---------- AI Provider Credentials ----------
+
+
+@app.get("/auth/ai-provider", response_model=AIProviderStatusResponse, tags=["AI Provider"])
+@limiter.limit("60/minute")
+def get_ai_provider(
+    request: Request,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> AIProviderStatusResponse:
+    """Get the current user's AI provider configuration status."""
+    has_key = current_user.ai_api_key_encrypted is not None
+    key_hint = None
+    if has_key:
+        try:
+            raw_key = decrypt_token(current_user.ai_api_key_encrypted)
+            if len(raw_key) <= 12:
+                key_hint = "****"
+            else:
+                key_hint = f"{raw_key[:7]}...{raw_key[-4:]}"
+        except RuntimeError:
+            key_hint = "****"
+    return AIProviderStatusResponse(
+        has_key=has_key,
+        key_hint=key_hint,
+        base_url=current_user.ai_base_url,
+        model=current_user.ai_model,
+    )
+
+
+@app.put("/auth/ai-provider", response_model=AIProviderStatusResponse, tags=["AI Provider"])
+@limiter.limit("20/minute")
+def save_ai_provider(
+    request: Request,
+    data: AIProviderRequest,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+    session: Session = Depends(get_session),
+) -> AIProviderStatusResponse:
+    """Save or update the user's AI provider credentials (encrypted at rest)."""
+    current_user.ai_api_key_encrypted = encrypt_token(data.api_key)
+    current_user.ai_base_url = data.base_url
+    current_user.ai_model = data.model
+    session.add(current_user)
+    session.commit()
+
+    raw_key = data.api_key
+    if len(raw_key) <= 12:
+        key_hint = "****"
+    else:
+        key_hint = f"{raw_key[:7]}...{raw_key[-4:]}"
+
+    return AIProviderStatusResponse(
+        has_key=True,
+        key_hint=key_hint,
+        base_url=current_user.ai_base_url,
+        model=current_user.ai_model,
+    )
+
+
+@app.delete("/auth/ai-provider", status_code=204, tags=["AI Provider"])
+@limiter.limit("20/minute")
+def delete_ai_provider(
+    request: Request,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+    session: Session = Depends(get_session),
+) -> None:
+    """Remove the user's AI provider credentials."""
+    current_user.ai_api_key_encrypted = None
+    current_user.ai_base_url = None
+    current_user.ai_model = None
+    session.add(current_user)
+    session.commit()
+
+
+@app.get("/auth/ai-provider/credentials", tags=["AI Provider"])
+@limiter.limit("120/minute")
+def get_ai_provider_credentials(
+    request: Request,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> dict:
+    """Return decrypted AI credentials. Internal use by AI coach service only."""
+    if not current_user.ai_api_key_encrypted:
+        raise HTTPException(status_code=404, detail="No AI provider configured")
+    try:
+        api_key = decrypt_token(current_user.ai_api_key_encrypted)
+    except RuntimeError:
+        raise HTTPException(status_code=500, detail="Failed to decrypt AI key — encryption key may have changed")
+    return {
+        "api_key": api_key,
+        "base_url": current_user.ai_base_url,
+        "model": current_user.ai_model,
+    }
 
 
 @app.get("/admin/users", response_model=list[AdminUserResponse], tags=["Admin"])

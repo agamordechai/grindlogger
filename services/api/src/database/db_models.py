@@ -56,6 +56,11 @@ class UserTable(SQLModel, table=True):
     google_calendar_id: str | None = Field(default=None, max_length=255)
     google_calendar_enabled: bool = Field(default=False)
 
+    # AI provider credentials (encrypted at rest)
+    ai_api_key_encrypted: str | None = Field(default=None, max_length=2048)
+    ai_base_url: str | None = Field(default=None, max_length=1024)
+    ai_model: str | None = Field(default=None, max_length=255)
+
 
 class BodyMeasurementTable(SQLModel, table=True):
     """Body measurement entry — tracks weight, body fat %, and tape measurements over time."""

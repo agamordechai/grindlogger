@@ -184,6 +184,23 @@ class GoogleCalendarSettingsRequest(BaseModel):
     enabled: bool | None = Field(None, description="Enable or disable calendar sync")
 
 
+class AIProviderRequest(BaseModel):
+    """Request to save AI provider credentials."""
+
+    api_key: str = Field(..., min_length=1, max_length=500, description="AI provider API key")
+    base_url: str | None = Field(None, max_length=1024, description="Custom base URL for OpenAI-compatible providers")
+    model: str | None = Field(None, max_length=255, description="Model override (e.g. gpt-4o, claude-haiku-4-5)")
+
+
+class AIProviderStatusResponse(BaseModel):
+    """Response for AI provider configuration status (never exposes raw key)."""
+
+    has_key: bool
+    key_hint: str | None = None
+    base_url: str | None = None
+    model: str | None = None
+
+
 class UpdateProfileRequest(BaseModel):
     """Profile update request model."""
 

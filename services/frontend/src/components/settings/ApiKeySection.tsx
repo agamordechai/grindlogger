@@ -1,68 +1,104 @@
 import { useState, useEffect } from 'react';
 import { Key } from 'lucide-react';
 import { GlowButton } from '../ui/GlowButton';
-
-const STORAGE_KEY = 'ai_api_key';
-const BASE_URL_KEY = 'ai_base_url';
-const MODEL_KEY = 'ai_model';
-
-function maskKey(key: string): string {
-  if (key.length <= 12) return '****';
-  return `${key.slice(0, 7)}...${key.slice(-4)}`;
-}
+import { getAIProviderStatus, saveAIProvider, deleteAIProvider, type AIProviderStatus } from '../../api/client';
 
 export function ApiKeySection() {
   const [key, setKey] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [model, setModel] = useState('');
-  const [savedKey, setSavedKey] = useState<string | null>(null);
-  const [savedBaseUrl, setSavedBaseUrl] = useState<string | null>(null);
-  const [savedModel, setSavedModel] = useState<string | null>(null);
+  const [status, setStatus] = useState<AIProviderStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setSavedKey(localStorage.getItem(STORAGE_KEY));
-    setSavedBaseUrl(localStorage.getItem(BASE_URL_KEY));
-    setSavedModel(localStorage.getItem(MODEL_KEY));
+    getAIProviderStatus()
+      .then(setStatus)
+      .catch(() => setStatus(null))
+      .finally(() => setLoading(false));
   }, []);
 
-  const handleSave = () => {
+  // Migrate localStorage keys to server on first load
+  useEffect(() => {
+    if (loading || status?.has_key) return;
+    const legacyKey = localStorage.getItem('ai_api_key');
+    if (legacyKey) {
+      const legacyUrl = localStorage.getItem('ai_base_url');
+      const legacyModel = localStorage.getItem('ai_model');
+      saveAIProvider({
+        api_key: legacyKey,
+        base_url: legacyUrl || null,
+        model: legacyModel || null,
+      }).then((s) => {
+        setStatus(s);
+        localStorage.removeItem('ai_api_key');
+        localStorage.removeItem('ai_base_url');
+        localStorage.removeItem('ai_model');
+      }).catch(() => {/* keep localStorage as fallback */});
+    }
+  }, [loading, status?.has_key]);
+
+  const handleSave = async () => {
     const trimmedKey = key.trim();
-    if (trimmedKey) {
-      localStorage.setItem(STORAGE_KEY, trimmedKey);
-      setSavedKey(trimmedKey);
+    if (!trimmedKey && !status?.has_key) return;
+    if (!trimmedKey) {
+      setError('API key is required');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      const result = await saveAIProvider({
+        api_key: trimmedKey,
+        base_url: baseUrl.trim() || status?.base_url || null,
+        model: model.trim() || status?.model || null,
+      });
+      setStatus(result);
       setKey('');
-    }
-    const trimmedUrl = baseUrl.trim();
-    if (trimmedUrl) {
-      localStorage.setItem(BASE_URL_KEY, trimmedUrl);
-      setSavedBaseUrl(trimmedUrl);
       setBaseUrl('');
-    } else if (!savedBaseUrl && !trimmedUrl) {
-      localStorage.removeItem(BASE_URL_KEY);
-    }
-    const trimmedModel = model.trim();
-    if (trimmedModel) {
-      localStorage.setItem(MODEL_KEY, trimmedModel);
-      setSavedModel(trimmedModel);
       setModel('');
-    } else if (!savedModel && !trimmedModel) {
-      localStorage.removeItem(MODEL_KEY);
+    } catch (e: any) {
+      setError(e.response?.data?.detail || 'Failed to save');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleRemove = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(BASE_URL_KEY);
-    localStorage.removeItem(MODEL_KEY);
-    setSavedKey(null);
-    setSavedBaseUrl(null);
-    setSavedModel(null);
-    setKey('');
-    setBaseUrl('');
-    setModel('');
+  const handleRemove = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await deleteAIProvider();
+      setStatus({ has_key: false, key_hint: null, base_url: null, model: null });
+      setKey('');
+      setBaseUrl('');
+      setModel('');
+      // Clean up any remaining localStorage keys
+      localStorage.removeItem('ai_api_key');
+      localStorage.removeItem('ai_base_url');
+      localStorage.removeItem('ai_model');
+    } catch (e: any) {
+      setError(e.response?.data?.detail || 'Failed to remove');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const hasChanges = key.trim() || baseUrl.trim() || model.trim();
+
+  if (loading) {
+    return (
+      <div className="py-6 border-b border-border">
+        <div className="flex items-center gap-2 mb-4">
+          <Key size={16} className="text-ember" />
+          <h3 className="text-sm font-bold text-chalk">AI Coach Provider</h3>
+        </div>
+        <p className="text-xs text-steel">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="py-6 border-b border-border">
@@ -71,28 +107,32 @@ export function ApiKeySection() {
         <h3 className="text-sm font-bold text-chalk">AI Coach Provider</h3>
       </div>
 
-      {savedKey ? (
+      {error && (
+        <p className="text-xs text-red-400 mb-2">{error}</p>
+      )}
+
+      {status?.has_key ? (
         <div className="space-y-2 mb-3">
           <div className="flex items-center gap-3 bg-surface-2 rounded-xl px-3 py-2.5">
             <div className="flex-1 space-y-1">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-steel">Key:</span>
-                <code className="text-sm text-ember font-mono">{maskKey(savedKey)}</code>
+                <code className="text-sm text-ember font-mono">{status.key_hint}</code>
               </div>
-              {savedBaseUrl && (
+              {status.base_url && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-steel">URL:</span>
-                  <code className="text-xs text-chalk font-mono">{savedBaseUrl}</code>
+                  <code className="text-xs text-chalk font-mono">{status.base_url}</code>
                 </div>
               )}
-              {savedModel && (
+              {status.model && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-steel">Model:</span>
-                  <code className="text-xs text-chalk font-mono">{savedModel}</code>
+                  <code className="text-xs text-chalk font-mono">{status.model}</code>
                 </div>
               )}
             </div>
-            <GlowButton variant="danger" size="sm" onClick={handleRemove}>
+            <GlowButton variant="danger" size="sm" onClick={handleRemove} disabled={saving}>
               Remove
             </GlowButton>
           </div>
@@ -115,18 +155,18 @@ export function ApiKeySection() {
           type="text"
           value={baseUrl}
           onChange={e => setBaseUrl(e.target.value)}
-          placeholder={savedBaseUrl || 'Base URL (optional, e.g. https://api.openai.com/v1)'}
+          placeholder={status?.base_url || 'Base URL (optional, e.g. https://api.openai.com/v1)'}
           className="input w-full"
         />
         <input
           type="text"
           value={model}
           onChange={e => setModel(e.target.value)}
-          placeholder={savedModel || 'Model (optional, e.g. gpt-4o, claude-haiku-4-5)'}
+          placeholder={status?.model || 'Model (optional, e.g. gpt-4o, claude-haiku-4-5)'}
           className="input w-full"
         />
-        <GlowButton onClick={handleSave} disabled={!hasChanges} className="w-full">
-          {savedKey ? 'Update' : 'Save'}
+        <GlowButton onClick={handleSave} disabled={!hasChanges || saving} className="w-full">
+          {saving ? 'Saving...' : status?.has_key ? 'Update' : 'Save'}
         </GlowButton>
       </div>
     </div>

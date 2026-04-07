@@ -46,48 +46,50 @@ def _get_auth_header(request: Request) -> str | None:
     return request.headers.get("Authorization")
 
 
-def _resolve_ai_credentials(request: Request) -> tuple[str, str | None, str | None]:
+async def _resolve_ai_credentials(request: Request) -> tuple[str, str | None, str | None]:
     """Resolve AI provider credentials for this request.
 
     Priority for API key:
-      1. X-AI-Key header (user-provided)
-      2. Server AI_API_KEY env var if caller is admin
-      3. Raise 403
+      1. Server-side encrypted credentials (fetched from main API)
+      2. X-AI-Key header (legacy / migration support)
+      3. Server AI_API_KEY env var if caller is admin
+      4. Raise 403
 
     Returns:
         Tuple of (api_key, base_url_or_None, model_or_None)
     """
-    # API key
-    user_key = request.headers.get("X-AI-Key")
-    if not user_key:
-        # Legacy header support
-        user_key = request.headers.get("X-Anthropic-Key")
+    auth_header = _get_auth_header(request)
 
-    if not user_key:
-        # Admin fallback to server key
-        server_key = settings.ai_api_key
-        if server_key:
-            auth = request.headers.get("Authorization", "")
-            token = auth.removeprefix("Bearer ").strip() if auth.startswith("Bearer ") else ""
-            if token:
-                try:
-                    payload = jwt.decode(token, settings.jwt_secret_key, algorithms=["HS256"])
-                    if payload.get("role") == "admin":
-                        user_key = server_key
-                except jwt.PyJWTError:
-                    logger.debug("JWT decode failed during admin check")
+    # 1. Try server-side stored credentials
+    workout_client = get_workout_client()
+    creds = await workout_client.get_ai_credentials(auth_header=auth_header)
+    if creds and creds.get("api_key"):
+        return creds["api_key"], creds.get("base_url"), creds.get("model")
 
-    if not user_key:
-        raise HTTPException(
-            status_code=403,
-            detail="AI API key required. Please set your API key in Settings.",
-        )
+    # 2. Legacy header support (for migration period)
+    user_key = request.headers.get("X-AI-Key") or request.headers.get("X-Anthropic-Key")
+    if user_key:
+        base_url = request.headers.get("X-AI-Base-URL") or None
+        model = request.headers.get("X-AI-Model") or None
+        return user_key, base_url, model
 
-    # Optional overrides from headers
-    base_url = request.headers.get("X-AI-Base-URL") or None
-    model = request.headers.get("X-AI-Model") or None
+    # 3. Admin fallback to server key
+    server_key = settings.ai_api_key
+    if server_key:
+        auth = request.headers.get("Authorization", "")
+        token = auth.removeprefix("Bearer ").strip() if auth.startswith("Bearer ") else ""
+        if token:
+            try:
+                payload = jwt.decode(token, settings.jwt_secret_key, algorithms=["HS256"])
+                if payload.get("role") == "admin":
+                    return server_key, None, None
+            except jwt.PyJWTError:
+                logger.debug("JWT decode failed during admin check")
 
-    return user_key, base_url, model
+    raise HTTPException(
+        status_code=403,
+        detail="AI API key required. Please set your API key in Settings.",
+    )
 
 
 def _get_user_id(request: Request) -> str:
@@ -191,7 +193,7 @@ async def health_check() -> HealthResponse:
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: Request, chat_request: ChatRequest) -> ChatResponse:
     """Chat with the AI workout coach."""
-    api_key, base_url, model = _resolve_ai_credentials(request)
+    api_key, base_url, model = await _resolve_ai_credentials(request)
     auth_header = _get_auth_header(request)
     workout_client = get_workout_client()
     workout_context = None
@@ -226,7 +228,7 @@ async def chat(request: Request, chat_request: ChatRequest) -> ChatResponse:
 @app.post("/recommend", response_model=WorkoutRecommendation)
 async def recommend_workout(request: Request, rec_request: RecommendationRequest) -> WorkoutRecommendation:
     """Get AI-generated workout recommendations."""
-    api_key, base_url, model = _resolve_ai_credentials(request)
+    api_key, base_url, model = await _resolve_ai_credentials(request)
     auth_header = _get_auth_header(request)
 
     # Fetch current workout context
@@ -262,7 +264,7 @@ async def recommend_workout(request: Request, rec_request: RecommendationRequest
 @app.get("/analyze", response_model=ProgressAnalysis)
 async def analyze_workout(request: Request) -> ProgressAnalysis:
     """Analyze your current workout routine."""
-    api_key, base_url, model = _resolve_ai_credentials(request)
+    api_key, base_url, model = await _resolve_ai_credentials(request)
     auth_header = _get_auth_header(request)
 
     try:
@@ -291,7 +293,7 @@ async def analyze_workout(request: Request) -> ProgressAnalysis:
 @app.post("/overload", response_model=OverloadSuggestions)
 async def overload_suggestions(request: Request, body: OverloadRequest | None = None) -> OverloadSuggestions:
     """Get progressive overload suggestions based on workout history."""
-    api_key, base_url, model = _resolve_ai_credentials(request)
+    api_key, base_url, model = await _resolve_ai_credentials(request)
     auth_header = _get_auth_header(request)
 
     exercise_names = body.exercise_names if body else None

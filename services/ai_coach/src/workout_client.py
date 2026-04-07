@@ -200,6 +200,26 @@ class WorkoutAPIClient:
         )
         return ctx, weight_progress, volume_progress
 
+    async def get_ai_credentials(self, auth_header: str | None = None) -> dict[str, Any] | None:
+        """Fetch decrypted AI provider credentials from the main API.
+
+        Returns:
+            Dict with api_key, base_url, model or None if not configured.
+        """
+        try:
+            client = await self._get_client()
+            headers = {}
+            if auth_header:
+                headers["Authorization"] = auth_header
+            response = await client.get("/auth/ai-provider/credentials", headers=headers)
+            if response.status_code == 404:
+                return None
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            logger.warning(f"Failed to fetch AI credentials: {e}")
+            return None
+
     def _identify_muscle_groups(self, exercises: list[ExerciseFromAPI]) -> list[str]:
         """Identify muscle groups from exercise names.
 

@@ -71,17 +71,8 @@ function attachAuthHeader(config: any) {
 client.interceptors.request.use(attachAuthHeader);
 aiCoachClient.interceptors.request.use(attachAuthHeader);
 
-// Attach user-provided AI provider credentials for AI Coach requests
-aiCoachClient.interceptors.request.use((config) => {
-  config.headers = config.headers || {};
-  const key = localStorage.getItem('ai_api_key');
-  if (key) config.headers['X-AI-Key'] = key;
-  const baseUrl = localStorage.getItem('ai_base_url');
-  if (baseUrl) config.headers['X-AI-Base-URL'] = baseUrl;
-  const model = localStorage.getItem('ai_model');
-  if (model) config.headers['X-AI-Model'] = model;
-  return config;
-});
+// AI provider credentials are now stored server-side (encrypted).
+// Legacy header-based credentials removed — AI coach fetches them from the main API.
 
 // Response interceptor: attempt token refresh on 401
 client.interceptors.response.use(
@@ -451,6 +442,33 @@ export async function updateCalendarSyncSettings(
     enabled,
   });
   return response.data;
+}
+
+// ============ AI Provider API ============
+
+export interface AIProviderStatus {
+  has_key: boolean;
+  key_hint: string | null;
+  base_url: string | null;
+  model: string | null;
+}
+
+export async function getAIProviderStatus(): Promise<AIProviderStatus> {
+  const response = await client.get<AIProviderStatus>('/auth/ai-provider');
+  return response.data;
+}
+
+export async function saveAIProvider(data: {
+  api_key: string;
+  base_url?: string | null;
+  model?: string | null;
+}): Promise<AIProviderStatus> {
+  const response = await client.put<AIProviderStatus>('/auth/ai-provider', data);
+  return response.data;
+}
+
+export async function deleteAIProvider(): Promise<void> {
+  await client.delete('/auth/ai-provider');
 }
 
 // ============ Admin API ============
