@@ -1,4 +1,4 @@
-"""FastAPI application for Workout Tracker.
+"""FastAPI application for GrindLogger.
 
 This module defines the REST API endpoints for managing workout exercises.
 """
@@ -119,7 +119,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         Control is yielded to the application during its runtime.
     """
     # Startup
-    logger.info(f"Starting Workout Tracker API v{settings.api.version}")
+    logger.info(f"Starting GrindLogger API v{settings.api.version}")
     logger.info(f"Database: {'PostgreSQL' if settings.db.is_postgres else 'SQLite'}")
     logger.info(f"Debug mode: {settings.api.debug}")
 
@@ -130,7 +130,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
     # Shutdown
-    logger.info("Shutting down Workout Tracker API")
+    logger.info("Shutting down GrindLogger API")
 
 
 # Initialize FastAPI app with settings
@@ -209,7 +209,7 @@ def read_root(request: Request) -> dict[str, str]:
         A dictionary containing a welcome message and configuration info.
     """
     return {
-        "message": "Welcome to the Workout Tracker API",
+        "message": "Welcome to the GrindLogger API",
         "version": settings.api.version,
         "docs": settings.api.docs_url,
     }

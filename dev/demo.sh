@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# Workout Tracker Demo Script
+# GrindLogger Demo Script
 # ============================
-# This script demonstrates the full functionality of the Workout Tracker application.
+# This script demonstrates the full functionality of the GrindLogger application.
 # It starts the services, verifies health, and walks through key features.
 #
 # Note: Docker Compose configuration is located in /config/docker-compose.yml
@@ -71,7 +71,7 @@ wait_for_service() {
 }
 
 # Main demo flow
-print_header "Workout Tracker Demo"
+print_header "GrindLogger Demo"
 
 echo "This demo will:"
 echo "  1. Start all services via Docker Compose"

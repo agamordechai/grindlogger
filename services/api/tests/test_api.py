@@ -1,4 +1,4 @@
-"""Tests for the Workout Tracker API endpoints.
+"""Tests for the GrindLogger API endpoints.
 
 Uses pytest fixtures for test isolation with a separate test database.
 All exercise tests use JWT tokens tied to a test user in the database.
@@ -105,7 +105,7 @@ def test_read_root(client: TestClient) -> None:
     assert response.status_code == 200
     data = response.json()
     assert "message" in data
-    assert "Welcome to the Workout Tracker API" in data["message"]
+    assert "Welcome to the GrindLogger API" in data["message"]
 
 
 def test_read_exercises(client: TestClient, auth_headers: dict[str, str]) -> None:

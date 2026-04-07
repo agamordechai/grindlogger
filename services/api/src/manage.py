@@ -55,7 +55,7 @@ def list_users() -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Workout Tracker management commands")
+    parser = argparse.ArgumentParser(description="GrindLogger management commands")
     sub = parser.add_subparsers(dest="command")
 
     p_promote = sub.add_parser("promote", help="Change a user's role")

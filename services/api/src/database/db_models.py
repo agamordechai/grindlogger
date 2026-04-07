@@ -1,4 +1,4 @@
-"""SQLModel database table definitions for Workout Tracker.
+"""SQLModel database table definitions for GrindLogger.
 
 This module defines the database tables using SQLModel ORM.
 Separate from Pydantic models to maintain clear separation between

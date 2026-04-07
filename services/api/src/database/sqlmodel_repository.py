@@ -1,4 +1,4 @@
-"""SQLModel-based repository for Workout Tracker API.
+"""SQLModel-based repository for GrindLogger API.
 
 Provides CRUD operations for exercises using SQLModel ORM.
 All queries are scoped to a specific user via user_id.

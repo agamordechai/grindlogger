@@ -68,14 +68,14 @@ def test_api_settings_defaults() -> None:
         - Host is "0.0.0.0"
         - Port is 8000
         - Debug mode is disabled
-        - API title is "Workout Tracker"
+        - API title is "GrindLogger"
     """
     api_settings = APISettings()
 
     assert api_settings.host == "0.0.0.0"
     assert api_settings.port == 8000
     assert api_settings.debug is False
-    assert api_settings.title == "Workout Tracker"
+    assert api_settings.title == "GrindLogger"
 
 
 def test_app_settings_cors_origins_list() -> None:

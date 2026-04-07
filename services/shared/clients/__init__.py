@@ -1,4 +1,4 @@
-"""Shared HTTP clients for workout tracker services."""
+"""Shared HTTP clients for GrindLogger services."""
 
 from services.shared.clients.base_client import BaseAPIClient
 

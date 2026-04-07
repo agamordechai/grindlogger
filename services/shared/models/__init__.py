@@ -1,4 +1,4 @@
-"""Shared Pydantic models for workout tracker services."""
+"""Shared Pydantic models for GrindLogger services."""
 
 from services.shared.models.exercise import (
     ExerciseBase,

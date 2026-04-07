@@ -10,7 +10,7 @@ AI_COACH_URL="http://localhost:8001"
 WORKER_URL="http://localhost:8002"
 
 echo "================================================"
-echo "WORKOUT TRACKER - COMPREHENSIVE FLOW TESTING"
+echo "GRINDLOGGER - COMPREHENSIVE FLOW TESTING"
 echo "================================================"
 echo ""
 

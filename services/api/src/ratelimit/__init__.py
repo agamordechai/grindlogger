@@ -1,4 +1,4 @@
-"""Rate limiting module for Workout Tracker API."""
+"""Rate limiting module for GrindLogger API."""
 
 import logging
 

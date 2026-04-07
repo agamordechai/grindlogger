@@ -1,4 +1,4 @@
-"""Configuration settings for the Workout Tracker API."""
+"""Configuration settings for the GrindLogger API."""
 
 import os
 from pathlib import Path
@@ -81,8 +81,8 @@ class APISettings(BaseSettings):
     debug: bool = Field(default=False, description="Enable debug mode")
     reload: bool = Field(default=False, description="Enable auto-reload on code changes")
     workers: int = Field(default=1, ge=1, description="Number of worker processes")
-    title: str = Field(default="Workout Tracker", description="API title")
-    description: str = Field(default="A simple workout tracker app", description="API description")
+    title: str = Field(default="GrindLogger", description="API title")
+    description: str = Field(default="A simple grindlogger app", description="API description")
     version: str = Field(default="0.1.0", description="API version")
     docs_url: str | None = Field(default="/docs", description="URL path for API documentation")
     openapi_url: str | None = Field(default="/openapi.json", description="URL path for OpenAPI schema")

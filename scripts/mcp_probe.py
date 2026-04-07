@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MCP Probe script for testing Workout Tracker FastMCP server.
+"""MCP Probe script for testing GrindLogger FastMCP server.
 
 This script tests the FastMCP server by directly calling the exposed tools
 and verifying their output. Used for EX3 grading evidence.
@@ -128,7 +128,7 @@ def test_volume() -> None:
 def test_all() -> None:
     """Test all MCP tools (default command)."""
     console.print(Panel.fit(
-        "[bold magenta]FastMCP Workout Tracker - Full Test Suite[/bold magenta]",
+        "[bold magenta]FastMCP GrindLogger - Full Test Suite[/bold magenta]",
         border_style="magenta"
     ))
 
@@ -170,7 +170,7 @@ def test_all() -> None:
 def demo() -> None:
     """Run a demonstration with formatted output for EX3 grading evidence."""
     console.print(Panel.fit(
-        "[bold magenta]FastMCP Workout Tracker - Demo for EX3[/bold magenta]\n"
+        "[bold magenta]FastMCP GrindLogger - Demo for EX3[/bold magenta]\n"
         "[dim]This demo shows the FastMCP integration working correctly[/dim]",
         border_style="magenta"
     ))

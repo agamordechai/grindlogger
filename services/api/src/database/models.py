@@ -1,4 +1,4 @@
-"""Pydantic models (schemas) for the Workout Tracker API.
+"""Pydantic models (schemas) for the GrindLogger API.
 
 This module imports shared exercise models and defines API-specific models.
 The shared models ensure consistency across all microservices.

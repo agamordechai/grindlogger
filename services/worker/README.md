@@ -1,6 +1,6 @@
 # Worker Service
 
-Background job worker service for the Workout Tracker application using Arq (async task queue).
+Background job worker service for the GrindLogger application using Arq (async task queue).
 
 ## Overview
 

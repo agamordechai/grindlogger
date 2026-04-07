@@ -1,5 +1,5 @@
 /**
- * API client for the Workout Tracker backend.
+ * API client for the GrindLogger backend.
  * Mirrors the functionality of the Python client.py
  */
 

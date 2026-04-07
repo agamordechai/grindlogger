@@ -217,7 +217,7 @@ def test_cli_help_displays_usage():
     """Test that --help flag shows usage information."""
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    assert "Workout Tracker CLI" in result.stdout
+    assert "GrindLogger CLI" in result.stdout
     assert "seed" in result.stdout
     assert "export" in result.stdout
     assert "stats" in result.stdout

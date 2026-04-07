@@ -1,4 +1,4 @@
-"""HTTP client for communicating with the Workout Tracker API."""
+"""HTTP client for communicating with the GrindLogger API."""
 
 import asyncio
 import logging
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class WorkoutAPIClient:
-    """Client for the Workout Tracker API."""
+    """Client for the GrindLogger API."""
 
     def __init__(self, base_url: str | None = None, timeout: float = 10.0):
         """Initialize the API client.

@@ -1,4 +1,4 @@
-"""Database module for Workout Tracker API - SQLModel version."""
+"""Database module for GrindLogger API - SQLModel version."""
 
 from services.api.src.database.database import engine, get_session, init_db
 from services.api.src.database.db_models import ExerciseTable

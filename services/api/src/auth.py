@@ -1,4 +1,4 @@
-"""Authentication and authorization module for Workout Tracker API.
+"""Authentication and authorization module for GrindLogger API.
 
 Uses Google OAuth 2.0 ID tokens for sign-in. JWTs are issued locally
 after verifying the Google token.

@@ -1,10 +1,10 @@
-# Workout Tracker - Development Commands
+# GrindLogger - Development Commands
 # Quick reference for common development tasks
 
 .PHONY: help test test-fast test-slow test-parallel install lint format clean
 
 help:  ## Show this help message
-	@echo "Workout Tracker Development Commands"
+	@echo "GrindLogger Development Commands"
 	@echo "====================================="
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 

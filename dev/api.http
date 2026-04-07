@@ -1,4 +1,4 @@
-### Workout Tracker API - HTTP Requests
+### GrindLogger API - HTTP Requests
 ### Use with VS Code REST Client extension or JetBrains HTTP Client
 
 @baseUrl = http://localhost:8000

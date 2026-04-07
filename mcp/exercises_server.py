@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""FastMCP server for Workout Tracker exercises.
+"""FastMCP server for GrindLogger exercises.
 
-This script exposes workout tracker exercises via the Model Context Protocol (MCP),
+This script exposes GrindLogger exercises via the Model Context Protocol (MCP),
 allowing AI assistants to query and interact with exercise data directly.
 
 Usage:
@@ -24,7 +24,7 @@ from services.api.src.database.database import engine
 from services.api.src.database.sqlmodel_repository import ExerciseRepository
 
 # Create FastMCP server
-mcp = FastMCP("io.workout.tracker")
+mcp = FastMCP("io.grindlogger")
 
 
 @mcp.tool(name="list-exercises")

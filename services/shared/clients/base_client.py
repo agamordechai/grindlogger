@@ -1,7 +1,7 @@
 """Base HTTP client for service-to-service communication.
 
 This module provides a base client class with common functionality for
-making HTTP requests to other services in the workout tracker system.
+making HTTP requests to other services in the GrindLogger system.
 """
 
 import logging

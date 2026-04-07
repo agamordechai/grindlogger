@@ -1,6 +1,6 @@
-# Workout Tracker Frontend (React)
+# GrindLogger Frontend (React)
 
-A modern React frontend for the Workout Tracker API, converted from Streamlit.
+A modern React frontend for the GrindLogger API, converted from Streamlit.
 
 ## Features
 

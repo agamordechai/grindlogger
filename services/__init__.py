@@ -1,1 +1,1 @@
-"""Services package for Workout Tracker."""
+"""Services package for GrindLogger."""

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# Workout Tracker — VM Setup Script
+# GrindLogger — VM Setup Script
 # Targets: Ubuntu 22.04+ (AWS EC2, Oracle Cloud, etc.)
 #
 # Usage:
@@ -13,7 +13,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-echo "=== Workout Tracker Production Setup ==="
+echo "=== GrindLogger Production Setup ==="
 echo "Project directory: $PROJECT_DIR"
 cd "$PROJECT_DIR"
 

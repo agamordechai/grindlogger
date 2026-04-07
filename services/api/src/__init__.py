@@ -1,1 +1,1 @@
-"""API service package for Workout Tracker."""
+"""API service package for GrindLogger."""

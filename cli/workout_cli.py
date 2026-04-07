@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-"""Workout Tracker CLI - Operator commands for database management.
+"""GrindLogger CLI - Operator commands for database management.
 
-This Typer-based CLI provides operator tools for managing the workout tracker:
+This Typer-based CLI provides operator tools for managing GrindLogger:
 - Database seeding and reset
 - Export to CSV/JSON
 - Statistics and summaries
@@ -36,7 +36,7 @@ from services.api.src.database.sqlmodel_repository import ExerciseRepository
 from services.api.src.database.user_repository import UserRepository
 
 app = typer.Typer(
-    help="Workout Tracker CLI - Operator commands for database management",
+    help="GrindLogger CLI - Operator commands for database management",
     add_completion=False,
 )
 console = Console()
@@ -77,7 +77,7 @@ def seed(
         uv run python scripts/cli.py seed --count 10
         uv run python scripts/cli.py seed --count 5 --force
     """
-    console.print(Panel.fit("[bold cyan]Workout Tracker - Database Seeding[/bold cyan]", border_style="cyan"))
+    console.print(Panel.fit("[bold cyan]GrindLogger - Database Seeding[/bold cyan]", border_style="cyan"))
 
     # Initialize database
     init_db()

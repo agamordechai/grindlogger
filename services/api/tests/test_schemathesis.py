@@ -1,4 +1,4 @@
-"""Schemathesis property-based tests for the Workout Tracker API.
+"""Schemathesis property-based tests for the GrindLogger API.
 
 Schemathesis generates test cases from the OpenAPI schema to surface:
   - 5xx crashes on schema-valid inputs
