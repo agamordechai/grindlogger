@@ -93,9 +93,7 @@ class WorkoutAPIClient:
 
         async def _fetch_month(year: int, month: int) -> list[dict]:
             try:
-                response = await client.get(
-                    f"/sessions/calendar?year={year}&month={month}", headers=headers
-                )
+                response = await client.get(f"/sessions/calendar?year={year}&month={month}", headers=headers)
                 response.raise_for_status()
                 return response.json()
             except Exception as e:
