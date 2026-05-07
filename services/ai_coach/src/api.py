@@ -249,6 +249,7 @@ async def recommend_workout(request: Request, rec_request: RecommendationRequest
             training_goal=rec_request.training_goal,
             training_days_per_week=rec_request.training_days_per_week,
             experience_level=rec_request.experience_level,
+            exercises_per_session=rec_request.exercises_per_session,
             api_key=api_key,
             base_url=base_url,
             model=model,

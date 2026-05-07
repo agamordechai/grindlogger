@@ -647,6 +647,7 @@ async def get_workout_recommendation(
     training_goal: str | None = None,
     training_days_per_week: int | None = None,
     experience_level: str | None = None,
+    exercises_per_session: int | None = None,
     api_key: str | None = None,
     base_url: str | None = None,
     model: str | None = None,
@@ -660,6 +661,7 @@ async def get_workout_recommendation(
     goal_label = (training_goal or "general_fitness").replace("_", " ").title()
     level_label = (experience_level or "intermediate").title()
     days = training_days_per_week or 3
+    ex_per_session = exercises_per_session or None  # None means use goal-based defaults
 
     prompt = f"""Generate a complete, personalized workout routine.
 
@@ -676,7 +678,7 @@ Requirements:
 1. A catchy workout title reflecting the goal and split
 2. Brief description explaining the program philosophy and why this split suits the goal
 3. Generate exercises across all {days} days — use workout days "A" through "{chr(64 + days)}"
-4. Each day should have 4-7 exercises appropriate for the split
+4. Each day should have {f"exactly {ex_per_session} exercises" if ex_per_session else "4-7 exercises"} appropriate for the split
 5. Estimated session duration in minutes
 6. Difficulty level matching {level_label}
 7. A split_type label (e.g. "Push/Pull/Legs", "Upper/Lower", "Full Body", "Bro Split", "Arnold Split")

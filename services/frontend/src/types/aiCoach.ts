@@ -40,6 +40,7 @@ export interface RecommendationRequest {
   training_goal?: string;
   training_days_per_week?: number;
   experience_level?: string;
+  exercises_per_session?: number;
 }
 
 export interface ExerciseRecommendation {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Dumbbell, CheckCircle } from 'lucide-react';
+import { Dumbbell, CheckCircle, Bookmark, BookmarkCheck } from 'lucide-react';
 import { GlowButton } from '../ui/GlowButton';
 import { Badge } from '../ui/Badge';
 import { getWorkoutRecommendation, appendExercisesToRoutine, clearExercises, listExercises } from '../../api/client';
@@ -20,10 +20,12 @@ export function WorkoutGenerator() {
   const [goal, setGoal] = useState('hypertrophy');
   const [daysPerWeek, setDaysPerWeek] = useState(3);
   const [experience, setExperience] = useState('intermediate');
+  const [exercisesPerSession, setExercisesPerSession] = useState<number | null>(null);
   const [recommendation, setRecommendation] = useSessionStorage<WorkoutRecommendation | null>('coach_workout_recommendation', null);
   const [importStates, setImportStates] = useState<ImportState[]>([]);
   const [importing, setImporting] = useState(false);
   const [importedCount, setImportedCount] = useState<number | null>(null);
+  const [savedTemplate, setSavedTemplate] = useState(false);
   const { addTemplate } = useTemplates();
 
   // Re-initialize importStates when recommendation is restored from sessionStorage
@@ -51,6 +53,7 @@ export function WorkoutGenerator() {
         training_goal: goal,
         training_days_per_week: daysPerWeek,
         experience_level: experience,
+        ...(exercisesPerSession !== null && { exercises_per_session: exercisesPerSession }),
       };
       if (focusArea === 'other') {
         if (customFocus.trim()) request.custom_focus_area = customFocus.trim();
@@ -123,6 +126,25 @@ export function WorkoutGenerator() {
     } finally {
       setImporting(false);
     }
+  };
+
+  const handleSaveTemplate = () => {
+    if (!recommendation) return;
+    const parseReps = (reps: string) => parseInt(reps.split('-')[0]) || 10;
+    const parseWeight = (ws: string | null | undefined): number | null => {
+      if (!ws) return null;
+      const n = parseFloat(ws.replace(/[^\d.]/g, ''));
+      return isNaN(n) ? null : n;
+    };
+    const exercises = getSelectedExercises().map(ex => ({
+      name: ex.name,
+      sets: ex.sets,
+      reps: parseReps(ex.reps),
+      weight: parseWeight(ex.weight_suggestion),
+      workout_day: ex.workout_day,
+    }));
+    addTemplate(recommendation.title, exercises);
+    setSavedTemplate(true);
   };
 
   if (error) {
@@ -297,7 +319,22 @@ export function WorkoutGenerator() {
               {importing ? 'Adding...' : `Add to Existing (${selectedCount})`}
             </button>
           </div>
-          <GlowButton variant="secondary" onClick={() => setRecommendation(null)} className="w-full">
+          <button
+            onClick={handleSaveTemplate}
+            disabled={selectedCount === 0 || savedTemplate}
+            className={`w-full flex items-center justify-center gap-2 text-sm font-semibold rounded-xl px-4 py-2 transition-all border disabled:opacity-40 ${
+              savedTemplate
+                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                : 'bg-surface-2 border-border text-steel hover:text-chalk hover:border-steel/40'
+            }`}
+          >
+            {savedTemplate ? (
+              <><BookmarkCheck size={15} /> Saved as Template</>
+            ) : (
+              <><Bookmark size={15} /> Save as Template</>
+            )}
+          </button>
+          <GlowButton variant="secondary" onClick={() => { setRecommendation(null); setSavedTemplate(false); }} className="w-full">
             Generate Another
           </GlowButton>
         </div>
@@ -402,18 +439,58 @@ export function WorkoutGenerator() {
         <label className="block text-xs font-medium text-steel mb-1.5">
           Session Duration: <span className="text-ember font-semibold font-mono">{duration} min</span>
         </label>
-        <input
-          type="range"
-          min={5}
-          max={120}
-          step={5}
-          value={duration}
-          onChange={e => setDuration(Number(e.target.value))}
-          className="w-full accent-[#F97316]"
-        />
-        <div className="flex justify-between text-[10px] text-steel/60 mt-1">
-          <span>5 min</span>
-          <span>2 hrs</span>
+        <div className="flex gap-1.5 flex-wrap">
+          {[30, 45, 60, 75, 90, 120].map(d => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setDuration(d)}
+              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all border flex-1 ${
+                duration === d
+                  ? 'bg-ember/10 border-ember/30 text-ember'
+                  : 'bg-surface-2 border-border text-steel hover:border-steel/40'
+              }`}
+            >
+              {d}m
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Exercises per session */}
+      <div>
+        <label className="block text-xs font-medium text-steel mb-1.5">
+          Exercises per Session:{' '}
+          <span className="text-ember font-semibold font-mono">
+            {exercisesPerSession ?? 'auto'}
+          </span>
+        </label>
+        <div className="flex gap-1.5 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setExercisesPerSession(null)}
+            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all border flex-1 ${
+              exercisesPerSession === null
+                ? 'bg-ember/10 border-ember/30 text-ember'
+                : 'bg-surface-2 border-border text-steel hover:border-steel/40'
+            }`}
+          >
+            Auto
+          </button>
+          {[3, 4, 5, 6, 7, 8].map(n => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => setExercisesPerSession(n)}
+              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all border flex-1 ${
+                exercisesPerSession === n
+                  ? 'bg-ember/10 border-ember/30 text-ember'
+                  : 'bg-surface-2 border-border text-steel hover:border-steel/40'
+              }`}
+            >
+              {n}
+            </button>
+          ))}
         </div>
       </div>
 

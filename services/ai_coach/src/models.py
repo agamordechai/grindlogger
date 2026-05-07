@@ -106,6 +106,9 @@ class RecommendationRequest(BaseModel):
         default=None,
         description="Experience level: beginner, intermediate, advanced",
     )
+    exercises_per_session: int | None = Field(
+        default=None, ge=3, le=10, description="Target number of exercises per workout day"
+    )
 
 
 class ExerciseRecommendation(BaseModel):
