@@ -7,7 +7,7 @@ from typing import Any
 import httpx
 
 from services.ai_coach.src.config import get_settings
-from services.ai_coach.src.models import ExerciseFromAPI, WorkoutContext
+from services.ai_coach.src.models import ExerciseFromAPI, RecentSession, WorkoutContext
 
 logger = logging.getLogger(__name__)
 
@@ -80,21 +80,63 @@ class WorkoutAPIClient:
             logger.error(f"Failed to fetch exercises: {e}")
             return []
 
+    async def get_recent_sessions(self, auth_header: str | None = None) -> list[RecentSession]:
+        """Fetch sessions from the current and previous month for gap analysis."""
+        from datetime import date
+
+        today = date.today()
+        headers = {}
+        if auth_header:
+            headers["Authorization"] = auth_header
+
+        client = await self._get_client()
+
+        async def _fetch_month(year: int, month: int) -> list[dict]:
+            try:
+                response = await client.get(
+                    f"/sessions/calendar?year={year}&month={month}", headers=headers
+                )
+                response.raise_for_status()
+                return response.json()
+            except Exception as e:
+                logger.warning(f"Failed to fetch sessions for {year}-{month:02d}: {e}")
+                return []
+
+        prev_month = today.month - 1 or 12
+        prev_year = today.year if today.month > 1 else today.year - 1
+
+        this_month_data, prev_month_data = await asyncio.gather(
+            _fetch_month(today.year, today.month),
+            _fetch_month(prev_year, prev_month),
+        )
+
+        sessions = []
+        for raw in sorted(this_month_data + prev_month_data, key=lambda s: s["date"]):
+            sessions.append(
+                RecentSession(
+                    date=raw["date"],
+                    workout_day=raw["workout_day"],
+                    exercise_count=raw.get("exercise_count", 0),
+                    total_volume=raw.get("total_volume", 0.0),
+                )
+            )
+        return sessions
+
     async def get_workout_context(self, auth_header: str | None = None) -> WorkoutContext:
-        """Build workout context from current exercises.
+        """Build workout context from current exercises and recent session history.
 
         Args:
             auth_header: Authorization header value to forward
 
         Returns:
-            WorkoutContext with current workout data
+            WorkoutContext with current workout data and recent sessions
         """
-        exercises = await self.get_exercises(auth_header=auth_header)
+        exercises, recent_sessions = await asyncio.gather(
+            self.get_exercises(auth_header=auth_header),
+            self.get_recent_sessions(auth_header=auth_header),
+        )
 
-        # Calculate total volume
         total_volume = sum(ex.sets * ex.reps * (ex.weight or 0) for ex in exercises)
-
-        # Identify muscle groups (basic heuristic based on exercise names)
         muscle_groups = self._identify_muscle_groups(exercises)
 
         return WorkoutContext(
@@ -102,6 +144,7 @@ class WorkoutAPIClient:
             total_volume=total_volume,
             exercise_count=len(exercises),
             muscle_groups_worked=muscle_groups,
+            recent_sessions=recent_sessions,
         )
 
     async def create_exercise(self, data: dict[str, Any], auth_header: str | None = None) -> dict[str, Any]:

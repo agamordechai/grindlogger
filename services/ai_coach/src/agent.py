@@ -190,6 +190,68 @@ def _is_anthropic(api_key: str, base_url: str | None) -> bool:
     return False
 
 
+def _format_gap_analysis(workout_context: WorkoutContext) -> str:
+    """Analyze recent session history and format gap/adherence info."""
+    from datetime import date, timedelta
+
+    sessions = workout_context.recent_sessions
+    if not sessions:
+        return "\n\nRecent Workout History: No sessions logged yet.\n"
+
+    today = date.today()
+    cutoff = today - timedelta(days=30)
+
+    recent = [s for s in sessions if date.fromisoformat(s.date) >= cutoff]
+    if not recent:
+        last = sessions[-1]
+        days_ago = (today - date.fromisoformat(last.date)).days
+        return (
+            f"\n\nRecent Workout History:\n"
+            f"- Last workout: {days_ago} day(s) ago ({last.date}, Day {last.workout_day})\n"
+            f"- No sessions in the last 30 days — long break detected.\n"
+        )
+
+    # Basic stats
+    last_session = recent[-1]
+    days_since_last = (today - date.fromisoformat(last_session.date)).days
+    count_last_7 = sum(1 for s in recent if date.fromisoformat(s.date) >= today - timedelta(days=7))
+    count_last_14 = sum(1 for s in recent if date.fromisoformat(s.date) >= today - timedelta(days=14))
+
+    # Find gaps between consecutive sessions
+    dates = sorted(date.fromisoformat(s.date) for s in recent)
+    gaps = [(dates[i + 1] - dates[i]).days for i in range(len(dates) - 1)]
+    max_gap = max(gaps) if gaps else 0
+    max_gap_start = None
+    max_gap_end = None
+    if gaps:
+        idx = gaps.index(max_gap)
+        max_gap_start = dates[idx]
+        max_gap_end = dates[idx + 1]
+
+    ctx = "\n\nRecent Workout History (last 30 days):\n"
+    ctx += f"- Last workout: {days_since_last} day(s) ago ({last_session.date}, Day {last_session.workout_day})\n"
+    ctx += f"- Sessions in last 7 days: {count_last_7}\n"
+    ctx += f"- Sessions in last 14 days: {count_last_14}\n"
+    ctx += f"- Sessions in last 30 days: {len(recent)}\n"
+
+    if max_gap > 3 and max_gap_start and max_gap_end:
+        ctx += f"- Longest gap in last 30 days: {max_gap} days ({max_gap_start} → {max_gap_end})\n"
+
+    if days_since_last >= 7:
+        ctx += f"- ⚠ Currently {days_since_last} days since last workout — significant gap.\n"
+    elif days_since_last >= 4:
+        ctx += f"- Note: {days_since_last} days since last workout.\n"
+
+    # List recent sessions (up to 10, newest first)
+    ctx += "\nRecent sessions (newest first):\n"
+    for s in reversed(recent[-10:]):
+        dur = ""
+        vol = f", {s.total_volume:.0f}kg vol" if s.total_volume else ""
+        ctx += f"  - {s.date}: Day {s.workout_day} ({s.exercise_count} exercises{vol}{dur})\n"
+
+    return ctx
+
+
 def _format_workout_context(workout_context: WorkoutContext | None) -> str:
     """Format workout context into a string for the system prompt."""
     if not workout_context or not workout_context.exercises:
@@ -233,6 +295,8 @@ def _format_workout_context(workout_context: WorkoutContext | None) -> str:
         for ex in day_exercises:
             weight_str = f" @ {ex.weight}kg" if ex.weight else " (bodyweight)"
             ctx += f"    - [ID:{ex.id}] {ex.name}: {ex.sets} sets x {ex.reps} reps{weight_str}\n"
+
+    ctx += _format_gap_analysis(workout_context)
 
     return ctx
 

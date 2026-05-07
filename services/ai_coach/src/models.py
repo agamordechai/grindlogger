@@ -35,6 +35,15 @@ class MuscleGroup(str, Enum):
     PUSH_PULL_LEGS = "push_pull_legs"
 
 
+class RecentSession(BaseModel):
+    """Lightweight session info for gap analysis."""
+
+    date: str = Field(..., description="Session date in YYYY-MM-DD format")
+    workout_day: str = Field(..., description="Which workout day was performed (A, B, C, ...)")
+    exercise_count: int = Field(default=0)
+    total_volume: float = Field(default=0.0)
+
+
 class WorkoutContext(BaseModel):
     """Context for AI recommendations based on current workout data."""
 
@@ -42,6 +51,9 @@ class WorkoutContext(BaseModel):
     total_volume: float = Field(default=0.0, description="Total workout volume in kg")
     exercise_count: int = Field(default=0, description="Total number of exercises")
     muscle_groups_worked: list[str] = Field(default_factory=list)
+    recent_sessions: list[RecentSession] = Field(
+        default_factory=list, description="Sessions from the last two months for gap analysis"
+    )
 
 
 class ChatMessage(BaseModel):
