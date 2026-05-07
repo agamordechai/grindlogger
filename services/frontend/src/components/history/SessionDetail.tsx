@@ -120,7 +120,8 @@ export function SessionDetail({ summaries, onDelete, onEdit }: SessionDetailProp
             </div>
 
             {/* Exercise table */}
-            <div className="px-4 py-2">
+            <div className="overflow-x-auto">
+              <div className="px-4 py-2 min-w-[380px]">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-[11px] text-steel uppercase">
@@ -213,6 +214,7 @@ export function SessionDetail({ summaries, onDelete, onEdit }: SessionDetailProp
                   })}
                 </tbody>
               </table>
+              </div>
             </div>
 
             {/* Notes */}
