@@ -678,7 +678,8 @@ Requirements:
 1. A catchy workout title reflecting the goal and split
 2. Brief description explaining the program philosophy and why this split suits the goal
 3. Generate exercises across all {days} days — use workout days "A" through "{chr(64 + days)}"
-4. Each day should have {f"exactly {ex_per_session} exercises" if ex_per_session else "4-7 exercises"} appropriate for the split
+4. Each day should have {f"exactly {ex_per_session} exercises" if ex_per_session else "4-7 exercises"} \
+appropriate for the split
 5. Estimated session duration in minutes
 6. Difficulty level matching {level_label}
 7. A split_type label (e.g. "Push/Pull/Legs", "Upper/Lower", "Full Body", "Bro Split", "Arnold Split")

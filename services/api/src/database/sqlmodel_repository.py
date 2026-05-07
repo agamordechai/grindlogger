@@ -119,7 +119,14 @@ class ExerciseRepository:
         return None
 
     def create(
-        self, user_id: int, name: str, sets: int, reps: int, weight: float | None = None, workout_day: str = "A", per_side: bool = False
+        self,
+        user_id: int,
+        name: str,
+        sets: int,
+        reps: int,
+        weight: float | None = None,
+        workout_day: str = "A",
+        per_side: bool = False,
     ) -> ExerciseResponse:
         """Create a new exercise for a user.
 
