@@ -13,6 +13,7 @@ export interface Exercise {
   archived: boolean;
   sort_order: number;
   superset_group: number | null;
+  per_side: boolean;
 }
 
 export interface ExerciseNameStatus {
@@ -35,6 +36,7 @@ export interface CreateExerciseRequest {
   reps: number;
   weight?: number | null;
   workout_day?: string;
+  per_side?: boolean;
 }
 
 export interface UpdateExerciseRequest {
@@ -44,6 +46,7 @@ export interface UpdateExerciseRequest {
   weight?: number | null;
   workout_day?: string;
   notes?: string | null;
+  per_side?: boolean;
 }
 
 export interface PaginatedExerciseResponse {

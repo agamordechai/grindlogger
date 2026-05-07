@@ -18,7 +18,7 @@ export function StatsRow({ exercises }: StatsRowProps) {
   const totalSets = exercises.reduce((sum, ex) => sum + ex.sets, 0);
   const totalVolumeKg = exercises.reduce((sum, ex) => {
     const w = ex.weight != null ? ex.weight : bwKg;
-    return sum + ex.sets * ex.reps * w;
+    return sum + ex.sets * ex.reps * w * (ex.per_side ? 2 : 1);
   }, 0);
   const totalVolume = toDisplayWeight(totalVolumeKg, unit) ?? 0;
 

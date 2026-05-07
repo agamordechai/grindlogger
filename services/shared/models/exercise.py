@@ -43,6 +43,10 @@ class ExerciseBase(BaseModel):
         description="Per-exercise notes (cues, reminders, etc.)",
         examples=["Grip wider", "Pause at bottom"],
     )
+    per_side: bool = Field(
+        default=False,
+        description="Whether reps are counted per side (unilateral exercises — doubles volume)",
+    )
 
 
 class ExerciseCreate(ExerciseBase):
@@ -97,6 +101,7 @@ class ExerciseEditRequest(BaseModel):
         description="New workout day identifier (A-G for specific days, 'None' for daily exercises)",
     )
     notes: str | None = Field(default=None, max_length=500, description="Per-exercise notes")
+    per_side: bool | None = Field(default=None, description="Whether reps are counted per side")
 
 
 class PaginatedExerciseResponse(BaseModel):

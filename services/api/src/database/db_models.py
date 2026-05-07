@@ -116,6 +116,7 @@ class ExerciseTable(SQLModel, table=True):
     archived: bool = Field(default=False, index=True)
     sort_order: int = Field(default=0, ge=0)
     superset_group: int | None = Field(default=None)
+    per_side: bool = Field(default=False)
 
 
 class WorkoutSessionTable(SQLModel, table=True):

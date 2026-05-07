@@ -38,6 +38,9 @@ export function ExerciseRow({ exercise, onUpdate, onDelete, onArchive }: Exercis
             {(exercise.weight == null || exercise.weight === 0) && (
               <span className="text-steel/60 ml-2">BW</span>
             )}
+            {exercise.per_side && (
+              <span className="text-violet-400 ml-2">/ side</span>
+            )}
           </p>
           {exercise.notes && (
             <div className="flex items-center gap-1 mt-0.5 min-w-0">

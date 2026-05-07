@@ -17,7 +17,7 @@ export function VolumeChart({ exercises }: VolumeChartProps) {
     for (const ex of exercises) {
       const day = (!ex.workout_day || ex.workout_day === 'None') ? 'Daily' : ex.workout_day;
       const w = ex.weight != null ? ex.weight : bwKg;
-      byDay[day] = (byDay[day] || 0) + ex.sets * ex.reps * w;
+      byDay[day] = (byDay[day] || 0) + ex.sets * ex.reps * w * (ex.per_side ? 2 : 1);
     }
     return Object.entries(byDay)
       .map(([day, volume]) => ({ day, volume: Math.round(toDisplayWeight(volume, unit) ?? 0) }))

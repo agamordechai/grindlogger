@@ -21,6 +21,7 @@ export function ExerciseEditor({ exercise, days, onSave, onCancel }: ExerciseEdi
   const [weight, setWeight] = useState(toDisplayWeight(exercise.weight, unit) ?? 0);
   const [day, setDay] = useState(exercise.workout_day);
   const [notes, setNotes] = useState(exercise.notes || '');
+  const [perSide, setPerSide] = useState(exercise.per_side ?? false);
   const [saving, setSaving] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -44,6 +45,7 @@ export function ExerciseEditor({ exercise, days, onSave, onCancel }: ExerciseEdi
         weight: weight ? toKg(weight, unit) : null,
         workout_day: day,
         notes: notes.trim() || null,
+        per_side: perSide,
       });
     } finally {
       setSaving(false);
@@ -120,6 +122,23 @@ export function ExerciseEditor({ exercise, days, onSave, onCancel }: ExerciseEdi
           maxLength={500}
         />
       </div>
+
+      <label className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border cursor-pointer transition-all ${
+        perSide
+          ? 'bg-violet-500/10 border-violet-500/30 text-violet-400'
+          : 'bg-surface-2 border-border text-steel hover:border-steel/40'
+      }`}>
+        <input
+          type="checkbox"
+          checked={perSide}
+          onChange={e => setPerSide(e.target.checked)}
+          className="sr-only"
+        />
+        <span className={`w-3 h-3 rounded-sm border-2 flex items-center justify-center shrink-0 transition-colors ${perSide ? 'bg-violet-500 border-violet-500' : 'border-steel/50'}`}>
+          {perSide && <svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+        </span>
+        Per side <span className="text-steel/50">(unilateral — doubles volume)</span>
+      </label>
 
       <div className="flex gap-2">
         <GlowButton onClick={handleSave} disabled={saving || !name.trim()} className="flex-1">

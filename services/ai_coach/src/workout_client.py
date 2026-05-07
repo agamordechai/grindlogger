@@ -136,7 +136,7 @@ class WorkoutAPIClient:
             self.get_recent_sessions(auth_header=auth_header),
         )
 
-        total_volume = sum(ex.sets * ex.reps * (ex.weight or 0) for ex in exercises)
+        total_volume = sum(ex.sets * ex.reps * (ex.weight or 0) * (2 if ex.per_side else 1) for ex in exercises)
         muscle_groups = self._identify_muscle_groups(exercises)
 
         return WorkoutContext(
@@ -228,7 +228,7 @@ class WorkoutAPIClient:
             return ctx, {}, {}
 
         names = [ex.name for ex in exercises]
-        total_volume = sum(ex.sets * ex.reps * (ex.weight or 0) for ex in exercises)
+        total_volume = sum(ex.sets * ex.reps * (ex.weight or 0) * (2 if ex.per_side else 1) for ex in exercises)
         muscle_groups = self._identify_muscle_groups(exercises)
         ctx = WorkoutContext(
             exercises=exercises,

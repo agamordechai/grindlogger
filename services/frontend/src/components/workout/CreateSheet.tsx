@@ -28,6 +28,7 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
   const [reps, setReps] = useState(10);
   const [weight, setWeight] = useState(0);
   const [day, setDay] = useState(defaultDay);
+  const [perSide, setPerSide] = useState(false);
   const [saving, setSaving] = useState(false);
   const [suggestions, setSuggestions] = useState<ArchivedExerciseSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -73,6 +74,7 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
     setReps(10);
     setWeight(0);
     setDay(defaultDay);
+    setPerSide(false);
     setSuggestions([]);
   };
 
@@ -102,6 +104,7 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
           reps,
           weight: weight ? toKg(weight, unit) : null,
           workout_day: day,
+          per_side: perSide,
         });
         reset();
         onClose();
@@ -119,6 +122,7 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
         reps,
         weight: weight || null,
         workout_day: day,
+        per_side: perSide,
       });
       reset();
       onClose();
@@ -240,6 +244,23 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
             <option value="None">Unassigned</option>
           </select>
         </div>
+
+        <label className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border cursor-pointer transition-all ${
+          perSide
+            ? 'bg-violet-500/10 border-violet-500/30 text-violet-400'
+            : 'bg-surface-2 border-border text-steel hover:border-steel/40'
+        }`}>
+          <input
+            type="checkbox"
+            checked={perSide}
+            onChange={e => setPerSide(e.target.checked)}
+            className="sr-only"
+          />
+          <span className={`w-3 h-3 rounded-sm border-2 flex items-center justify-center shrink-0 transition-colors ${perSide ? 'bg-violet-500 border-violet-500' : 'border-steel/50'}`}>
+            {perSide && <svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+          </span>
+          Per side <span className="text-steel/50">(unilateral — doubles volume)</span>
+        </label>
 
         <GlowButton type="submit" disabled={saving || !name.trim()} className="w-full">
           {saving ? 'Creating...' : 'Create Exercise'}

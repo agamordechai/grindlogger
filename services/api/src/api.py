@@ -434,6 +434,7 @@ def add_exercise(
         reps=exercise.reps,
         weight=exercise.weight,
         workout_day=exercise.workout_day,
+        per_side=exercise.per_side,
     )
 
 
@@ -530,6 +531,7 @@ def edit_exercise_endpoint(
         workout_day=exercise_edit.workout_day,
         notes=exercise_edit.notes,
         update_notes=update_notes_flag,
+        per_side=exercise_edit.per_side,
     )
     if not exercise:
         raise HTTPException(status_code=404, detail="Exercise not found")

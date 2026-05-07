@@ -119,7 +119,7 @@ class ExerciseRepository:
         return None
 
     def create(
-        self, user_id: int, name: str, sets: int, reps: int, weight: float | None = None, workout_day: str = "A"
+        self, user_id: int, name: str, sets: int, reps: int, weight: float | None = None, workout_day: str = "A", per_side: bool = False
     ) -> ExerciseResponse:
         """Create a new exercise for a user.
 
@@ -141,6 +141,7 @@ class ExerciseRepository:
             weight=weight,
             workout_day=workout_day,
             user_id=user_id,
+            per_side=per_side,
         )
         self.session.add(exercise)
         self.session.commit()
@@ -159,6 +160,7 @@ class ExerciseRepository:
         workout_day: str | None = None,
         notes: str | None = None,
         update_notes: bool = False,
+        per_side: bool | None = None,
     ) -> ExerciseResponse | None:
         """Update an existing exercise owned by a user.
 
@@ -195,6 +197,8 @@ class ExerciseRepository:
             exercise.workout_day = workout_day
         if notes is not None or update_notes:
             exercise.notes = notes
+        if per_side is not None:
+            exercise.per_side = per_side
 
         self.session.add(exercise)
         self.session.commit()
