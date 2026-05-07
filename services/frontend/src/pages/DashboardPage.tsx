@@ -124,14 +124,17 @@ export default function DashboardPage() {
     return counts;
   }, [exercises]);
 
+  const filteredExercises = useMemo(() => {
+    if (selectedDay === 'All') return exercises;
+    return exercises.filter(ex => {
+      const mapped = (!ex.workout_day || ex.workout_day === 'None') ? 'Daily' : ex.workout_day;
+      return mapped === selectedDay;
+    });
+  }, [exercises, selectedDay]);
+
   const groupedExercises = useMemo(() => {
     const groups: Record<string, typeof exercises> = {};
-    const filtered = selectedDay === 'All'
-      ? exercises
-      : exercises.filter(ex => {
-          const mapped = (!ex.workout_day || ex.workout_day === 'None') ? 'Daily' : ex.workout_day;
-          return mapped === selectedDay;
-        });
+    const filtered = filteredExercises;
 
     for (const ex of filtered) {
       const day = (!ex.workout_day || ex.workout_day === 'None') ? 'Daily' : ex.workout_day;
@@ -144,7 +147,7 @@ export default function DashboardPage() {
     return Object.entries(groups).sort(([a], [b]) => {
       return order.indexOf(a) - order.indexOf(b);
     });
-  }, [exercises, selectedDay]);
+  }, [filteredExercises]);
 
   const handleRestoreFromCreate = async (id: number) => {
     await restoreExercise(id);
@@ -353,7 +356,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <StatsRow exercises={exercises} />
+      <StatsRow exercises={filteredExercises} />
 
       {/* Day pills */}
       <DayPills selected={selectedDay} onChange={handleDayChange} dayCounts={dayCounts} />
