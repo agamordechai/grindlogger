@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { Bot, Dumbbell, ClipboardCheck, Ruler } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import type { ActionPerformed } from '../../types/aiCoach';
 
 const ACTION_ICONS: Record<string, typeof Dumbbell> = {
@@ -63,7 +64,22 @@ export function ChatMessage({ role, content, index, actions }: ChatMessageProps)
             })}
           </div>
         )}
-        <p className="whitespace-pre-wrap">{content}</p>
+        <ReactMarkdown
+          components={{
+            p: ({ children }) => <p className="mb-2 last:mb-0 whitespace-pre-wrap">{children}</p>,
+            strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+            em: ({ children }) => <em className="italic">{children}</em>,
+            ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-0.5">{children}</ul>,
+            ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-0.5">{children}</ol>,
+            li: ({ children }) => <li className="text-sm">{children}</li>,
+            h1: ({ children }) => <h1 className="text-base font-bold mb-1">{children}</h1>,
+            h2: ({ children }) => <h2 className="text-sm font-bold mb-1">{children}</h2>,
+            h3: ({ children }) => <h3 className="text-sm font-semibold mb-1">{children}</h3>,
+            code: ({ children }) => <code className="bg-black/20 rounded px-1 py-0.5 text-xs font-mono">{children}</code>,
+          }}
+        >
+          {content}
+        </ReactMarkdown>
       </div>
     </motion.div>
   );
