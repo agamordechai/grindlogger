@@ -68,7 +68,7 @@ def build_coach_tools(cycle_length: int = 7) -> list[dict]:
     return [
         {
             "name": "create_exercise",
-            "description": "Add a new exercise to the user's workout plan. Use this when the user asks to add an exercise.",
+            "description": "Add a new exercise to the user's workout plan. Use this when the user asks to add an exercise.",  # noqa: E501
             "input_schema": {
                 "type": "object",
                 "properties": {
@@ -102,7 +102,7 @@ def build_coach_tools(cycle_length: int = 7) -> list[dict]:
             "input_schema": {
                 "type": "object",
                 "properties": {
-                    "exercise_id": {"type": "integer", "description": "ID of the exercise to edit (from workout context)"},
+                    "exercise_id": {"type": "integer", "description": "ID of the exercise to edit (from workout context)"},  # noqa: E501
                     "name": {"type": "string", "description": "New exercise name"},
                     "sets": {"type": "integer", "description": "New number of sets"},
                     "reps": {"type": "integer", "description": "New number of reps"},
