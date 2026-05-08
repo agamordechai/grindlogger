@@ -25,9 +25,9 @@ export function CycleLengthSection() {
       );
 
       const confirmed = await confirm({
-        title: 'Reduce cycle?',
+        title: 'Shorten split?',
         message: `Days ${removedDays.join(', ')} will be removed. Any exercises on those days will be archived and can be restored later.`,
-        confirmText: 'Reduce cycle',
+        confirmText: 'Shorten split',
         type: 'danger',
       });
       if (!confirmed) return;
@@ -69,10 +69,10 @@ export function CycleLengthSection() {
     <div className="py-6 border-b border-border">
       <div className="flex items-center gap-2 mb-1">
         <Repeat size={16} className="text-ember" />
-        <h3 className="text-sm font-bold text-chalk">Workout Cycle</h3>
+        <h3 className="text-sm font-bold text-chalk">Training Split</h3>
       </div>
       <p className="text-xs text-steel mb-4">
-        Set how many days your training cycle repeats (1–14). Days are labelled A, B, C… "Daily" is always available.
+        Set how many training days are in your split (1–14). Days are labelled A, B, C… "Daily" is always available.
       </p>
 
       {error && (

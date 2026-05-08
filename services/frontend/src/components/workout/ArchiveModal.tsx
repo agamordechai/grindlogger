@@ -82,7 +82,7 @@ export function ArchiveModal({ open, onClose, onRestored }: ArchiveModalProps) {
                       {ex.workout_day === 'None' ? 'Daily' : `Day ${ex.workout_day}`}
                     </span>
                     {!isInCycle(ex.workout_day) && (
-                      <span className="ml-2 text-amber-400/80">· not in cycle</span>
+                      <span className="ml-2 text-amber-400/80">· not in split</span>
                     )}
                   </p>
                 </div>
@@ -110,7 +110,7 @@ export function ArchiveModal({ open, onClose, onRestored }: ArchiveModalProps) {
               {restoringId === ex.id && (
                 <div className="mt-3 pt-3 border-t border-border/50">
                   <p className="text-xs text-amber-400 mb-2">
-                    Day {ex.workout_day} is outside your current cycle. Pick a day to restore to:
+                    Day {ex.workout_day} is not in your current split. Pick a day to restore to:
                   </p>
                   <div className="flex flex-wrap gap-1.5 mb-3">
                     {letterDays.map(d => {
