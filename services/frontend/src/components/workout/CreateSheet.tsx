@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { RotateCcw, Dumbbell } from 'lucide-react';
+import { Dumbbell, Archive } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { GlowButton } from '../ui/GlowButton';
-import { ALL_DAYS } from '../../lib/constants';
-import { searchArchivedExercises } from '../../api/client';
+import { useCycleDays } from '../../hooks/useCycleDays';
+import { searchArchivedExercises, permanentDeleteExercise } from '../../api/client';
 import { searchLibrary, getMuscleGroupColor } from '../../lib/exerciseLibrary';
 import { getWeightUnit, toDisplayWeight, toKg } from '../../hooks/useUnits';
 import { useDialog } from '../ui/ConfirmDialog';
@@ -21,8 +21,10 @@ interface CreateSheetProps {
   getNameStatus?: (name: string) => 'active' | 'archived' | 'new';
 }
 
-export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exercises = [], defaultDay = 'A', getNameStatus }: CreateSheetProps) {
+export function CreateSheet({ open, onClose, onSubmit, onDelete, exercises = [], defaultDay = 'A', getNameStatus }: CreateSheetProps) {
   const { confirm } = useDialog();
+  const activeDays = useCycleDays();
+  const letterDays = activeDays.filter(d => d !== 'Daily');
   const [name, setName] = useState('');
   const [sets, setSets] = useState(3);
   const [reps, setReps] = useState(10);
@@ -32,6 +34,7 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
   const [saving, setSaving] = useState(false);
   const [suggestions, setSuggestions] = useState<ArchivedExerciseSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
   const unit = getWeightUnit();
   const librarySuggestions = useMemo(() => searchLibrary(name), [name]);
@@ -76,6 +79,7 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
     setDay(defaultDay);
     setPerSide(false);
     setSuggestions([]);
+    setPendingDeleteId(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -124,6 +128,9 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
         workout_day: day,
         per_side: perSide,
       });
+      if (pendingDeleteId !== null) {
+        await permanentDeleteExercise(pendingDeleteId);
+      }
       reset();
       onClose();
     } finally {
@@ -131,16 +138,18 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
     }
   };
 
-  const handleRestore = async (id: number) => {
-    if (!onRestore) return;
-    setSaving(true);
-    try {
-      await onRestore(id);
-      reset();
-      onClose();
-    } finally {
-      setSaving(false);
-    }
+  const handleFillFromArchive = (s: ArchivedExerciseSuggestion) => {
+    setName(s.name);
+    setSets(s.sets);
+    setReps(s.reps);
+    setWeight(s.weight != null ? (toDisplayWeight(s.weight, unit) ?? 0) : 0);
+    setPerSide(s.per_side);
+    const validDay = (s.workout_day === 'None' || letterDays.includes(s.workout_day))
+      ? s.workout_day
+      : letterDays[0] ?? 'A';
+    setDay(validDay);
+    setPendingDeleteId(s.id);
+    setShowSuggestions(false);
   };
 
   const handleSelectLibrary = (ex: LibraryExercise) => {
@@ -154,6 +163,13 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
   return (
     <Modal open={open} onClose={onClose} title="Add Exercise" description="Create a new exercise for your routine">
       <form onSubmit={handleSubmit} className="space-y-4">
+        {pendingDeleteId !== null && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs">
+            <Archive size={13} />
+            Filling from archived exercise — submitting will remove it from archive
+            <button type="button" onClick={() => { setPendingDeleteId(null); reset(); }} className="ml-auto text-steel hover:text-chalk">✕</button>
+          </div>
+        )}
         <div>
           <label className="block text-xs font-medium text-steel mb-1.5">Exercise Name</label>
           <div className="relative">
@@ -185,24 +201,24 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
                     </span>
                   </button>
                 ))}
-                {suggestions.length > 0 && onRestore && (
+                {suggestions.length > 0 && (
                   <>
                     {librarySuggestions.length > 0 && <div className="border-t border-border/50" />}
                     {suggestions.map((s) => (
                       <button
                         key={s.id}
                         type="button"
-                        onClick={() => handleRestore(s.id)}
+                        onClick={() => handleFillFromArchive(s)}
                         disabled={saving}
                         className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-2 transition-colors"
                       >
-                        <RotateCcw size={14} className="text-amber-500 shrink-0" />
+                        <Archive size={14} className="text-amber-500 shrink-0" />
                         <div className="flex-1 min-w-0">
                           <span className="text-sm text-chalk">{s.name}</span>
                           <span className="text-xs text-steel ml-2 font-mono">
                             {s.sets}&times;{s.reps}
                             {s.weight != null && s.weight > 0 && ` ${toDisplayWeight(s.weight, unit)}${unit}`}
-                            {' · Day '}{s.workout_day}
+                            {' · '}{s.workout_day === 'None' ? 'Daily' : `Day ${s.workout_day}`}
                           </span>
                         </div>
                       </button>
@@ -238,7 +254,7 @@ export function CreateSheet({ open, onClose, onSubmit, onRestore, onDelete, exer
         <div>
           <label className="block text-xs font-medium text-steel mb-1.5">Workout Day</label>
           <select value={day} onChange={e => setDay(e.target.value)} className="input">
-            {ALL_DAYS.map(d => (
+            {activeDays.map(d => (
               <option key={d} value={d}>{d}</option>
             ))}
             <option value="None">Unassigned</option>

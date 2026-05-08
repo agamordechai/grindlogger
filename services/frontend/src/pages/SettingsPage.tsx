@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import { PageShell } from '../components/ui/PageShell';
 import { ProfileSection } from '../components/settings/ProfileSection';
 import { UnitsSection } from '../components/settings/UnitsSection';
+import { CycleLengthSection } from '../components/settings/CycleLengthSection';
 import { ApiKeySection } from '../components/settings/ApiKeySection';
 import { CalendarSyncSection } from '../components/settings/CalendarSyncSection';
 import { BodyweightSection } from '../components/settings/BodyweightSection';
@@ -28,6 +29,7 @@ export default function SettingsPage() {
       <div className="card mt-6 p-0 px-4">
         <ProfileSection />
         <UnitsSection />
+        <CycleLengthSection />
         <BodyweightSection />
         <CalendarSyncSection />
         <ApiKeySection />

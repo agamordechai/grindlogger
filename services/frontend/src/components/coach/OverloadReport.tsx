@@ -3,7 +3,7 @@ import { GlowButton } from '../ui/GlowButton';
 import { getOverloadSuggestions, listExercises } from '../../api/client';
 import { getWeightUnit, toDisplayWeight } from '../../hooks/useUnits';
 import { useSessionStorage } from '../../hooks/useSessionStorage';
-import { ALL_DAYS } from '../../lib/constants';
+import { useCycleDays } from '../../hooks/useCycleDays';
 import type { OverloadSuggestions, ReadinessStatus } from '../../types/aiCoach';
 import type { Exercise } from '../../types/exercise';
 
@@ -22,6 +22,7 @@ export function OverloadReport() {
   const [selectedDay, setSelectedDay] = useState<string>('');
   const [selectedExercises, setSelectedExercises] = useState<Set<string>>(new Set());
   const unit = getWeightUnit();
+  const activeDays = useCycleDays();
 
   // Fetch exercises on mount
   useEffect(() => {
@@ -37,10 +38,10 @@ export function OverloadReport() {
       return d;
     }))];
     return days.sort((a, b) => {
-      const order = [...ALL_DAYS, 'None'];
+      const order = [...activeDays, 'None'];
       return order.indexOf(a) - order.indexOf(b);
     });
-  }, [exercises]);
+  }, [exercises, activeDays]);
 
   // Filtered exercises based on selected day
   const filteredExercises = useMemo(() => {

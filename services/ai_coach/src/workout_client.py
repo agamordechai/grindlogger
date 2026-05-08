@@ -120,6 +120,21 @@ class WorkoutAPIClient:
             )
         return sessions
 
+    async def get_user_profile(self, auth_header: str | None = None) -> dict[str, Any] | None:
+        """Fetch current user's profile from the main API."""
+        try:
+            client = await self._get_client()
+            headers = {}
+            if auth_header:
+                headers["Authorization"] = auth_header
+            response = await client.get("/auth/me", headers=headers)
+            if response.status_code == 200:
+                return response.json()
+            return None
+        except Exception as e:
+            logger.warning(f"Failed to fetch user profile: {e}")
+            return None
+
     async def get_workout_context(self, auth_header: str | None = None) -> WorkoutContext:
         """Build workout context from current exercises and recent session history.
 
@@ -129,11 +144,13 @@ class WorkoutAPIClient:
         Returns:
             WorkoutContext with current workout data and recent sessions
         """
-        exercises, recent_sessions = await asyncio.gather(
+        exercises, recent_sessions, profile = await asyncio.gather(
             self.get_exercises(auth_header=auth_header),
             self.get_recent_sessions(auth_header=auth_header),
+            self.get_user_profile(auth_header=auth_header),
         )
 
+        cycle_length = (profile or {}).get("cycle_length", 7)
         total_volume = sum(ex.sets * ex.reps * (ex.weight or 0) * (2 if ex.per_side else 1) for ex in exercises)
         muscle_groups = self._identify_muscle_groups(exercises)
 
@@ -143,6 +160,7 @@ class WorkoutAPIClient:
             exercise_count=len(exercises),
             muscle_groups_worked=muscle_groups,
             recent_sessions=recent_sessions,
+            cycle_length=cycle_length,
         )
 
     async def create_exercise(self, data: dict[str, Any], auth_header: str | None = None) -> dict[str, Any]:

@@ -148,7 +148,7 @@ export async function getCurrentUser(): Promise<User> {
   return response.data;
 }
 
-export async function updateProfile(data: { name?: string }): Promise<User> {
+export async function updateProfile(data: { name?: string; cycle_length?: number }): Promise<User> {
   const response = await client.patch<User>('/auth/me', data);
   return response.data;
 }
@@ -274,8 +274,8 @@ export async function archiveExercise(exerciseId: number): Promise<void> {
 /**
  * Restore an archived exercise.
  */
-export async function restoreExercise(exerciseId: number): Promise<Exercise> {
-  const response = await client.post<Exercise>(`/exercises/${exerciseId}/restore`);
+export async function restoreExercise(exerciseId: number, workout_day?: string): Promise<Exercise> {
+  const response = await client.post<Exercise>(`/exercises/${exerciseId}/restore`, workout_day !== undefined ? { workout_day } : {});
   return response.data;
 }
 

@@ -17,7 +17,7 @@ interface AuthContextType {
   loginWithEmail: (email: string, password: string) => Promise<void>;
   register: (email: string, name: string, password: string) => Promise<void>;
   logout: () => void;
-  updateProfile: (data: { name?: string }) => Promise<void>;
+  updateProfile: (data: { name?: string; cycle_length?: number }) => Promise<void>;
   deleteAccount: () => Promise<void>;
 }
 
@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await storeTokensAndLoadUser(tokens);
   }, [storeTokensAndLoadUser]);
 
-  const updateProfile = useCallback(async (data: { name?: string }) => {
+  const updateProfile = useCallback(async (data: { name?: string; cycle_length?: number }) => {
     const updatedUser = await updateProfileApi(data);
     setUser(updatedUser);
   }, []);

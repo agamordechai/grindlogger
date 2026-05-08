@@ -129,3 +129,4 @@ class ArchivedExerciseSuggestion(BaseModel):
     reps: int
     weight: float | None
     workout_day: str
+    per_side: bool = False

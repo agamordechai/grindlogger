@@ -21,7 +21,7 @@ import { SaveTemplateModal } from '../components/workout/SaveTemplateModal';
 import { LoadTemplateModal } from '../components/workout/LoadTemplateModal';
 import { TemplateOverrideModal } from '../components/workout/TemplateOverrideModal';
 import { ArchiveModal } from '../components/workout/ArchiveModal';
-import { ALL_DAYS } from '../lib/constants';
+import { useCycleDays } from '../hooks/useCycleDays';
 import { containerStagger } from '../lib/motion';
 import type { WorkoutTemplate, TemplateExercise } from '../hooks/useTemplates';
 import type { Exercise } from '../types/exercise';
@@ -82,6 +82,7 @@ export default function DashboardPage() {
   const { exercises, loading, error, fetchExercises, handleCreate, handleUpdate, handleDelete, handleArchive, handleSeed, handleReorder, handleCreateSuperset, handleRemoveSuperset } = useExercises();
   const { getNameStatus, fetchNames } = useExerciseNames();
   const { user } = useAuth();
+  const activeDays = useCycleDays();
   const [selectedDay, setSelectedDay] = useState(() => {
     try {
       const raw = localStorage.getItem('dashboard_selectedDay');
@@ -142,12 +143,11 @@ export default function DashboardPage() {
       groups[day].push(ex);
     }
 
-    // Sort: days A-G, Daily, None
-    const order = [...ALL_DAYS, 'None'];
+    const order = [...activeDays, 'None'];
     return Object.entries(groups).sort(([a], [b]) => {
       return order.indexOf(a) - order.indexOf(b);
     });
-  }, [filteredExercises]);
+  }, [filteredExercises, activeDays]);
 
   const handleRestoreFromCreate = async (id: number) => {
     await restoreExercise(id);

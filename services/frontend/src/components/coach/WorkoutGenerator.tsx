@@ -3,7 +3,8 @@ import { Dumbbell, CheckCircle, Bookmark, BookmarkCheck } from 'lucide-react';
 import { GlowButton } from '../ui/GlowButton';
 import { Badge } from '../ui/Badge';
 import { getWorkoutRecommendation, appendExercisesToRoutine, clearExercises, listExercises } from '../../api/client';
-import { MUSCLE_GROUPS, EQUIPMENT_OPTIONS, ALL_DAYS, getDayColor, TRAINING_GOALS, EXPERIENCE_LEVELS } from '../../lib/constants';
+import { MUSCLE_GROUPS, EQUIPMENT_OPTIONS, getDayColor, TRAINING_GOALS, EXPERIENCE_LEVELS } from '../../lib/constants';
+import { useCycleDays } from '../../hooks/useCycleDays';
 import { useSessionStorage } from '../../hooks/useSessionStorage';
 import { useTemplates } from '../../hooks/useTemplates';
 import type { WorkoutRecommendation, MuscleGroup, RecommendationRequest } from '../../types/aiCoach';
@@ -14,6 +15,7 @@ export function WorkoutGenerator() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [focusArea, setFocusArea] = useState<MuscleGroup | 'other'>('full_body');
+  const activeDays = useCycleDays();
   const [customFocus, setCustomFocus] = useState('');
   const [duration, setDuration] = useState(45);
   const [equipment, setEquipment] = useState<string[]>(['barbell', 'dumbbells', 'cables', 'bodyweight']);
@@ -248,7 +250,7 @@ export function WorkoutGenerator() {
                           <div className="px-3 pb-2.5 flex items-center gap-2">
                             <span className="text-[11px] text-steel/60 shrink-0">Import to:</span>
                             <div className="flex flex-wrap gap-1">
-                              {ALL_DAYS.map(d => {
+                              {activeDays.filter(d => d !== 'Daily').map(d => {
                                 const dayColor = getDayColor(d);
                                 const active = state?.day === d;
                                 return (

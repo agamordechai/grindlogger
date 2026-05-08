@@ -54,6 +54,7 @@ class WorkoutContext(BaseModel):
     recent_sessions: list[RecentSession] = Field(
         default_factory=list, description="Sessions from the last two months for gap analysis"
     )
+    cycle_length: int = Field(default=7, description="User's configured workout cycle length (number of days)")
 
 
 class ChatMessage(BaseModel):

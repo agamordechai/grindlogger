@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
-import { getDayColor, ALL_DAYS } from '../../lib/constants';
+import { getDayColor } from '../../lib/constants';
+import { useCycleDays } from '../../hooks/useCycleDays';
 
 interface DayPillsProps {
   selected: string;
@@ -8,7 +9,8 @@ interface DayPillsProps {
 }
 
 export function DayPills({ selected, onChange, dayCounts }: DayPillsProps) {
-  const tabs = ['All', ...ALL_DAYS];
+  const activeDays = useCycleDays();
+  const tabs = ['All', ...activeDays];
 
   return (
     <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">

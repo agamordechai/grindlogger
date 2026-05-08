@@ -27,14 +27,13 @@ export function useArchivedExercises() {
     fetchArchived();
   }, [fetchArchived, isAuthenticated]);
 
-  const handleRestore = async (exerciseId: number) => {
-    // Optimistically remove from list
+  const handleRestore = async (exerciseId: number, workout_day?: string) => {
     setExercises(prev => prev.filter(ex => ex.id !== exerciseId));
     try {
-      await restoreExercise(exerciseId);
+      await restoreExercise(exerciseId, workout_day);
     } catch (err) {
       setError(`Failed to restore: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      await fetchArchived(); // Revert on failure
+      await fetchArchived();
     }
   };
 

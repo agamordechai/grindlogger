@@ -58,123 +58,129 @@ Action guidelines:
 If workout context is provided, analyze it and tailor your responses accordingly.
 """
 
-# Tool definitions for Claude function calling
-COACH_TOOLS = [
-    {
-        "name": "create_exercise",
-        "description": "Add a new exercise to the user's workout plan. Use this when the user asks to add an exercise.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "name": {"type": "string", "description": "Exercise name (e.g. 'Bench Press', 'Squat')"},
-                "sets": {"type": "integer", "description": "Number of sets (1-100)"},
-                "reps": {"type": "integer", "description": "Number of reps per set (1-1000)"},
-                "weight": {
-                    "type": "number",
-                    "description": "Weight in kg (omit or null for bodyweight exercises)",
-                },
-                "workout_day": {
-                    "type": "string",
-                    "enum": ["A", "B", "C", "D", "E", "F", "G", "None"],
-                    "description": "Workout day letter. Use 'None' for daily exercises.",
-                    "default": "A",
-                },
-                "notes": {
-                    "type": "string",
-                    "description": "Optional notes or cues for the exercise",
-                },
-            },
-            "required": ["name", "sets", "reps"],
-        },
-    },
-    {
-        "name": "edit_exercise",
-        "description": (
-            "Modify an existing exercise. Use this when the user asks to change sets, reps, weight, name, "
-            "or day of an exercise. Requires the exercise ID from the workout context."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "exercise_id": {"type": "integer", "description": "ID of the exercise to edit (from workout context)"},
-                "name": {"type": "string", "description": "New exercise name"},
-                "sets": {"type": "integer", "description": "New number of sets"},
-                "reps": {"type": "integer", "description": "New number of reps"},
-                "weight": {"type": "number", "description": "New weight in kg"},
-                "workout_day": {
-                    "type": "string",
-                    "enum": ["A", "B", "C", "D", "E", "F", "G", "None"],
-                    "description": "New workout day letter. Use 'None' for daily exercises.",
-                },
-                "notes": {"type": "string", "description": "New notes"},
-            },
-            "required": ["exercise_id"],
-        },
-    },
-    {
-        "name": "log_workout",
-        "description": (
-            "Log a completed workout session. Use this when the user says they finished a workout "
-            "or wants to log exercises they did today."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "date": {"type": "string", "description": "Workout date in YYYY-MM-DD format"},
-                "workout_day": {
-                    "type": "string",
-                    "enum": ["A", "B", "C", "D", "E", "F", "G"],
-                    "description": "Which workout day was performed.",
-                },
-                "notes": {"type": "string", "description": "Optional session notes"},
-                "duration_minutes": {"type": "integer", "description": "Workout duration in minutes"},
-                "exercises": {
-                    "type": "array",
-                    "description": "Exercises performed in this session",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "exercise_name": {"type": "string"},
-                            "sets_completed": {"type": "integer"},
-                            "reps_completed": {"type": "integer"},
-                            "weight_used": {"type": "number", "description": "Weight in kg"},
-                        },
-                        "required": ["exercise_name", "sets_completed", "reps_completed"],
+def build_coach_tools(cycle_length: int = 7) -> list[dict]:
+    """Build tool definitions with workout_day enum derived from cycle_length."""
+    n = max(1, min(26, cycle_length))
+    letter_days = [chr(65 + i) for i in range(n)]
+    letter_days_with_none = letter_days + ["None"]
+    last_letter = chr(64 + n)
+
+    return [
+        {
+            "name": "create_exercise",
+            "description": "Add a new exercise to the user's workout plan. Use this when the user asks to add an exercise.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "Exercise name (e.g. 'Bench Press', 'Squat')"},
+                    "sets": {"type": "integer", "description": "Number of sets (1-100)"},
+                    "reps": {"type": "integer", "description": "Number of reps per set (1-1000)"},
+                    "weight": {
+                        "type": "number",
+                        "description": "Weight in kg (omit or null for bodyweight exercises)",
+                    },
+                    "workout_day": {
+                        "type": "string",
+                        "enum": letter_days_with_none,
+                        "description": f"Workout day letter (A–{last_letter}). Use 'None' for daily exercises.",
+                        "default": "A",
+                    },
+                    "notes": {
+                        "type": "string",
+                        "description": "Optional notes or cues for the exercise",
                     },
                 },
+                "required": ["name", "sets", "reps"],
             },
-            "required": ["date", "workout_day", "exercises"],
         },
-    },
-    {
-        "name": "add_measurement",
-        "description": (
-            "Record a body measurement entry. Use this when the user provides body measurements "
-            "like weight, body fat, or tape measurements."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "date": {"type": "string", "description": "Measurement date in YYYY-MM-DD format"},
-                "weight_kg": {"type": "number", "description": "Body weight in kg"},
-                "body_fat_pct": {"type": "number", "description": "Body fat percentage"},
-                "chest_cm": {"type": "number", "description": "Chest circumference in cm"},
-                "waist_cm": {"type": "number", "description": "Waist circumference in cm"},
-                "hips_cm": {"type": "number", "description": "Hips circumference in cm"},
-                "bicep_left_cm": {"type": "number", "description": "Left bicep circumference in cm"},
-                "bicep_right_cm": {"type": "number", "description": "Right bicep circumference in cm"},
-                "thigh_left_cm": {"type": "number", "description": "Left thigh circumference in cm"},
-                "thigh_right_cm": {"type": "number", "description": "Right thigh circumference in cm"},
-                "neck_cm": {"type": "number", "description": "Neck circumference in cm"},
-                "shoulders_cm": {"type": "number", "description": "Shoulders circumference in cm"},
-                "forearm_cm": {"type": "number", "description": "Forearm circumference in cm"},
-                "calf_cm": {"type": "number", "description": "Calf circumference in cm"},
-                "notes": {"type": "string", "description": "Optional notes"},
+        {
+            "name": "edit_exercise",
+            "description": (
+                "Modify an existing exercise. Use this when the user asks to change sets, reps, weight, name, "
+                "or day of an exercise. Requires the exercise ID from the workout context."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "exercise_id": {"type": "integer", "description": "ID of the exercise to edit (from workout context)"},
+                    "name": {"type": "string", "description": "New exercise name"},
+                    "sets": {"type": "integer", "description": "New number of sets"},
+                    "reps": {"type": "integer", "description": "New number of reps"},
+                    "weight": {"type": "number", "description": "New weight in kg"},
+                    "workout_day": {
+                        "type": "string",
+                        "enum": letter_days_with_none,
+                        "description": f"New workout day letter (A–{last_letter}). Use 'None' for daily exercises.",
+                    },
+                    "notes": {"type": "string", "description": "New notes"},
+                },
+                "required": ["exercise_id"],
             },
-            "required": ["date"],
         },
-    },
-]
+        {
+            "name": "log_workout",
+            "description": (
+                "Log a completed workout session. Use this when the user says they finished a workout "
+                "or wants to log exercises they did today."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "date": {"type": "string", "description": "Workout date in YYYY-MM-DD format"},
+                    "workout_day": {
+                        "type": "string",
+                        "enum": letter_days,
+                        "description": f"Which workout day was performed (A–{last_letter}).",
+                    },
+                    "notes": {"type": "string", "description": "Optional session notes"},
+                    "duration_minutes": {"type": "integer", "description": "Workout duration in minutes"},
+                    "exercises": {
+                        "type": "array",
+                        "description": "Exercises performed in this session",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "exercise_name": {"type": "string"},
+                                "sets_completed": {"type": "integer"},
+                                "reps_completed": {"type": "integer"},
+                                "weight_used": {"type": "number", "description": "Weight in kg"},
+                            },
+                            "required": ["exercise_name", "sets_completed", "reps_completed"],
+                        },
+                    },
+                },
+                "required": ["date", "workout_day", "exercises"],
+            },
+        },
+        {
+            "name": "add_measurement",
+            "description": (
+                "Record a body measurement entry. Use this when the user provides body measurements "
+                "like weight, body fat, or tape measurements."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "date": {"type": "string", "description": "Measurement date in YYYY-MM-DD format"},
+                    "weight_kg": {"type": "number", "description": "Body weight in kg"},
+                    "body_fat_pct": {"type": "number", "description": "Body fat percentage"},
+                    "chest_cm": {"type": "number", "description": "Chest circumference in cm"},
+                    "waist_cm": {"type": "number", "description": "Waist circumference in cm"},
+                    "hips_cm": {"type": "number", "description": "Hips circumference in cm"},
+                    "bicep_left_cm": {"type": "number", "description": "Left bicep circumference in cm"},
+                    "bicep_right_cm": {"type": "number", "description": "Right bicep circumference in cm"},
+                    "thigh_left_cm": {"type": "number", "description": "Left thigh circumference in cm"},
+                    "thigh_right_cm": {"type": "number", "description": "Right thigh circumference in cm"},
+                    "neck_cm": {"type": "number", "description": "Neck circumference in cm"},
+                    "shoulders_cm": {"type": "number", "description": "Shoulders circumference in cm"},
+                    "forearm_cm": {"type": "number", "description": "Forearm circumference in cm"},
+                    "calf_cm": {"type": "number", "description": "Calf circumference in cm"},
+                    "notes": {"type": "string", "description": "Optional notes"},
+                },
+                "required": ["date"],
+            },
+        },
+    ]
 
 settings = get_settings()
 
@@ -387,6 +393,7 @@ async def _anthropic_chat_with_tools(
     workout_client: WorkoutAPIClient,
     auth_header: str | None,
     history: list[ChatMessage] | None = None,
+    cycle_length: int = 7,
 ) -> tuple[str, list[ActionPerformed]]:
     """Anthropic chat with tool-use loop. Returns (response_text, actions_performed)."""
     client = anthropic.AsyncAnthropic(api_key=api_key)
@@ -401,7 +408,7 @@ async def _anthropic_chat_with_tools(
             temperature=settings.ai_temperature,
             system=system_prompt,
             messages=messages,
-            tools=COACH_TOOLS,
+            tools=build_coach_tools(cycle_length),
         )
 
         # If no tool use, extract final text and return
@@ -435,13 +442,14 @@ async def _openai_chat_with_tools(
     workout_client: WorkoutAPIClient,
     auth_header: str | None,
     history: list[ChatMessage] | None = None,
+    cycle_length: int = 7,
 ) -> tuple[str, list[ActionPerformed]]:
     """OpenAI-compatible chat with tool-use loop. Returns (response_text, actions_performed)."""
     client = AsyncOpenAI(api_key=api_key, base_url=base_url)
     actions: list[ActionPerformed] = []
 
     openai_tools = []
-    for tool in COACH_TOOLS:
+    for tool in build_coach_tools(cycle_length):
         openai_tools.append(
             {
                 "type": "function",
@@ -599,6 +607,8 @@ async def chat_with_coach(
         workout_context
     )
 
+    cl = workout_context.cycle_length if workout_context else 7
+
     try:
         if workout_client and auth_header:
             # Use tool-enabled flow
@@ -611,6 +621,7 @@ async def chat_with_coach(
                     workout_client=workout_client,
                     auth_header=auth_header,
                     history=history,
+                    cycle_length=cl,
                 )
             else:
                 return await _openai_chat_with_tools(
@@ -622,6 +633,7 @@ async def chat_with_coach(
                     workout_client=workout_client,
                     auth_header=auth_header,
                     history=history,
+                    cycle_length=cl,
                 )
         else:
             # Fallback to simple completion (no tools)

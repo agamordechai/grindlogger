@@ -274,11 +274,14 @@ class ExerciseRepository:
         self.session.commit()
         return True
 
-    def restore(self, exercise_id: int, user_id: int) -> ExerciseResponse | None:
+    def restore(self, exercise_id: int, user_id: int, workout_day: str | None = None) -> ExerciseResponse | None:
         """Restore an archived exercise.
 
         If an active exercise with the same name and workout_day exists,
         it is deleted before restoring the archived one.
+
+        Args:
+            workout_day: If provided, override the exercise's original workout_day.
 
         Returns:
             The restored exercise, or None if not found.
@@ -292,18 +295,21 @@ class ExerciseRepository:
         if not exercise:
             return None
 
-        # Delete active duplicates with the same name + day
+        target_day = workout_day if workout_day is not None else exercise.workout_day
+
+        # Delete active duplicates with the same name + target day
         dupes = self.session.exec(
             select(ExerciseTable).where(
                 ExerciseTable.user_id == user_id,
                 ExerciseTable.archived == False,  # noqa: E712
                 func.lower(ExerciseTable.name) == exercise.name.lower(),
-                ExerciseTable.workout_day == exercise.workout_day,
+                ExerciseTable.workout_day == target_day,
             )
         ).all()
         for dupe in dupes:
             self.session.delete(dupe)
 
+        exercise.workout_day = target_day
         exercise.archived = False
         self.session.add(exercise)
         self.session.commit()
@@ -364,6 +370,7 @@ class ExerciseRepository:
                 reps=ex.reps,
                 weight=ex.weight,
                 workout_day=ex.workout_day,
+                per_side=ex.per_side,
             )
             for ex in results
         ]

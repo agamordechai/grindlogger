@@ -28,6 +28,7 @@ export interface ArchivedExerciseSuggestion {
   reps: number;
   weight: number | null;
   workout_day: string;
+  per_side: boolean;
 }
 
 export interface CreateExerciseRequest {

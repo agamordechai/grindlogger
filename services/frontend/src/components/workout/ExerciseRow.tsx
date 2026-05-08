@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, Archive, Trash2, StickyNote, GitBranch } from 'lucide-react';
 import type { Exercise, UpdateExerciseRequest } from '../../types/exercise';
-import { ALL_DAYS } from '../../lib/constants';
+import { useCycleDays } from '../../hooks/useCycleDays';
 import { formatWeight } from '../../hooks/useUnits';
 import { useDialog } from '../ui/ConfirmDialog';
 import { ExerciseEditor } from './ExerciseEditor';
@@ -19,6 +19,7 @@ export function ExerciseRow({ exercise, onUpdate, onDelete, onArchive }: Exercis
   const [expanded, setExpanded] = useState(false);
   const [showVariants, setShowVariants] = useState(false);
   const { confirm } = useDialog();
+  const activeDays = useCycleDays();
 
   const variants = useMemo(() => getLibraryVariants(exercise.name), [exercise.name]);
 
@@ -69,7 +70,7 @@ export function ExerciseRow({ exercise, onUpdate, onDelete, onArchive }: Exercis
           >
             <ExerciseEditor
               exercise={exercise}
-              days={['A', ...ALL_DAYS.filter(d => d !== 'A'), 'None']}
+              days={[...activeDays.filter(d => d !== 'Daily'), 'None']}
               onSave={async (data) => {
                 await onUpdate(exercise.id, data);
                 setExpanded(false);

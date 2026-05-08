@@ -13,7 +13,7 @@ from datetime import UTC, datetime, timedelta
 from io import StringIO
 from typing import Annotated, Literal
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
+from fastapi import Body, Depends, FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
@@ -356,6 +356,12 @@ def archive_exercise(
     return None
 
 
+class RestoreExerciseRequest(BaseModel):
+    """Optional body for restore endpoint — allows overriding the workout day on restore."""
+
+    workout_day: str | None = None
+
+
 @app.post("/exercises/{exercise_id}/restore", response_model=ExerciseResponse, tags=["Exercises"])
 @limiter.limit("60/minute")
 def restore_exercise(
@@ -363,9 +369,10 @@ def restore_exercise(
     exercise_id: int,
     repository: RepositoryDep,
     current_user: Annotated[UserTable, Depends(get_current_user)],
+    body: RestoreExerciseRequest = Body(default_factory=RestoreExerciseRequest),
 ) -> ExerciseResponse:
-    """Restore an archived exercise."""
-    exercise = repository.restore(exercise_id, current_user.id)
+    """Restore an archived exercise, optionally overriding the workout day."""
+    exercise = repository.restore(exercise_id, current_user.id, workout_day=body.workout_day)
     if not exercise:
         raise HTTPException(status_code=404, detail="Exercise not found")
     return exercise
@@ -1211,6 +1218,7 @@ async def get_me(
         name=current_user.name,
         picture_url=current_user.picture_url,
         role=current_user.role,
+        cycle_length=current_user.cycle_length,
     )
 
 
@@ -1234,6 +1242,8 @@ async def update_me(
     """
     if update_data.name is not None:
         current_user.name = update_data.name
+    if update_data.cycle_length is not None:
+        current_user.cycle_length = update_data.cycle_length
 
     session.add(current_user)
     session.commit()
@@ -1245,6 +1255,7 @@ async def update_me(
         name=current_user.name,
         picture_url=current_user.picture_url,
         role=current_user.role,
+        cycle_length=current_user.cycle_length,
     )
 
 

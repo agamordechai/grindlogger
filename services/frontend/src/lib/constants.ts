@@ -6,6 +6,13 @@ export const DAY_LABELS: Record<string, string> = {
   E: 'Day E',
   F: 'Day F',
   G: 'Day G',
+  H: 'Day H',
+  I: 'Day I',
+  J: 'Day J',
+  K: 'Day K',
+  L: 'Day L',
+  M: 'Day M',
+  N: 'Day N',
   Daily: 'Daily',
   None: 'Unassigned',
 };
@@ -18,6 +25,13 @@ export const DAY_COLORS: Record<string, { hex: string; bg: string; text: string;
   E: { hex: '#EC4899', bg: 'bg-pink-500/15', text: 'text-pink-400', border: 'border-pink-500/30', accent: 'bg-pink-500' },
   F: { hex: '#F59E0B', bg: 'bg-amber-500/15', text: 'text-amber-400', border: 'border-amber-500/30', accent: 'bg-amber-500' },
   G: { hex: '#06B6D4', bg: 'bg-cyan-500/15', text: 'text-cyan-400', border: 'border-cyan-500/30', accent: 'bg-cyan-500' },
+  H: { hex: '#EF4444', bg: 'bg-red-500/15', text: 'text-red-400', border: 'border-red-500/30', accent: 'bg-red-500' },
+  I: { hex: '#14B8A6', bg: 'bg-teal-500/15', text: 'text-teal-400', border: 'border-teal-500/30', accent: 'bg-teal-500' },
+  J: { hex: '#A855F7', bg: 'bg-purple-500/15', text: 'text-purple-400', border: 'border-purple-500/30', accent: 'bg-purple-500' },
+  K: { hex: '#F43F5E', bg: 'bg-rose-500/15', text: 'text-rose-400', border: 'border-rose-500/30', accent: 'bg-rose-500' },
+  L: { hex: '#0EA5E9', bg: 'bg-sky-500/15', text: 'text-sky-400', border: 'border-sky-500/30', accent: 'bg-sky-500' },
+  M: { hex: '#84CC16', bg: 'bg-lime-500/15', text: 'text-lime-400', border: 'border-lime-500/30', accent: 'bg-lime-500' },
+  N: { hex: '#FB923C', bg: 'bg-orange-400/15', text: 'text-orange-300', border: 'border-orange-400/30', accent: 'bg-orange-400' },
   Daily: { hex: '#94A3B8', bg: 'bg-slate-500/15', text: 'text-slate-400', border: 'border-slate-500/30', accent: 'bg-slate-500' },
   None: { hex: '#57534E', bg: 'bg-stone-500/15', text: 'text-stone-400', border: 'border-stone-500/30', accent: 'bg-stone-500' },
 };
@@ -27,6 +41,13 @@ export function getDayColor(day: string) {
 }
 
 export const ALL_DAYS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'Daily'] as const;
+
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+export function getActiveDays(cycleLength: number): string[] {
+  const n = Math.max(1, Math.min(26, cycleLength));
+  return [...Array.from({ length: n }, (_, i) => LETTERS[i]), 'Daily'];
+}
 
 export const MUSCLE_GROUPS = [
   { value: 'full_body', label: 'Full Body' },

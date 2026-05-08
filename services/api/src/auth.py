@@ -205,6 +205,7 @@ class UpdateProfileRequest(BaseModel):
     """Profile update request model."""
 
     name: str | None = Field(None, min_length=1, max_length=255, description="Display name")
+    cycle_length: int | None = Field(None, ge=1, le=14, description="Workout cycle length in days (1-14)")
 
 
 class UserResponse(BaseModel):
@@ -215,6 +216,7 @@ class UserResponse(BaseModel):
     name: str
     picture_url: str | None = None
     role: str
+    cycle_length: int = 7
 
 
 class AdminUserResponse(BaseModel):

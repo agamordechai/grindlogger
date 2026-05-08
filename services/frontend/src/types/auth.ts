@@ -8,6 +8,7 @@ export interface User {
   name: string;
   picture_url: string | null;
   role: string;
+  cycle_length: number;
 }
 
 export interface AuthTokens {

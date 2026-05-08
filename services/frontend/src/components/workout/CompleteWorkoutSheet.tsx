@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Check, Plus, Trophy, Link, Trash2 } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { GlowButton } from '../ui/GlowButton';
-import { ALL_DAYS } from '../../lib/constants';
+import { useCycleDays } from '../../hooks/useCycleDays';
 import { getWeightUnit, toDisplayWeight, toKg } from '../../hooks/useUnits';
 import type { Exercise } from '../../types/exercise';
 import type { CreateWorkoutSession, CreateSessionExercise, WorkoutSession, SetType } from '../../types/session';
@@ -42,6 +42,7 @@ interface CompleteWorkoutSheetProps {
 
 export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, defaultDate, editSession }: CompleteWorkoutSheetProps) {
   const unit = getWeightUnit();
+  const activeDays = useCycleDays();
   const [entries, setEntries] = useState<ExerciseEntry[]>([]);
   const [notes, setNotes] = useState('');
   const [duration, setDuration] = useState<number | ''>('');
@@ -53,7 +54,7 @@ export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, de
     const d = (!ex.workout_day || ex.workout_day === 'None') ? 'Daily' : ex.workout_day;
     return d;
   }))].sort((a, b) => {
-    const order = [...ALL_DAYS, 'None'];
+    const order = [...activeDays, 'None'];
     return order.indexOf(a) - order.indexOf(b);
   });
 

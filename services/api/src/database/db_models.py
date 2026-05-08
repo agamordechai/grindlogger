@@ -61,6 +61,9 @@ class UserTable(SQLModel, table=True):
     ai_base_url: str | None = Field(default=None, max_length=1024)
     ai_model: str | None = Field(default=None, max_length=255)
 
+    # Workout cycle configuration
+    cycle_length: int = Field(default=7, ge=1, le=26)
+
 
 class BodyMeasurementTable(SQLModel, table=True):
     """Body measurement entry — tracks weight, body fat %, and tape measurements over time."""
