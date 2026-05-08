@@ -58,6 +58,7 @@ Action guidelines:
 If workout context is provided, analyze it and tailor your responses accordingly.
 """
 
+
 def build_coach_tools(cycle_length: int = 7) -> list[dict]:
     """Build tool definitions with workout_day enum derived from cycle_length."""
     n = max(1, min(26, cycle_length))
@@ -102,7 +103,10 @@ def build_coach_tools(cycle_length: int = 7) -> list[dict]:
             "input_schema": {
                 "type": "object",
                 "properties": {
-                    "exercise_id": {"type": "integer", "description": "ID of the exercise to edit (from workout context)"},  # noqa: E501
+                    "exercise_id": {
+                        "type": "integer",
+                        "description": "ID of the exercise to edit (from workout context)",
+                    },  # noqa: E501
                     "name": {"type": "string", "description": "New exercise name"},
                     "sets": {"type": "integer", "description": "New number of sets"},
                     "reps": {"type": "integer", "description": "New number of reps"},
@@ -181,6 +185,7 @@ def build_coach_tools(cycle_length: int = 7) -> list[dict]:
             },
         },
     ]
+
 
 settings = get_settings()
 
