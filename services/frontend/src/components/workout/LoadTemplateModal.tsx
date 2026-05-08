@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { Trash2, Upload, ChevronLeft } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Trash2, Upload, ChevronLeft, ArrowRight } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { formatWeight } from '../../hooks/useUnits';
 import { useDialog } from '../ui/ConfirmDialog';
 import { getDayColor } from '../../lib/constants';
+import { useCycleDays } from '../../hooks/useCycleDays';
 import type { WorkoutTemplate } from '../../hooks/useTemplates';
 
 interface LoadTemplateModalProps {
@@ -16,7 +17,29 @@ interface LoadTemplateModalProps {
 
 export function LoadTemplateModal({ open, onClose, templates, onLoad, onDelete }: LoadTemplateModalProps) {
   const { confirm } = useDialog();
+  const activeDays = useCycleDays();
+  const letterDays = activeDays.filter(d => d !== 'Daily');
+
   const [selected, setSelected] = useState<WorkoutTemplate | null>(null);
+  const [dayMap, setDayMap] = useState<Record<string, string>>({});
+
+  // Initialise mapping whenever a template is selected
+  useEffect(() => {
+    if (!selected) return;
+    const uniqueDays = [...new Set(selected.exercises.map(ex => ex.workout_day))];
+    const map: Record<string, string> = {};
+    for (const day of uniqueDays) {
+      if (day === 'None') {
+        map[day] = 'None';
+      } else if (letterDays.includes(day)) {
+        map[day] = day;
+      } else {
+        map[day] = letterDays[0] ?? day;
+      }
+    }
+    setDayMap(map);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected]);
 
   const handleClose = () => {
     setSelected(null);
@@ -24,8 +47,19 @@ export function LoadTemplateModal({ open, onClose, templates, onLoad, onDelete }
   };
 
   const handleLoad = async (template: WorkoutTemplate) => {
-    if (await confirm({ title: 'Load routine', message: `Add ${template.exercises.length} exercise${template.exercises.length !== 1 ? 's' : ''} from "${template.name}" to your routine?`, confirmText: 'Load' })) {
-      onLoad(template);
+    if (await confirm({
+      title: 'Load routine',
+      message: `Add ${template.exercises.length} exercise${template.exercises.length !== 1 ? 's' : ''} from "${template.name}" to your routine?`,
+      confirmText: 'Load',
+    })) {
+      const remapped: WorkoutTemplate = {
+        ...template,
+        exercises: template.exercises.map(ex => ({
+          ...ex,
+          workout_day: dayMap[ex.workout_day] ?? ex.workout_day,
+        })),
+      };
+      onLoad(remapped);
       handleClose();
     }
   };
@@ -63,7 +97,48 @@ export function LoadTemplateModal({ open, onClose, templates, onLoad, onDelete }
             Back
           </button>
 
-          <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1">
+          {/* Day mapping */}
+          <div className="mb-4 p-3 rounded-xl bg-surface-2/40 border border-border/60 space-y-2">
+            <p className="text-[11px] font-semibold text-steel uppercase tracking-wide mb-2">Load days as</p>
+            {Object.entries(dayMap).map(([from, to]) => {
+              const fromColor = getDayColor(from);
+              const toColor = getDayColor(to);
+              return (
+                <div key={from} className="flex items-center gap-2">
+                  <span className={`shrink-0 text-[11px] font-bold px-2 py-0.5 rounded border ${fromColor.bg} ${fromColor.text} ${fromColor.border}`}>
+                    {from === 'None' ? 'Daily' : `Day ${from}`}
+                  </span>
+                  <ArrowRight size={12} className="text-steel/50 shrink-0" />
+                  <div className="flex flex-wrap gap-1 flex-1">
+                    {letterDays.map(d => {
+                      const c = getDayColor(d);
+                      const active = to === d;
+                      return (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => setDayMap(prev => ({ ...prev, [from]: d }))}
+                          className={`w-7 h-7 rounded-lg text-[11px] font-bold transition-all border ${active ? `${c.bg} ${c.text} ${c.border}` : 'bg-surface-2 text-steel border-border hover:text-chalk'}`}
+                        >
+                          {d}
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => setDayMap(prev => ({ ...prev, [from]: 'None' }))}
+                      className={`px-2 h-7 rounded-lg text-[11px] font-bold transition-all border ${to === 'None' ? `${toColor.bg} ${toColor.text} ${toColor.border}` : 'bg-surface-2 text-steel border-border hover:text-chalk'}`}
+                    >
+                      Daily
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Exercise preview grouped by template day */}
+          <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-1">
             {[...groupByDay(selected).entries()].map(([day, exercises]) => {
               const color = getDayColor(day);
               return (
