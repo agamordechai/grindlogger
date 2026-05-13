@@ -84,7 +84,7 @@ function AuthenticatedApp() {
   return (
     <div className="min-h-screen bg-background">
       <TopBar />
-      <main className="mx-auto max-w-6xl px-4 lg:px-6 py-6 pb-24 lg:pb-6">
+      <main className="mx-auto max-w-7xl pb-20 lg:pb-0">
         <AnimatePresence mode="wait">
           <Routes>
             <Route index element={<DashboardPage />} />

@@ -1,14 +1,13 @@
 import { useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { Home, CalendarDays, Ruler, Bot, Shield } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const BASE_TABS = [
-  { to: '/', label: 'Home', icon: Home },
-  { to: '/history', label: 'History', icon: CalendarDays },
-  { to: '/measurements', label: 'Body', icon: Ruler },
-  { to: '/coach', label: 'Coach', icon: Bot },
+  { to: '/', label: 'HOME', icon: Home },
+  { to: '/history', label: 'HISTORY', icon: CalendarDays },
+  { to: '/measurements', label: 'BODY', icon: Ruler },
+  { to: '/coach', label: 'COACH', icon: Bot },
 ];
 
 export function BottomNav() {
@@ -16,41 +15,64 @@ export function BottomNav() {
 
   const tabs = useMemo(() => {
     if (user?.role === 'admin') {
-      return [...BASE_TABS, { to: '/admin', label: 'Admin', icon: Shield }];
+      return [...BASE_TABS, { to: '/admin', label: 'ADMIN', icon: Shield }];
     }
     return BASE_TABS;
   }, [user?.role]);
 
   return (
-    <nav className="lg:hidden fixed bottom-0 inset-x-0 z-50 border-t border-border bg-background/80 backdrop-blur-xl h-16 safe-area-bottom">
-      <div className="flex items-center justify-around h-full px-4">
-        {tabs.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            className="relative flex flex-col items-center gap-1 py-1 px-4"
-          >
-            {({ isActive }) => (
-              <>
-                <div className="relative">
-                  <Icon size={22} className={isActive ? 'text-ember' : 'text-steel'} />
-                  {isActive && (
-                    <motion.div
-                      layoutId="bottom-nav-dot"
-                      className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-ember"
-                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                    />
-                  )}
-                </div>
-                <span className={`text-[10px] font-medium ${isActive ? 'text-ember' : 'text-steel'}`}>
-                  {label}
-                </span>
-              </>
-            )}
-          </NavLink>
-        ))}
-      </div>
+    <nav
+      className="lg:hidden"
+      style={{
+        position: 'fixed',
+        bottom: 0,
+        inset: '0 0 0 0',
+        zIndex: 50,
+        display: 'flex',
+        borderTop: '3px solid #38d8ff',
+        background: 'linear-gradient(180deg, rgba(4,8,29,.88), rgba(4,8,29,.96))',
+        backdropFilter: 'blur(8px)',
+        height: 64,
+        top: 'auto',
+      }}
+    >
+      {tabs.map(({ to, label, icon: Icon }) => (
+        <NavLink
+          key={to}
+          to={to}
+          end={to === '/'}
+          style={{ flex: 1 }}
+        >
+          {({ isActive }) => (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 3,
+                height: '100%',
+                padding: '8px 4px',
+                background: isActive ? '#ff2233' : 'transparent',
+                borderRight: '2px solid rgba(28,82,214,.35)',
+                color: isActive ? '#f4f6ff' : '#38d8ff',
+                transition: 'background 0.12s, color 0.12s',
+              }}
+            >
+              <Icon size={18} />
+              <span style={{
+                fontFamily: "'Big Shoulders Display', sans-serif",
+                fontWeight: 900,
+                fontStyle: 'italic',
+                fontSize: 10,
+                letterSpacing: 2,
+              }}>
+                {label}
+              </span>
+            </div>
+          )}
+        </NavLink>
+      ))}
     </nav>
   );
 }

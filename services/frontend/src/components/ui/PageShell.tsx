@@ -5,9 +5,10 @@ import type { ReactNode } from 'react';
 interface PageShellProps {
   children: ReactNode;
   className?: string;
+  noPadding?: boolean;
 }
 
-export function PageShell({ children, className = '' }: PageShellProps) {
+export function PageShell({ children, className = '', noPadding = false }: PageShellProps) {
   return (
     <motion.div
       variants={pageVariants}
@@ -15,7 +16,7 @@ export function PageShell({ children, className = '' }: PageShellProps) {
       animate="animate"
       exit="exit"
       transition={pageTransition}
-      className={className}
+      className={`${noPadding ? '' : 'page-content'} ${className}`}
     >
       {children}
     </motion.div>

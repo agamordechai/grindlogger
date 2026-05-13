@@ -1,26 +1,37 @@
-import { motion } from 'framer-motion';
 import type { ReactNode } from 'react';
-import { itemSlideUp } from '../../lib/motion';
 
 interface StatCardProps {
   label: string;
   value: string | number;
-  icon: ReactNode;
+  icon?: ReactNode;
+  unit?: string;
 }
 
-export function StatCard({ label, value, icon }: StatCardProps) {
+export function StatCard({ label, value, unit }: StatCardProps) {
   return (
-    <motion.div
-      variants={itemSlideUp}
-      className="card flex flex-col items-center text-center gap-1 p-3 sm:flex-row sm:text-left sm:gap-3 sm:p-4"
+    <div
+      style={{
+        position: 'relative',
+        background: '#0d1b58',
+        border: '3px solid #38d8ff',
+        padding: '14px 16px',
+        clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%)',
+        boxShadow: '4px 4px 0 #1438a8',
+        overflow: 'hidden',
+      }}
     >
-      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-ember/10 flex items-center justify-center text-ember shrink-0 hidden sm:flex">
-        {icon}
+      <div style={{ position: 'absolute', top: -2, left: -2, width: 38, height: 6, background: '#ff2233' }} />
+      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, letterSpacing: 3, color: '#38d8ff', textTransform: 'uppercase' }}>
+        {label}
       </div>
-      <div className="min-w-0">
-        <p className="text-lg sm:text-xl font-bold font-mono text-chalk truncate">{value}</p>
-        <p className="text-[10px] sm:text-xs text-steel truncate">{label}</p>
+      <div style={{ fontFamily: "'Anton', sans-serif", fontSize: 36, lineHeight: 0.95, letterSpacing: 1, marginTop: 4, fontStyle: 'italic', color: '#f4f6ff' }}>
+        {value}
       </div>
-    </motion.div>
+      {unit && (
+        <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 9, letterSpacing: 2, color: '#7eecff', textTransform: 'uppercase', marginTop: 3 }}>
+          {unit}
+        </div>
+      )}
+    </div>
   );
 }
