@@ -35,7 +35,7 @@ def upgrade() -> None:
             sa.Column("name", sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
             sa.Column("picture_url", sqlmodel.sql.sqltypes.AutoString(length=1024), nullable=True),
             sa.Column("role", sqlmodel.sql.sqltypes.AutoString(length=20), nullable=False, server_default="user"),
-            sa.Column("disabled", sa.Boolean(), nullable=False, server_default=sa.text("0")),
+            sa.Column("disabled", sa.Boolean(), nullable=False, server_default=sa.text("false")),
             sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
             sa.PrimaryKeyConstraint("id"),
             sa.UniqueConstraint("google_id"),
