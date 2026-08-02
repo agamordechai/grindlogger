@@ -10,8 +10,8 @@ interface ExerciseProgressPanelProps {
 }
 
 const COLORS = [
-  '#F97316', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6',
-  '#EC4899', '#06B6D4', '#EF4444', '#84CC16', '#6366F1',
+  '#FF6B1A', '#14C8FF', '#3DE84F', '#FFD400', '#B24BF3',
+  '#FF3D8A', '#00E5D0', '#FF3B30', '#7CFF4F', '#5B8CFF',
 ];
 
 interface DayChartData {
@@ -150,13 +150,13 @@ export function ExerciseProgressPanel({ metric }: ExerciseProgressPanelProps) {
                   dataKey="date"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#94A3B8', fontSize: 10 }}
+                  tick={{ fill: '#9C948A', fontSize: 10 }}
                   interval="preserveStartEnd"
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#94A3B8', fontSize: 10 }}
+                  tick={{ fill: '#9C948A', fontSize: 10 }}
                   width={45}
                 />
                 <Tooltip
@@ -164,7 +164,7 @@ export function ExerciseProgressPanel({ metric }: ExerciseProgressPanelProps) {
                   contentStyle={{
                     backgroundColor: 'var(--color-surface-1)',
                     border: '1px solid var(--color-border)',
-                    borderRadius: '12px',
+                    borderRadius: '0',
                     color: 'var(--color-chalk)',
                     fontSize: '12px',
                     opacity: 1,
@@ -176,7 +176,7 @@ export function ExerciseProgressPanel({ metric }: ExerciseProgressPanelProps) {
                   ]}
                 />
                 <Legend
-                  wrapperStyle={{ fontSize: '11px', color: '#94A3B8' }}
+                  wrapperStyle={{ fontSize: '11px', color: '#9C948A' }}
                 />
                 {exerciseNames.map((name, i) => (
                   <Line

@@ -204,30 +204,32 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center relative overflow-hidden">
-      {/* Animated gradient mesh background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-ember/8 via-background to-ember-dark/5 animate-gradient-mesh" />
-      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-ember/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-ember-dark/5 rounded-full blur-3xl" />
+    <div className="min-h-screen bg-background flex items-center justify-center relative overflow-hidden px-4">
+      {/* Shard / hazard hero background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-ember/10 via-background to-arc/5 animate-gradient-mesh" />
+      <div className="absolute -top-24 -left-24 w-96 h-96 bg-ember/10 [clip-path:var(--clip-shard)] blur-3xl animate-shard-drift" />
+      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-arc/10 [clip-path:var(--clip-shard)] blur-3xl animate-shard-drift" />
+      <div className="absolute inset-0 scanlines opacity-[0.12] pointer-events-none" />
 
       {/* Card */}
       <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative w-full max-w-sm mx-4"
+        initial={{ opacity: 0, x: -30, skewX: -6 }}
+        animate={{ opacity: 1, x: 0, skewX: 0 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        className="relative w-full max-w-sm min-w-0"
       >
-        <div className="card space-y-6 p-6">
+        <div className="card border-2 border-ember space-y-6 p-6">
+          <div className="absolute inset-x-0 top-0 h-1.5 hazard" />
           {/* Logo + title */}
           <div className="text-center">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-ember to-ember-dark flex items-center justify-center mx-auto mb-4 shadow-lg shadow-ember/30">
-              <Flame size={24} className="text-white" />
+            <div className="w-14 h-14 [clip-path:var(--clip-shard)] bg-gradient-to-br from-ember to-ember-dark flex items-center justify-center mx-auto mb-4 [filter:drop-shadow(3px_3px_0_#000)]">
+              <Flame size={24} className="text-void" />
             </div>
-            <h1 className="text-xl font-bold text-chalk">
-              {isRegister ? 'Create an account' : 'Welcome back'}
+            <h1 className="font-display text-3xl uppercase tracking-wide text-chalk">
+              {isRegister ? 'Enlist' : 'Welcome Back'}
             </h1>
-            <p className="text-steel text-sm mt-1">
-              {isRegister ? 'Start your training journey' : 'Sign in to the Forge'}
+            <p className="text-steel text-sm mt-1 uppercase tracking-widest">
+              {isRegister ? 'Start the grind' : 'Back to the grind'}
             </p>
           </div>
 
@@ -322,7 +324,7 @@ export default function LoginPage() {
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
-                className="bg-danger/10 border border-danger/20 text-danger text-xs rounded-xl px-3 py-2"
+                className="bg-danger/10 border border-danger/30 text-danger text-xs [clip-path:var(--clip-tag)] px-3 py-2"
               >
                 {error}
               </motion.div>

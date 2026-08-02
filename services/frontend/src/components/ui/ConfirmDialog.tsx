@@ -72,21 +72,23 @@ export function DialogProvider({ children }: { children: ReactNode }) {
               onClick={() => handleClose(false)}
             />
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              className="relative w-[calc(100%-2rem)] max-w-sm bg-surface-1 border border-ember/60 rounded-2xl p-6 shadow-2xl"
+              initial={{ opacity: 0, scale: 0.95, y: 10, skewX: -3 }}
+              animate={{ opacity: 1, scale: 1, y: 0, skewX: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10, skewX: -3 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+              className={`relative w-[calc(100%-2rem)] max-w-sm bg-surface-1 border-2 [clip-path:var(--clip-shard)] p-6 ${
+                type === 'danger' ? 'border-danger' : 'border-ember'
+              }`}
             >
               <button
                 onClick={() => handleClose(false)}
-                className="absolute top-3 right-3 w-7 h-7 rounded-lg flex items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
+                className="absolute top-3 right-3 w-7 h-7 [clip-path:var(--clip-tag)] flex items-center justify-center text-steel hover:text-arc hover:bg-surface-2 transition-colors"
               >
                 <X size={14} />
               </button>
 
               <div className="flex items-start gap-3 mb-4">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                <div className={`w-10 h-10 [clip-path:var(--clip-tag)] flex items-center justify-center shrink-0 ${
                   type === 'danger' ? 'bg-danger/15' : 'bg-ember/15'
                 }`}>
                   {type === 'danger' ? (
@@ -96,7 +98,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                   )}
                 </div>
                 <div className="pr-6">
-                  <h3 className="text-sm font-bold text-chalk">{dialog.title}</h3>
+                  <h3 className="font-display text-base uppercase tracking-wide text-chalk">{dialog.title}</h3>
                   <p className="text-xs text-steel mt-1 leading-relaxed">{dialog.message}</p>
                 </div>
               </div>

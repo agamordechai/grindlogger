@@ -40,7 +40,7 @@ export function ExerciseRow({ exercise, onUpdate, onDelete, onArchive }: Exercis
               <span className="text-steel/60 ml-2">BW</span>
             )}
             {exercise.per_side && (
-              <span className="text-violet-400 ml-2">/ side</span>
+              <span className="text-epic ml-2">/ side</span>
             )}
           </p>
           {exercise.notes && (
@@ -51,7 +51,7 @@ export function ExerciseRow({ exercise, onUpdate, onDelete, onArchive }: Exercis
           )}
         </div>
         {variants.length > 0 && (
-          <GitBranch size={12} className="text-cyan-400 shrink-0" />
+          <GitBranch size={12} className="text-arc shrink-0" />
         )}
         <ChevronRight
           size={16}
@@ -81,7 +81,7 @@ export function ExerciseRow({ exercise, onUpdate, onDelete, onArchive }: Exercis
               <div className="px-4 pb-2">
                 <button
                   onClick={() => setShowVariants(!showVariants)}
-                  className="flex items-center gap-1.5 text-xs font-medium text-cyan-400 hover:text-cyan-300 transition-colors"
+                  className="flex items-center gap-1.5 text-xs font-medium text-arc hover:text-arc transition-colors"
                 >
                   <GitBranch size={12} />
                   Try a variant ({variants.length})
@@ -99,7 +99,7 @@ export function ExerciseRow({ exercise, onUpdate, onDelete, onArchive }: Exercis
                       transition={{ duration: 0.15 }}
                       className="overflow-hidden"
                     >
-                      <div className="mt-2 rounded-lg border border-cyan-400/20 bg-cyan-400/5 divide-y divide-cyan-400/10">
+                      <div className="mt-2 [clip-path:var(--clip-tag)] border border-arc/20 bg-arc/5 divide-y divide-arc/10">
                         {variants.map(v => (
                           <div key={v.name} className="flex items-center gap-3 px-3 py-2">
                             <div className="flex-1 min-w-0">
@@ -125,7 +125,7 @@ export function ExerciseRow({ exercise, onUpdate, onDelete, onArchive }: Exercis
                       await onArchive(exercise.id);
                     }
                   }}
-                  className="flex items-center gap-1.5 text-xs text-amber-500 hover:text-amber-400 transition-colors"
+                  className="flex items-center gap-1.5 text-xs text-hazard hover:text-hazard transition-colors"
                 >
                   <Archive size={12} />
                   Archive

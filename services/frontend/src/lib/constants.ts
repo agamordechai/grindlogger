@@ -17,23 +17,24 @@ export const DAY_LABELS: Record<string, string> = {
   None: 'Unassigned',
 };
 
+// Loot-rarity ladder — each training day gets a saturated comic tone.
 export const DAY_COLORS: Record<string, { hex: string; bg: string; text: string; border: string; accent: string }> = {
-  A: { hex: '#F97316', bg: 'bg-orange-500/15', text: 'text-orange-400', border: 'border-orange-500/30', accent: 'bg-orange-500' },
-  B: { hex: '#3B82F6', bg: 'bg-blue-500/15', text: 'text-blue-400', border: 'border-blue-500/30', accent: 'bg-blue-500' },
-  C: { hex: '#10B981', bg: 'bg-emerald-500/15', text: 'text-emerald-400', border: 'border-emerald-500/30', accent: 'bg-emerald-500' },
-  D: { hex: '#8B5CF6', bg: 'bg-violet-500/15', text: 'text-violet-400', border: 'border-violet-500/30', accent: 'bg-violet-500' },
-  E: { hex: '#EC4899', bg: 'bg-pink-500/15', text: 'text-pink-400', border: 'border-pink-500/30', accent: 'bg-pink-500' },
-  F: { hex: '#F59E0B', bg: 'bg-amber-500/15', text: 'text-amber-400', border: 'border-amber-500/30', accent: 'bg-amber-500' },
-  G: { hex: '#06B6D4', bg: 'bg-cyan-500/15', text: 'text-cyan-400', border: 'border-cyan-500/30', accent: 'bg-cyan-500' },
-  H: { hex: '#EF4444', bg: 'bg-red-500/15', text: 'text-red-400', border: 'border-red-500/30', accent: 'bg-red-500' },
-  I: { hex: '#14B8A6', bg: 'bg-teal-500/15', text: 'text-teal-400', border: 'border-teal-500/30', accent: 'bg-teal-500' },
-  J: { hex: '#A855F7', bg: 'bg-purple-500/15', text: 'text-purple-400', border: 'border-purple-500/30', accent: 'bg-purple-500' },
-  K: { hex: '#F43F5E', bg: 'bg-rose-500/15', text: 'text-rose-400', border: 'border-rose-500/30', accent: 'bg-rose-500' },
-  L: { hex: '#0EA5E9', bg: 'bg-sky-500/15', text: 'text-sky-400', border: 'border-sky-500/30', accent: 'bg-sky-500' },
-  M: { hex: '#84CC16', bg: 'bg-lime-500/15', text: 'text-lime-400', border: 'border-lime-500/30', accent: 'bg-lime-500' },
-  N: { hex: '#FB923C', bg: 'bg-orange-400/15', text: 'text-orange-300', border: 'border-orange-400/30', accent: 'bg-orange-400' },
-  Daily: { hex: '#94A3B8', bg: 'bg-slate-500/15', text: 'text-slate-400', border: 'border-slate-500/30', accent: 'bg-slate-500' },
-  None: { hex: '#57534E', bg: 'bg-stone-500/15', text: 'text-stone-400', border: 'border-stone-500/30', accent: 'bg-stone-500' },
+  A: { hex: '#FF7A00', bg: 'bg-[#FF7A00]/15', text: 'text-[#FF7A00]', border: 'border-[#FF7A00]/40', accent: 'bg-[#FF7A00]' }, // legendary
+  B: { hex: '#2FA8FF', bg: 'bg-[#2FA8FF]/15', text: 'text-[#2FA8FF]', border: 'border-[#2FA8FF]/40', accent: 'bg-[#2FA8FF]' }, // rare
+  C: { hex: '#3DE84F', bg: 'bg-[#3DE84F]/15', text: 'text-[#3DE84F]', border: 'border-[#3DE84F]/40', accent: 'bg-[#3DE84F]' }, // uncommon
+  D: { hex: '#B24BF3', bg: 'bg-[#B24BF3]/15', text: 'text-[#B24BF3]', border: 'border-[#B24BF3]/40', accent: 'bg-[#B24BF3]' }, // epic
+  E: { hex: '#FF3D8A', bg: 'bg-[#FF3D8A]/15', text: 'text-[#FF3D8A]', border: 'border-[#FF3D8A]/40', accent: 'bg-[#FF3D8A]' }, // magenta
+  F: { hex: '#FFD400', bg: 'bg-[#FFD400]/15', text: 'text-[#FFD400]', border: 'border-[#FFD400]/40', accent: 'bg-[#FFD400]' }, // hazard
+  G: { hex: '#00E5D0', bg: 'bg-[#00E5D0]/15', text: 'text-[#00E5D0]', border: 'border-[#00E5D0]/40', accent: 'bg-[#00E5D0]' }, // seraph
+  H: { hex: '#FF3B30', bg: 'bg-[#FF3B30]/15', text: 'text-[#FF3B30]', border: 'border-[#FF3B30]/40', accent: 'bg-[#FF3B30]' }, // flame
+  I: { hex: '#14C8FF', bg: 'bg-[#14C8FF]/15', text: 'text-[#14C8FF]', border: 'border-[#14C8FF]/40', accent: 'bg-[#14C8FF]' }, // arc
+  J: { hex: '#A855F7', bg: 'bg-[#A855F7]/15', text: 'text-[#A855F7]', border: 'border-[#A855F7]/40', accent: 'bg-[#A855F7]' }, // violet
+  K: { hex: '#FF6B1A', bg: 'bg-[#FF6B1A]/15', text: 'text-[#FF6B1A]', border: 'border-[#FF6B1A]/40', accent: 'bg-[#FF6B1A]' }, // ember
+  L: { hex: '#7CFF4F', bg: 'bg-[#7CFF4F]/15', text: 'text-[#7CFF4F]', border: 'border-[#7CFF4F]/40', accent: 'bg-[#7CFF4F]' }, // lime
+  M: { hex: '#FF8AC4', bg: 'bg-[#FF8AC4]/15', text: 'text-[#FF8AC4]', border: 'border-[#FF8AC4]/40', accent: 'bg-[#FF8AC4]' }, // pink
+  N: { hex: '#5B8CFF', bg: 'bg-[#5B8CFF]/15', text: 'text-[#5B8CFF]', border: 'border-[#5B8CFF]/40', accent: 'bg-[#5B8CFF]' }, // indigo
+  Daily: { hex: '#9C948A', bg: 'bg-[#9C948A]/15', text: 'text-[#9C948A]', border: 'border-[#9C948A]/40', accent: 'bg-[#9C948A]' },
+  None: { hex: '#57534E', bg: 'bg-[#57534E]/15', text: 'text-[#8A8078]', border: 'border-[#57534E]/40', accent: 'bg-[#57534E]' },
 };
 
 export function getDayColor(day: string) {

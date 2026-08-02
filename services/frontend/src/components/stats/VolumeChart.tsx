@@ -37,12 +37,12 @@ export function VolumeChart({ exercises }: VolumeChartProps) {
               dataKey="day"
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#94A3B8', fontSize: 11 }}
+              tick={{ fill: '#9C948A', fontSize: 11 }}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#94A3B8', fontSize: 11 }}
+              tick={{ fill: '#9C948A', fontSize: 11 }}
               width={40}
             />
             <Tooltip
@@ -50,7 +50,7 @@ export function VolumeChart({ exercises }: VolumeChartProps) {
               contentStyle={{
                 backgroundColor: 'var(--color-surface-1)',
                 border: '1px solid var(--color-border)',
-                borderRadius: '12px',
+                borderRadius: '0',
                 color: 'var(--color-chalk)',
                 fontSize: '12px',
                 opacity: 1,
@@ -59,7 +59,7 @@ export function VolumeChart({ exercises }: VolumeChartProps) {
               itemStyle={{ color: 'var(--color-chalk)' }}
               formatter={(value) => [`${Number(value).toLocaleString()} ${unit}`, 'Volume']}
             />
-            <Bar dataKey="volume" radius={[6, 6, 0, 0]}>
+            <Bar dataKey="volume" radius={[0, 0, 0, 0]}>
               {data.map((entry) => (
                 <Cell key={entry.day} fill={getDayColor(entry.day).hex} />
               ))}

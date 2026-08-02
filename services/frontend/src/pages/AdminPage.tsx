@@ -72,7 +72,7 @@ export default function AdminPage() {
   if (error) {
     return (
       <PageShell>
-        <div className="text-center py-20 text-red-400">{error}</div>
+        <div className="text-center py-20 text-danger">{error}</div>
       </PageShell>
     );
   }
@@ -93,7 +93,7 @@ export default function AdminPage() {
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl text-sm"
+            className="bg-danger/10 border border-danger/30 text-danger px-4 py-3 rounded-xl text-sm"
           >
             {actionError}
           </motion.div>
@@ -158,8 +158,8 @@ export default function AdminPage() {
                         onClick={() => handleToggleDisabled(u)}
                         className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                           u.disabled
-                            ? 'bg-red-500/15 text-red-400 hover:bg-red-500/25'
-                            : 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
+                            ? 'bg-danger/15 text-danger hover:bg-danger/25'
+                            : 'bg-success/15 text-success hover:bg-success/25'
                         }`}
                       >
                         {u.disabled ? 'Disabled' : 'Active'}
@@ -172,7 +172,7 @@ export default function AdminPage() {
                       <button
                         onClick={() => setDeleteTarget(u)}
                         disabled={u.id === user?.id}
-                        className="p-1.5 rounded-lg text-steel hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="p-1.5 rounded-lg text-steel hover:text-danger hover:bg-danger/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                         title={u.id === user?.id ? 'Cannot delete yourself' : `Delete ${u.name}`}
                       >
                         <Trash2 size={16} />

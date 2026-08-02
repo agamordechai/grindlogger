@@ -1,8 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Flame, Home, CalendarDays, Ruler, Bot, Settings, Shield, Sun, Moon, LogOut } from 'lucide-react';
+import { Flame, Home, CalendarDays, Ruler, Bot, Settings, Shield, LogOut } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useTheme } from '../../contexts/ThemeContext';
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { RestTimerButton } from '../timer/RestTimerButton';
 
@@ -15,7 +14,6 @@ const BASE_NAV_ITEMS = [
 
 export function TopBar() {
   const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -44,10 +42,10 @@ export function TopBar() {
       <div className="mx-auto max-w-6xl flex items-center justify-between px-4 lg:px-6 h-16">
         {/* Logo */}
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-ember to-ember-dark flex items-center justify-center shadow-lg shadow-ember/20">
-            <Flame size={20} className="text-white" />
+          <div className="w-9 h-9 [clip-path:var(--clip-tag)] bg-gradient-to-br from-ember to-ember-dark flex items-center justify-center [filter:drop-shadow(2px_2px_0_#000)]">
+            <Flame size={20} className="text-void" />
           </div>
-          <span className="text-lg font-bold text-chalk hidden sm:block">GRINDLOGGER</span>
+          <span className="font-display text-xl tracking-widest text-chalk hidden sm:block">GRINDLOGGER</span>
         </div>
 
         {/* Desktop nav */}
@@ -60,16 +58,16 @@ export function TopBar() {
               className="relative"
             >
               {({ isActive }) => (
-                <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                  isActive ? 'text-chalk' : 'text-steel hover:text-chalk'
+                <div className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold uppercase tracking-wide transition-colors ${
+                  isActive ? 'text-ember' : 'text-steel hover:text-chalk'
                 }`}>
                   <Icon size={16} />
                   {label}
                   {isActive && (
                     <motion.div
                       layoutId="nav-pill"
-                      className="absolute inset-0 bg-surface-2 rounded-xl -z-10"
-                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                      className="absolute inset-0 bg-ember/12 border-b-2 border-ember [clip-path:var(--clip-tag)] -z-10"
+                      transition={{ type: 'spring', stiffness: 500, damping: 32 }}
                     />
                   )}
                 </div>
@@ -108,7 +106,7 @@ export function TopBar() {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -4 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-full mt-2 w-56 bg-surface-1 border border-ember/60 rounded-xl py-1 shadow-xl shadow-black/30 z-[60]"
+                  className="absolute right-0 top-full mt-2 w-56 bg-surface-1 border-2 border-ember [clip-path:var(--clip-shard)] py-1 [filter:drop-shadow(4px_4px_0_rgba(0,0,0,0.5))] z-[60]"
                 >
                   {/* User info */}
                   <div className="px-3 py-2.5 border-b border-border">
@@ -124,13 +122,6 @@ export function TopBar() {
                     >
                       <Settings size={16} />
                       Settings
-                    </button>
-                    <button
-                      onClick={() => { toggleTheme(); }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
-                    >
-                      {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-                      {theme === 'dark' ? 'Light mode' : 'Dark mode'}
                     </button>
                   </div>
 

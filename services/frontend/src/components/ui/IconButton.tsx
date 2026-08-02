@@ -12,7 +12,7 @@ export function IconButton({ children, className = '', disabled, onClick }: Icon
   return (
     <motion.button
       whileTap={disabled ? undefined : { scale: 0.93 }}
-      className={`w-9 h-9 rounded-xl flex items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors ${className}`}
+      className={`w-9 h-9 [clip-path:var(--clip-tag)] flex items-center justify-center text-steel hover:text-arc hover:bg-surface-2 transition-colors ${className}`}
       disabled={disabled}
       onClick={onClick}
     >

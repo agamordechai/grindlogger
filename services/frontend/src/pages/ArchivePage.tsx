@@ -57,7 +57,7 @@ export default function ArchivePage() {
               </div>
               <button
                 onClick={() => handleRestore(ex.id)}
-                className="p-2 rounded-lg text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+                className="p-2 rounded-lg text-success hover:bg-success/10 transition-colors"
                 title="Restore"
               >
                 <RotateCcw size={16} />

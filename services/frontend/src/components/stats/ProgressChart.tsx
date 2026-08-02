@@ -71,13 +71,13 @@ export function ProgressChart({ exerciseName, metric }: ProgressChartProps) {
             dataKey="date"
             axisLine={false}
             tickLine={false}
-            tick={{ fill: '#94A3B8', fontSize: 10 }}
+            tick={{ fill: '#9C948A', fontSize: 10 }}
             interval="preserveStartEnd"
           />
           <YAxis
             axisLine={false}
             tickLine={false}
-            tick={{ fill: '#94A3B8', fontSize: 10 }}
+            tick={{ fill: '#9C948A', fontSize: 10 }}
             width={45}
           />
           <Tooltip
@@ -85,7 +85,7 @@ export function ProgressChart({ exerciseName, metric }: ProgressChartProps) {
             contentStyle={{
               backgroundColor: 'var(--color-surface-1)',
               border: '1px solid var(--color-border)',
-              borderRadius: '12px',
+              borderRadius: '0',
               color: 'var(--color-chalk)',
               fontSize: '12px',
               opacity: 1,
@@ -100,10 +100,10 @@ export function ProgressChart({ exerciseName, metric }: ProgressChartProps) {
           <Line
             type="monotone"
             dataKey="value"
-            stroke="#F97316"
+            stroke="#FF6B1A"
             strokeWidth={2}
-            dot={{ fill: '#F97316', r: 3 }}
-            activeDot={{ r: 5, fill: '#EA580C' }}
+            dot={{ fill: '#FF6B1A', r: 3 }}
+            activeDot={{ r: 5, fill: '#FF3D00' }}
           />
         </LineChart>
       </ResponsiveContainer>

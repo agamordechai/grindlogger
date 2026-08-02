@@ -124,7 +124,7 @@ function DraggableRow({
         <div className="flex items-center gap-2">
           <p className="text-chalk text-sm font-medium truncate">{exercise.name}</p>
           {exercise.superset_group != null && (
-            <span className="text-[10px] font-semibold text-violet-400 bg-violet-400/10 px-1.5 py-0.5 rounded">
+            <span className="text-[10px] font-bold text-epic bg-epic/10 px-1.5 py-0.5 [clip-path:var(--clip-tag)]">
               SS
             </span>
           )}
@@ -140,11 +140,11 @@ function DraggableRow({
 
 function SupersetWrapper({ children, label }: { children: React.ReactNode; label?: string }) {
   return (
-    <div className="mx-2 my-1.5 rounded-xl border border-violet-500/30 bg-violet-500/5 overflow-hidden">
+    <div className="mx-2 my-1.5 [clip-path:var(--clip-tag)] border border-epic/40 bg-epic/5 overflow-hidden">
       {label && (
-        <div className="flex items-center gap-1.5 px-3 py-1 border-b border-violet-500/20">
-          <Link size={10} className="text-violet-400" />
-          <span className="text-[10px] font-semibold text-violet-400 uppercase tracking-wider">
+        <div className="flex items-center gap-1.5 px-3 py-1 border-b border-epic/20">
+          <Link size={10} className="text-epic" />
+          <span className="text-[10px] font-semibold text-epic uppercase tracking-wider">
             {label}
           </span>
         </div>
@@ -216,17 +216,19 @@ export function SplitCard({
     >
       {/* Colored accent bar + header */}
       <div className="flex items-center">
-        <div className={`w-1 self-stretch ${color.accent} rounded-l-2xl`} />
+        <div className={`w-1.5 self-stretch ${color.accent}`} />
         <button
           onClick={() => !editMode && setCollapsed(!collapsed)}
           className="flex-1 flex items-center gap-3 px-4 py-3 hover:bg-surface-2/30 transition-colors"
         >
-          <div className={`w-2.5 h-2.5 rounded-full ${color.accent}`} />
-          <span className="text-sm font-bold text-chalk flex-1 text-left">
+          <span className={`tag ${color.bg} ${color.text} border ${color.border}`}>
+            {day}
+          </span>
+          <span className="font-display text-base uppercase tracking-wide text-chalk flex-1 text-left">
             {DAY_LABELS[day] || day}
           </span>
-          <span className="text-xs text-steel font-mono">
-            {exercises.length} exercise{exercises.length !== 1 ? 's' : ''}
+          <span className="text-xs text-steel font-mono tabular-nums">
+            {exercises.length} EX
           </span>
           {!editMode && (
             <ChevronDown
@@ -244,7 +246,7 @@ export function SplitCard({
               setCollapsed(false);
             }
           }}
-          className={`px-3 py-3 text-xs font-semibold transition-colors ${
+          className={`px-3 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${
             editMode ? 'text-ember' : 'text-steel hover:text-chalk'
           }`}
         >
@@ -273,7 +275,7 @@ export function SplitCard({
                     {hasSelection && !allSelectedInSameSuperset && (
                       <button
                         onClick={handleLink}
-                        className="flex items-center gap-1.5 text-xs font-medium text-violet-400 hover:text-violet-300 transition-colors px-2 py-1 rounded-lg hover:bg-violet-400/10"
+                        className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-epic hover:text-epic/80 transition-colors px-2 py-1 [clip-path:var(--clip-tag)] hover:bg-epic/10"
                       >
                         <Link size={12} />
                         Link Superset
@@ -282,7 +284,7 @@ export function SplitCard({
                     {selectedExercises.some(e => e.superset_group != null) && (
                       <button
                         onClick={handleUnlink}
-                        className="flex items-center gap-1.5 text-xs font-medium text-steel hover:text-chalk transition-colors px-2 py-1 rounded-lg hover:bg-surface-3"
+                        className="flex items-center gap-1.5 text-xs font-medium text-steel hover:text-chalk transition-colors px-2 py-1 [clip-path:var(--clip-tag)] hover:bg-surface-3"
                       >
                         <Unlink size={12} />
                         Unlink

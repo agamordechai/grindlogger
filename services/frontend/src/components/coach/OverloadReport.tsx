@@ -8,10 +8,10 @@ import type { OverloadSuggestions, ReadinessStatus } from '../../types/aiCoach';
 import type { Exercise } from '../../types/exercise';
 
 const READINESS_STYLES: Record<ReadinessStatus, { label: string; badge: string; icon: string }> = {
-  ready_to_increase: { label: 'Ready to Increase', badge: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30', icon: '↑' },
-  maintaining:       { label: 'Maintaining',       badge: 'bg-amber-500/15 text-amber-400 border-amber-500/30',   icon: '→' },
+  ready_to_increase: { label: 'Ready to Increase', badge: 'bg-success/15 text-success border-success/30', icon: '↑' },
+  maintaining:       { label: 'Maintaining',       badge: 'bg-hazard/15 text-hazard border-hazard/30',   icon: '→' },
   needs_more_data:   { label: 'Needs More Data',   badge: 'bg-steel/15 text-steel border-steel/30',               icon: '?' },
-  deload_suggested:  { label: 'Deload Suggested',  badge: 'bg-red-500/15 text-red-400 border-red-500/30',         icon: '↓' },
+  deload_suggested:  { label: 'Deload Suggested',  badge: 'bg-danger/15 text-danger border-danger/30',         icon: '↓' },
 };
 
 export function OverloadReport() {
@@ -140,7 +140,7 @@ export function OverloadReport() {
                       <span className="text-steel">Weight:</span>
                       <span className="font-mono text-steel">{formatWeight(s.current_weight)}</span>
                       <span className="text-ember">→</span>
-                      <span className="font-mono text-emerald-400 font-semibold">{formatWeight(s.suggested_weight)}</span>
+                      <span className="font-mono text-success font-semibold">{formatWeight(s.suggested_weight)}</span>
                     </div>
                   )}
 
@@ -150,7 +150,7 @@ export function OverloadReport() {
                       <span className="text-steel">Volume:</span>
                       <span className="font-mono text-steel">{s.current_volume}</span>
                       <span className="text-ember">→</span>
-                      <span className="font-mono text-emerald-400 font-semibold">{s.suggested_volume}</span>
+                      <span className="font-mono text-success font-semibold">{s.suggested_volume}</span>
                     </div>
                   )}
 
@@ -248,10 +248,10 @@ export function OverloadReport() {
 
       {/* Legend */}
       <ul className="space-y-1.5 text-sm text-steel">
-        <li className="flex gap-2"><span className="text-emerald-400">↑</span> Ready to increase — specific weight suggestions</li>
-        <li className="flex gap-2"><span className="text-amber-400">→</span> Maintaining — keep current programming</li>
+        <li className="flex gap-2"><span className="text-success">↑</span> Ready to increase — specific weight suggestions</li>
+        <li className="flex gap-2"><span className="text-hazard">→</span> Maintaining — keep current programming</li>
         <li className="flex gap-2"><span className="text-steel">?</span> Needs more data — log more sessions</li>
-        <li className="flex gap-2"><span className="text-red-400">↓</span> Deload suggested — reduce to recover</li>
+        <li className="flex gap-2"><span className="text-danger">↓</span> Deload suggested — reduce to recover</li>
       </ul>
 
       <GlowButton onClick={handleAnalyze} disabled={loading} className="w-full">
