@@ -33,22 +33,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-  // On mount, check for existing tokens and validate
+  // On mount, load the single local user. This is an offline, on-device app:
+  // there is exactly one user and no remote authentication.
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-
     getCurrentUser()
       .then(setUser)
-      .catch(() => {
-        // Token is invalid or expired, clear it
-        logout();
-      })
+      .catch(() => setUser(null))
       .finally(() => setLoading(false));
-  }, [logout]);
+  }, []);
 
   const storeTokensAndLoadUser = useCallback(async (tokens: { access_token: string; refresh_token: string | null }) => {
     localStorage.setItem('access_token', tokens.access_token);
@@ -95,10 +87,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const deleteAccount = useCallback(async () => {
+    // On-device "reset": wipe all local data, then reload the fresh local user
+    // (there is always a single local user — we never sign out to a login screen).
     await deleteAccountApi();
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    setUser(null);
+    const refreshed = await getCurrentUser();
+    setUser(refreshed);
   }, []);
 
   return (

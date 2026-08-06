@@ -8,3 +8,9 @@ npm-debug.log*
 .DS_Store
 *.pem
 
+# OTA release artifacts (built bundles served over LAN)
+releases/
+
+# Personal data backups — never commit
+*grindlogger-backup.json
+

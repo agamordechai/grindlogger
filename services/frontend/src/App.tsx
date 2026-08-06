@@ -2,8 +2,6 @@ import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useAuth } from './contexts/AuthContext';
-import LoginPage from './components/auth/LoginPage';
-import OAuthCallback from './components/auth/OAuthCallback';
 import { TopBar } from './components/nav/TopBar';
 import { BottomNav } from './components/nav/BottomNav';
 import { Skeleton } from './components/ui/Skeleton';
@@ -11,7 +9,6 @@ import { ScrollToTop } from './components/ui/ScrollToTop';
 import DashboardPage from './pages/DashboardPage';
 import CoachPage from './pages/CoachPage';
 import SettingsPage from './pages/SettingsPage';
-import AdminPage from './pages/AdminPage';
 import HistoryPage from './pages/HistoryPage';
 import MeasurementsPage from './pages/MeasurementsPage';
 
@@ -64,16 +61,11 @@ function usePersistRoute() {
 }
 
 export default function App() {
-  const { loading, isAuthenticated } = useAuth();
+  // Offline, on-device app: there is a single local user and no remote login.
+  // We only wait for the local DB/user to load, then render the app.
+  const { loading } = useAuth();
 
   if (loading) return <LoadingScreen />;
-
-  // OAuth callback routes must render regardless of auth state
-  if (window.location.pathname === '/auth/github/callback') return <OAuthCallback provider="github" />;
-  if (window.location.pathname === '/auth/discord/callback') return <OAuthCallback provider="discord" />;
-  if (window.location.pathname === '/auth/reddit/callback') return <OAuthCallback provider="reddit" />;
-
-  if (!isAuthenticated) return <LoginPage />;
 
   return <AuthenticatedApp />;
 }
@@ -92,7 +84,6 @@ function AuthenticatedApp() {
             <Route path="measurements" element={<MeasurementsPage />} />
             <Route path="coach" element={<CoachPage />} />
             <Route path="settings" element={<SettingsPage />} />
-            <Route path="admin" element={<AdminPage />} />
           </Routes>
         </AnimatePresence>
       </main>
