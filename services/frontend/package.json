@@ -11,6 +11,7 @@
         "ios:add": "npx cap add ios",
         "ios:sync": "npm run build && npx cap sync ios",
         "ios:open": "npx cap open ios",
+        "ios:ipa": "bash scripts/build-ipa.sh",
         "ota:serve": "node scripts/release-local.mjs"
     },
     "dependencies": {

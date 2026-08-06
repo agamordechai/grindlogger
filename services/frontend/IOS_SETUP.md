@@ -36,25 +36,42 @@ Open `ios/App/App/Info.plist` (via `npm run ios:open` → App → Info) and add:
 
 (Anthropic is HTTPS, so it needs no exception.)
 
-## 4. Build & run on your iPhone (free Apple ID)
+## 4. Install on your iPhone — 100% free
 
+Everything here uses a **free Apple ID** and **free Xcode**. There is **no $99 Apple
+Developer Program** and no cost of any kind.
+
+A free Apple ID signature lasts **7 days**. There are two free ways to handle that — pick
+one:
+
+### Option A — AltStore (recommended: set-and-forget, no weekly chore)
+[AltStore](https://altstore.io) is free and re-signs your app **automatically over WiFi**
+using your own Apple ID, so you never manually re-sign.
+
+1. Install **AltServer** on your Mac and **AltStore** on your iPhone (free — follow
+   altstore.io; you sign in with your free Apple ID).
+2. Build the app package:
+   ```bash
+   npm run ios:ipa        # produces releases/GrindLogger.ipa (unsigned; AltStore signs it)
+   ```
+3. AirDrop `releases/GrindLogger.ipa` to the phone → open **AltStore → My Apps → +** →
+   pick it. AltStore signs & installs it.
+4. Keep AltServer running on the Mac. While your phone and Mac are on the same WiFi,
+   AltStore refreshes the signature in the background — the app just keeps working, and
+   **your data is never touched**.
+
+### Option B — Xcode Run (simplest, but re-Run ~weekly)
 ```bash
 npm run ios:open       # opens Xcode
 ```
-
-In Xcode:
 1. Plug in your iPhone, select it as the run target.
-2. Select the **App** target → **Signing & Capabilities** → check *Automatically manage
-   signing* → **Team = your personal Apple ID** (add it with "Add an Account…" if needed).
-   If the bundle id `com.grindlogger.app` is taken, change it to something unique like
-   `com.<yourname>.grindlogger`.
-3. Press **Run** (▶). First run: on the iPhone, go to **Settings → General → VPN & Device
-   Management → Developer App → Trust**.
-
-> **Free-signing caveat:** apps signed with a free Apple ID stop launching after **7
-> days**. Reconnect and press Run in Xcode again to re-sign. The **$99/yr Apple Developer
-> Program** removes this (1-year builds + TestFlight). OTA updates do **not** reset the
-> 7-day clock.
+2. **App** target → **Signing & Capabilities** → check *Automatically manage signing* →
+   **Team = your Apple ID** (add it with "Add an Account…"). If bundle id
+   `com.grindlogger.app` is taken, change it to e.g. `com.<yourname>.grindlogger`.
+3. Press **Run** (▶). First run on the phone: **Settings → General → VPN & Device
+   Management → [your Apple ID] → Trust**.
+4. Every ~7 days, plug in and press Run again to re-sign (this is the chore Option A
+   avoids). Your data persists across re-signs.
 
 ## 5. Set your AI key & restore your history
 
