@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS users (
   google_calendar_enabled INTEGER NOT NULL DEFAULT 0,
   ai_base_url TEXT,
   ai_model TEXT,
+  ai_api_key TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

@@ -1,43 +1,29 @@
 /**
  * Storage for the Anthropic API key.
  *
- * - Web (dev / PWA): localStorage.
- * - Native iOS: Capacitor Preferences, which persists in the app's sandboxed
- *   store (survives app restarts, wiped on uninstall). The key is only ever sent
- *   to Anthropic. Swap `@capacitor/preferences` for a Keychain plugin here if you
- *   want hardware-backed storage — this module is the single point of change.
+ * The key lives in the local SQLite `users` table (app-sandboxed on iOS, same
+ * as any on-device store). We deliberately use the DB rather than a native
+ * plugin because the SQLite path is the one proven to work reliably in the iOS
+ * WebView; a plugin call behind a dynamic import stalled the Settings screen.
  */
 
-import { Capacitor } from '@capacitor/core';
+import { one, run } from '../db/database';
+import { LOCAL_USER_ID } from '../db/schema';
 
-const KEY = 'grindlogger_ai_api_key';
-const isNative = Capacitor.isNativePlatform();
-
-async function prefs() {
-  const { Preferences } = await import('@capacitor/preferences');
-  return Preferences;
-}
+const U = LOCAL_USER_ID;
 
 export async function getKey(): Promise<string | null> {
-  if (isNative) {
-    const { value } = await (await prefs()).get({ key: KEY });
-    return value ?? null;
-  }
-  return localStorage.getItem(KEY);
+  const row = await one<{ ai_api_key: string | null }>(
+    'SELECT ai_api_key FROM users WHERE id = ?',
+    [U],
+  );
+  return row?.ai_api_key ?? null;
 }
 
 export async function setKey(value: string): Promise<void> {
-  if (isNative) {
-    await (await prefs()).set({ key: KEY, value });
-    return;
-  }
-  localStorage.setItem(KEY, value);
+  await run('UPDATE users SET ai_api_key = ? WHERE id = ?', [value, U]);
 }
 
 export async function removeKey(): Promise<void> {
-  if (isNative) {
-    await (await prefs()).remove({ key: KEY });
-    return;
-  }
-  localStorage.removeItem(KEY);
+  await run('UPDATE users SET ai_api_key = NULL WHERE id = ?', [U]);
 }

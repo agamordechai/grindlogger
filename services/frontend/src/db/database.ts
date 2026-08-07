@@ -42,6 +42,7 @@ async function doInit(): Promise<SQLiteDBConnection> {
 
   await conn.open();
   await conn.execute(SCHEMA_SQL);
+  await runMigrations(conn);
   await ensureDefaultUser(conn);
 
   if (isWeb) await sqlite.saveToStore(DB_NAME);
@@ -60,6 +61,27 @@ export async function getDb(): Promise<SQLiteDBConnection> {
 /** Persist the in-memory web DB to IndexedDB. No-op on native. */
 async function persist(): Promise<void> {
   if (isWeb && sqlite) await sqlite.saveToStore(DB_NAME);
+}
+
+/** Add a column to a table if it isn't already present (idempotent). */
+async function ensureColumn(
+  conn: SQLiteDBConnection,
+  table: string,
+  column: string,
+  type: string,
+): Promise<void> {
+  const res = await conn.query(`PRAGMA table_info(${table})`);
+  const cols = (res.values ?? []).map((r: Record<string, unknown>) => r.name as string);
+  if (!cols.includes(column)) {
+    await conn.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  }
+}
+
+/** Lightweight, idempotent schema migrations for pre-existing databases. */
+async function runMigrations(conn: SQLiteDBConnection): Promise<void> {
+  // ai_api_key added after initial release — the API key now lives in the DB
+  // rather than the Preferences plugin (more reliable in the iOS WebView).
+  await ensureColumn(conn, 'users', 'ai_api_key', 'TEXT');
 }
 
 /** Guarantee the single local user row exists. */
