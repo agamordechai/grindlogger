@@ -210,7 +210,7 @@ export function ChatView() {
                     </div>
                     <button
                       onClick={(e) => handleDeleteConversation(e, conv.id)}
-                      className="opacity-0 group-hover:opacity-100 text-steel hover:text-red-400 transition-all p-1"
+                      className="opacity-0 group-hover:opacity-100 text-steel hover:text-danger transition-all p-1"
                     >
                       <Trash2 size={14} />
                     </button>

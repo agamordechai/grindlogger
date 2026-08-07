@@ -295,11 +295,11 @@ export function WorkoutGenerator() {
         )}
 
         {importedCount !== null ? (
-          <div className="flex items-center gap-2 text-sm text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 rounded-xl px-4 py-3">
+          <div className="flex items-center gap-2 text-sm text-success bg-success/10 border border-success/20 rounded-xl px-4 py-3">
             <CheckCircle size={16} className="shrink-0" />
             <span>
               {importedCount} exercise{importedCount !== 1 ? 's' : ''} added to your routine.
-              {importedCount > 0 && <span className="text-emerald-400/60"> Previous routine saved as template.</span>}
+              {importedCount > 0 && <span className="text-success/60"> Previous routine saved as template.</span>}
             </span>
           </div>
         ) : null}
@@ -326,7 +326,7 @@ export function WorkoutGenerator() {
             disabled={selectedCount === 0 || savedTemplate}
             className={`w-full flex items-center justify-center gap-2 text-sm font-semibold rounded-xl px-4 py-2 transition-all border disabled:opacity-40 ${
               savedTemplate
-                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                ? 'bg-success/10 border-success/20 text-success'
                 : 'bg-surface-2 border-border text-steel hover:text-chalk hover:border-steel/40'
             }`}
           >

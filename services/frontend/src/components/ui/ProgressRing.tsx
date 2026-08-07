@@ -6,7 +6,7 @@ interface ProgressRingProps {
   color?: string;
 }
 
-export function ProgressRing({ value, max = 100, size = 80, strokeWidth = 6, color = '#F97316' }: ProgressRingProps) {
+export function ProgressRing({ value, max = 100, size = 80, strokeWidth = 6, color = '#FF6B1A' }: ProgressRingProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const pct = Math.min(value / max, 1);
@@ -20,7 +20,7 @@ export function ProgressRing({ value, max = 100, size = 80, strokeWidth = 6, col
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="rgba(87,83,78,0.3)"
+          stroke="rgba(58,46,34,0.7)"
           strokeWidth={strokeWidth}
         />
         <circle

@@ -57,8 +57,8 @@ export function TemplateOverrideModal({ open, onClose, duplicates, newExercises,
             <p className="text-xs font-medium text-steel mb-1.5">Will be added ({newExercises.length})</p>
             <div className="flex flex-wrap gap-1">
               {newExercises.map((ex, i) => (
-                <span key={i} className="text-[11px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-md px-2 py-0.5">
-                  {ex.name} <span className="text-emerald-400/60">Day {ex.workout_day}</span>
+                <span key={i} className="text-[11px] text-success bg-success/10 border border-success/20 rounded-md px-2 py-0.5">
+                  {ex.name} <span className="text-success/60">Day {ex.workout_day}</span>
                 </span>
               ))}
             </div>

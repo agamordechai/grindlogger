@@ -10,10 +10,10 @@ import type { WorkoutSession, WorkoutSessionSummary, SetType } from '../../types
 
 const SET_TYPE_STYLES: Record<SetType, { label: string; cls: string }> = {
   normal:   { label: 'Normal',  cls: 'text-steel' },
-  warm_up:  { label: 'Warm-up', cls: 'text-blue-400' },
-  drop_set: { label: 'Drop',    cls: 'text-violet-400' },
-  amrap:    { label: 'AMRAP',   cls: 'text-amber-400' },
-  failure:  { label: 'Failure', cls: 'text-red-400' },
+  warm_up:  { label: 'Warm-up', cls: 'text-arc' },
+  drop_set: { label: 'Drop',    cls: 'text-epic' },
+  amrap:    { label: 'AMRAP',   cls: 'text-hazard' },
+  failure:  { label: 'Failure', cls: 'text-danger' },
 };
 
 interface SessionDetailProps {
@@ -160,7 +160,7 @@ export function SessionDetail({ summaries, onDelete, onEdit }: SessionDetailProp
                             </span>
                             <span className="text-right font-mono">
                               {ex.one_rep_max != null && ex.one_rep_max > 0 ? (
-                                <span className="text-amber-400 flex items-center justify-end gap-1">
+                                <span className="text-hazard flex items-center justify-end gap-1">
                                   <Trophy size={11} />
                                   {toDisplayWeight(ex.one_rep_max, unit)}{unit}
                                 </span>

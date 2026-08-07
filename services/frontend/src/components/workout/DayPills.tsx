@@ -25,15 +25,15 @@ export function DayPills({ selected, onChange, dayCounts }: DayPillsProps) {
           <button
             key={day}
             onClick={() => onChange(day)}
-            className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors shrink-0"
+            className="relative flex items-center gap-1.5 px-3.5 py-1.5 [clip-path:var(--clip-tag)] text-xs font-bold uppercase tracking-wide whitespace-nowrap transition-colors shrink-0"
           >
             {isActive && (
               <motion.div
                 layoutId="day-pill"
-                className={`absolute inset-0 rounded-full ${
+                className={`absolute inset-0 [clip-path:var(--clip-tag)] ${
                   color ? `${color.bg} border ${color.border}` : 'bg-surface-2 border border-border'
                 }`}
-                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 32 }}
               />
             )}
             <span className={`relative ${isActive ? (color ? color.text : 'text-chalk') : 'text-steel'}`}>

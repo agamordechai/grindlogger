@@ -86,10 +86,10 @@ export default function HistoryPage() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-ember to-ember-dark flex items-center justify-center">
-              <CalendarDays size={18} className="text-white" />
+            <div className="w-9 h-9 [clip-path:var(--clip-tag)] bg-gradient-to-br from-ember to-ember-dark flex items-center justify-center [filter:drop-shadow(2px_2px_0_#000)]">
+              <CalendarDays size={18} className="text-void" />
             </div>
-            <h1 className="text-2xl font-bold text-chalk">History</h1>
+            <h1 className="font-display text-3xl uppercase tracking-wide text-chalk">History</h1>
           </div>
           <p className="text-steel text-sm">Your workout history and progress</p>
         </div>

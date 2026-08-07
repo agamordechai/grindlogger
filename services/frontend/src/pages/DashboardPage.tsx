@@ -56,12 +56,12 @@ function MoreMenu({ onRefresh, onArchive, onSaveTemplate, onLoadTemplate, refres
     <div ref={ref} className="relative sm:hidden">
       <button
         onClick={() => setOpen(prev => !prev)}
-        className="w-9 h-9 rounded-xl flex items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
+        className="w-9 h-9 [clip-path:var(--clip-tag)] flex items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
       >
         <MoreVertical size={18} />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-44 bg-surface-1 border border-border rounded-xl py-1 shadow-xl shadow-black/30 z-[60]">
+        <div className="absolute right-0 top-full mt-1 w-44 bg-surface-1 border-2 border-ember [clip-path:var(--clip-shard)] py-1 [filter:drop-shadow(4px_4px_0_rgba(0,0,0,0.5))] z-[60]">
           {items.map(({ label, icon: Icon, onClick, spinning }) => (
             <button
               key={label}
@@ -245,10 +245,10 @@ export default function DashboardPage() {
     return (
       <PageShell>
         <div className="card text-center py-12">
-          <div className="w-14 h-14 rounded-2xl bg-danger/10 flex items-center justify-center mx-auto mb-4">
+          <div className="w-14 h-14 [clip-path:var(--clip-shard)] bg-danger/10 border-2 border-danger/40 flex items-center justify-center mx-auto mb-4">
             <AlertTriangle size={24} className="text-danger" />
           </div>
-          <h2 className="text-lg font-bold text-chalk mb-2">Connection Error</h2>
+          <h2 className="font-display text-2xl uppercase tracking-wide text-chalk mb-2">Connection Lost</h2>
           <p className="text-steel text-sm mb-1 whitespace-pre-line max-w-md mx-auto">{error}</p>
           <p className="text-steel/60 text-xs mb-6">
             Make sure the FastAPI server is running.
@@ -303,31 +303,31 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-chalk">
+          <h1 className="font-display text-3xl uppercase tracking-wide text-chalk">
             {greeting}{user?.name ? `, ${user.name.split(' ')[0]}` : ''}
           </h1>
-          <p className="text-steel text-sm mt-0.5">Your training split at a glance</p>
+          <p className="text-steel text-sm mt-0.5 uppercase tracking-widest">Your training split at a glance</p>
         </div>
         <div className="flex items-center gap-2">
           {/* Desktop: individual icon buttons */}
           <button
             onClick={() => setShowLoadTemplate(true)}
             title="Load template"
-            className="hidden sm:flex w-9 h-9 rounded-xl items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
+            className="hidden sm:flex w-9 h-9 [clip-path:var(--clip-tag)] items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
           >
             <FolderOpen size={16} />
           </button>
           <button
             onClick={() => setShowSaveTemplate(true)}
             title="Save as template"
-            className="hidden sm:flex w-9 h-9 rounded-xl items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
+            className="hidden sm:flex w-9 h-9 [clip-path:var(--clip-tag)] items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
           >
             <Save size={16} />
           </button>
           <button
             onClick={() => setShowArchive(true)}
             title="Archive"
-            className="hidden sm:flex w-9 h-9 rounded-xl items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
+            className="hidden sm:flex w-9 h-9 [clip-path:var(--clip-tag)] items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
           >
             <Archive size={16} />
           </button>
@@ -335,7 +335,7 @@ export default function DashboardPage() {
             onClick={fetchExercises}
             disabled={loading}
             title="Refresh"
-            className="hidden sm:flex w-9 h-9 rounded-xl items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
+            className="hidden sm:flex w-9 h-9 [clip-path:var(--clip-tag)] items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
           >
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
           </button>

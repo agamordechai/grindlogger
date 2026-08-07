@@ -189,7 +189,7 @@ export function SaveTemplateModal({ open, onClose, exercises, onSave }: SaveTemp
         <button
           onClick={handleSave}
           disabled={!canSave || saved}
-          className={`btn w-full ${saved ? 'btn-secondary text-emerald-400 border-emerald-500/30' : 'btn-ember'}`}
+          className={`btn w-full ${saved ? 'btn-secondary text-success border-success/30' : 'btn-ember'}`}
         >
           {saved ? 'Saved!' : `Save ${selected.size} exercise${selected.size !== 1 ? 's' : ''}`}
         </button>

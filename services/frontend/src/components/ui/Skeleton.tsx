@@ -4,7 +4,7 @@ interface SkeletonProps {
 
 export function Skeleton({ className = '' }: SkeletonProps) {
   return (
-    <div className={`rounded-xl animate-shimmer ${className}`} />
+    <div className={`[clip-path:var(--clip-tag)] animate-shimmer ${className}`} />
   );
 }
 

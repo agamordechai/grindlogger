@@ -10,7 +10,7 @@ export function Badge({ day, size = 'sm' }: BadgeProps) {
   const sizeClass = size === 'md' ? 'px-3 py-1 text-xs' : 'px-2 py-0.5 text-[11px]';
 
   return (
-    <span className={`inline-flex items-center rounded-lg font-semibold ${sizeClass} ${color.bg} ${color.text} border ${color.border}`}>
+    <span className={`inline-flex items-center [clip-path:var(--clip-tag)] font-bold uppercase tracking-wider ${sizeClass} ${color.bg} ${color.text} border ${color.border}`}>
       {day}
     </span>
   );

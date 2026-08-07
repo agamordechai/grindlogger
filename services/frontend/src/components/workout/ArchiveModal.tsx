@@ -82,13 +82,13 @@ export function ArchiveModal({ open, onClose, onRestored }: ArchiveModalProps) {
                       {ex.workout_day === 'None' ? 'Daily' : `Day ${ex.workout_day}`}
                     </span>
                     {!isInCycle(ex.workout_day) && (
-                      <span className="ml-2 text-amber-400/80">· not in split</span>
+                      <span className="ml-2 text-hazard/80">· not in split</span>
                     )}
                   </p>
                 </div>
                 <button
                   onClick={() => handleRestoreClick(ex.id, ex.workout_day)}
-                  className="p-2 rounded-lg text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+                  className="p-2 rounded-lg text-success hover:bg-success/10 transition-colors"
                   title="Restore"
                 >
                   <RotateCcw size={16} />
@@ -109,7 +109,7 @@ export function ArchiveModal({ open, onClose, onRestored }: ArchiveModalProps) {
               {/* Inline day picker for out-of-cycle exercises */}
               {restoringId === ex.id && (
                 <div className="mt-3 pt-3 border-t border-border/50">
-                  <p className="text-xs text-amber-400 mb-2">
+                  <p className="text-xs text-hazard mb-2">
                     Day {ex.workout_day} is not in your current split. Pick a day to restore to:
                   </p>
                   <div className="flex flex-wrap gap-1.5 mb-3">
@@ -131,7 +131,7 @@ export function ArchiveModal({ open, onClose, onRestored }: ArchiveModalProps) {
                     <button
                       onClick={() => setRestoringDay('None')}
                       className={`px-2.5 h-8 rounded-lg text-xs font-bold transition-all border ${
-                        restoringDay === 'None' ? 'bg-slate-500/15 text-slate-400 border-slate-500/30' : 'bg-surface-2 text-steel border-border hover:text-chalk'
+                        restoringDay === 'None' ? 'bg-steel/15 text-steel border-steel/30' : 'bg-surface-2 text-steel border-border hover:text-chalk'
                       }`}
                     >
                       Daily
@@ -140,7 +140,7 @@ export function ArchiveModal({ open, onClose, onRestored }: ArchiveModalProps) {
                   <div className="flex gap-2">
                     <button
                       onClick={confirmRestore}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-semibold hover:bg-emerald-500/25 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-success/15 text-success border border-success/30 text-xs font-semibold hover:bg-success/25 transition-colors"
                     >
                       <Check size={12} />
                       Restore to Day {restoringDay === 'None' ? 'Daily' : restoringDay}

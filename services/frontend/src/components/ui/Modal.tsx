@@ -78,23 +78,24 @@ export function Modal({ open, onClose, title, description, children }: ModalProp
             onClick={onClose}
           >
             <motion.div
-              initial={{ opacity: 0, y: 60 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 60 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="relative w-full lg:max-w-md bg-surface-1 border border-ember/60 rounded-t-2xl lg:rounded-2xl p-6 max-h-[85%] overflow-y-auto"
+              initial={{ opacity: 0, y: 60, skewX: -4 }}
+              animate={{ opacity: 1, y: 0, skewX: 0 }}
+              exit={{ opacity: 0, y: 60, skewX: -4 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+              className="relative w-full lg:max-w-md bg-surface-1 border-2 border-ember [clip-path:var(--clip-shard)] p-6 max-h-[85%] overflow-y-auto"
               onClick={e => e.stopPropagation()}
             >
+              <div className="absolute inset-x-0 top-0 h-1 hazard" />
               <button
                 onClick={onClose}
-                className="absolute top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center text-steel hover:text-chalk hover:bg-surface-2 transition-colors"
+                className="absolute top-4 right-4 w-8 h-8 [clip-path:var(--clip-tag)] flex items-center justify-center text-steel hover:text-arc hover:bg-surface-2 transition-colors"
               >
                 <X size={16} />
               </button>
 
               {title && (
                 <div className="mb-4 pr-8">
-                  <h2 className="text-lg font-bold text-chalk">{title}</h2>
+                  <h2 className="font-display text-xl uppercase tracking-wide text-chalk">{title}</h2>
                   {description && <p className="text-steel text-sm mt-1">{description}</p>}
                 </div>
               )}

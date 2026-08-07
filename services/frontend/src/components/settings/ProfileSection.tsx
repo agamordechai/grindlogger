@@ -68,7 +68,7 @@ export function ProfileSection() {
             referrerPolicy="no-referrer"
           />
         ) : (
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-ember to-ember-dark flex items-center justify-center text-white text-xl font-bold ring-2 ring-ember/30">
+          <div className="w-16 h-16 [clip-path:var(--clip-shard)] bg-gradient-to-br from-ember to-ember-dark flex items-center justify-center text-void text-xl font-display ring-2 ring-ember/30">
             {user?.name?.[0]?.toUpperCase() || '?'}
           </div>
         )}
