@@ -1,10 +1,8 @@
-import { useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, CalendarDays, Ruler, Bot, Shield } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { Home, CalendarDays, Ruler, Bot } from 'lucide-react';
 
-const BASE_TABS = [
+const tabs = [
   { to: '/', label: 'Home', icon: Home },
   { to: '/history', label: 'History', icon: CalendarDays },
   { to: '/measurements', label: 'Body', icon: Ruler },
@@ -12,15 +10,6 @@ const BASE_TABS = [
 ];
 
 export function BottomNav() {
-  const { user } = useAuth();
-
-  const tabs = useMemo(() => {
-    if (user?.role === 'admin') {
-      return [...BASE_TABS, { to: '/admin', label: 'Admin', icon: Shield }];
-    }
-    return BASE_TABS;
-  }, [user?.role]);
-
   return (
     <nav className="lg:hidden fixed bottom-0 inset-x-0 z-50 border-t border-border bg-background/80 backdrop-blur-xl h-16 safe-area-bottom">
       <div className="flex items-center justify-around h-full px-4">

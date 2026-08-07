@@ -5,7 +5,7 @@ import { ProfileSection } from '../components/settings/ProfileSection';
 import { UnitsSection } from '../components/settings/UnitsSection';
 import { CycleLengthSection } from '../components/settings/CycleLengthSection';
 import { ApiKeySection } from '../components/settings/ApiKeySection';
-import { CalendarSyncSection } from '../components/settings/CalendarSyncSection';
+import { RestoreBackupSection } from '../components/settings/RestoreBackupSection';
 import { BodyweightSection } from '../components/settings/BodyweightSection';
 import { AccountSection } from '../components/settings/AccountSection';
 
@@ -31,8 +31,8 @@ export default function SettingsPage() {
         <UnitsSection />
         <CycleLengthSection />
         <BodyweightSection />
-        <CalendarSyncSection />
         <ApiKeySection />
+        <RestoreBackupSection />
         <AccountSection />
       </div>
     </PageShell>

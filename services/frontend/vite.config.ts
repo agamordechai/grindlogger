@@ -8,6 +8,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // The native app manages its own bundle (and OTA updates); do not
+      // auto-register a service worker. The web manifest is still emitted.
+      injectRegister: false,
+      devOptions: { enabled: false },
       includeAssets: ['favicon.svg', 'favicon-48.png', 'favicon-192.png', 'favicon-512.png'],
       manifest: {
         name: 'GrindLogger',
