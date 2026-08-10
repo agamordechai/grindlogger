@@ -8,6 +8,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { RestTimerProvider } from './contexts/RestTimerContext'
 import App from './App.tsx'
 import { initOTA } from './ota'
+import { runSync } from './sync/engine'
 import './index.css'
 
 // On the web (development), the on-device SQLite store is provided by the
@@ -36,3 +37,9 @@ createRoot(document.getElementById('root')!).render(
 
 // Check for an OTA web-bundle update over WiFi (native only; no-op on web).
 void initOTA()
+
+// Sync with the configured server, if any (silent no-op when sync isn't set
+// up — offline stays the default). Runs on launch and whenever connectivity
+// returns; also exposed for a manual "Sync Now" button in Settings.
+void runSync()
+window.addEventListener('online', () => void runSync())

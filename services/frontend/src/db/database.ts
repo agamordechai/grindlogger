@@ -87,6 +87,7 @@ async function runMigrations(conn: SQLiteDBConnection): Promise<void> {
   // the sync_deletions table is created directly by SCHEMA_SQL since it's a
   // brand-new table (CREATE TABLE IF NOT EXISTS works retroactively for that).
   await ensureColumn(conn, 'users', 'sync_server_url', 'TEXT');
+  await ensureColumn(conn, 'users', 'sync_refresh_token', 'TEXT');
   await ensureColumn(conn, 'users', 'sync_last_synced_at', 'TEXT');
   for (const table of ['exercises', 'workout_sessions', 'body_measurements']) {
     await ensureColumn(conn, table, 'remote_id', 'INTEGER');

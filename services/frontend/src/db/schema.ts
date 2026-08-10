@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS users (
   ai_model TEXT,
   ai_api_key TEXT,
   sync_server_url TEXT,
+  sync_refresh_token TEXT,
   sync_last_synced_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
