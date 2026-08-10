@@ -17,7 +17,7 @@ import type {
   ExerciseProgress,
   ProgressPoint,
 } from '../../types/session';
-import { all, one, run } from '../database';
+import { all, one, run, logDeletionIfSynced } from '../database';
 import { LOCAL_USER_ID } from '../schema';
 
 const U = LOCAL_USER_ID;
@@ -194,6 +194,7 @@ export async function autoLogExercise(
   let sessionId: number;
   if (session) {
     sessionId = session.id;
+    await run('UPDATE workout_sessions SET dirty = 1 WHERE id = ?', [sessionId]);
   } else {
     const res = await run(
       'INSERT INTO workout_sessions (user_id, workout_date, workout_day) VALUES (?, ?, ?)',
@@ -245,6 +246,9 @@ export async function createSession(data: CreateWorkoutSession): Promise<Workout
         sessionId,
       ]);
     }
+    // Any create call that merges into an existing session (even just adding
+    // exercises with no notes/duration change) still needs to mark it dirty.
+    await run('UPDATE workout_sessions SET dirty = 1 WHERE id = ?', [sessionId]);
   } else {
     const res = await run(
       'INSERT INTO workout_sessions (user_id, workout_date, workout_day, notes, duration_minutes) VALUES (?, ?, ?, ?, ?)',
@@ -270,7 +274,7 @@ export async function updateSession(sessionId: number, data: CreateWorkoutSessio
   if (!s) throw new Error('Session not found');
 
   await run(
-    'UPDATE workout_sessions SET workout_date = ?, workout_day = ?, notes = ?, duration_minutes = ? WHERE id = ?',
+    'UPDATE workout_sessions SET workout_date = ?, workout_day = ?, notes = ?, duration_minutes = ?, dirty = 1 WHERE id = ?',
     [data.date, data.workout_day, data.notes ?? null, data.duration_minutes ?? null, sessionId],
   );
 
@@ -311,6 +315,7 @@ export async function deleteSession(sessionId: number): Promise<void> {
     U,
   ]);
   if (!s) return;
+  await logDeletionIfSynced('workout_sessions', sessionId);
   const exRows = await all<{ id: number }>('SELECT id FROM session_exercises WHERE session_id = ?', [
     sessionId,
   ]);

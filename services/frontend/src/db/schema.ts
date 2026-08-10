@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS users (
   ai_base_url TEXT,
   ai_model TEXT,
   ai_api_key TEXT,
+  sync_server_url TEXT,
+  sync_last_synced_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -46,7 +48,10 @@ CREATE TABLE IF NOT EXISTS exercises (
   archived INTEGER NOT NULL DEFAULT 0,
   sort_order INTEGER NOT NULL DEFAULT 0,
   superset_group INTEGER,
-  per_side INTEGER NOT NULL DEFAULT 0
+  per_side INTEGER NOT NULL DEFAULT 0,
+  remote_id INTEGER,
+  remote_updated_at TEXT,
+  dirty INTEGER NOT NULL DEFAULT 1
 );
 CREATE INDEX IF NOT EXISTS ix_exercises_user ON exercises(user_id);
 CREATE INDEX IF NOT EXISTS ix_exercises_name ON exercises(name);
@@ -60,7 +65,10 @@ CREATE TABLE IF NOT EXISTS workout_sessions (
   notes TEXT,
   duration_minutes INTEGER,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  google_calendar_event_id TEXT
+  google_calendar_event_id TEXT,
+  remote_id INTEGER,
+  remote_updated_at TEXT,
+  dirty INTEGER NOT NULL DEFAULT 1
 );
 CREATE INDEX IF NOT EXISTS ix_sessions_user ON workout_sessions(user_id);
 CREATE INDEX IF NOT EXISTS ix_sessions_date ON workout_sessions(workout_date);
@@ -107,10 +115,22 @@ CREATE TABLE IF NOT EXISTS body_measurements (
   forearm_cm REAL,
   calf_cm REAL,
   notes TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  remote_id INTEGER,
+  remote_updated_at TEXT,
+  dirty INTEGER NOT NULL DEFAULT 1
 );
 CREATE INDEX IF NOT EXISTS ix_measurements_user ON body_measurements(user_id);
 CREATE INDEX IF NOT EXISTS ix_measurements_date ON body_measurements(measurement_date);
+
+-- Records a remote-known row that was hard-deleted locally, so the sync
+-- engine knows to also DELETE it on the server. Populated only when the
+-- deleted row already had a remote_id (rows never synced need no entry).
+CREATE TABLE IF NOT EXISTS sync_deletions (
+  table_name TEXT NOT NULL,
+  remote_id INTEGER NOT NULL,
+  deleted_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 
 CREATE TABLE IF NOT EXISTS conversations (
   id TEXT PRIMARY KEY,

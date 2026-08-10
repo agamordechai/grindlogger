@@ -10,7 +10,7 @@ import type {
   MeasurementProgressPoint,
   MeasurementMetric,
 } from '../../types/measurement';
-import { all, one, run } from '../database';
+import { all, one, run, logDeletionIfSynced } from '../database';
 import { LOCAL_USER_ID } from '../schema';
 
 const U = LOCAL_USER_ID;
@@ -125,11 +125,12 @@ export async function updateMeasurement(id: number, data: CreateBodyMeasurement)
   );
   if (!existing) throw new Error('Measurement not found');
 
-  const setCols = ['measurement_date', ...COLUMNS, 'notes'];
+  const setCols = ['measurement_date', ...COLUMNS, 'notes', 'dirty'];
   const vals: unknown[] = [
     data.date,
     ...COLUMNS.map((c) => (data as unknown as Record<string, unknown>)[c] ?? null),
     data.notes ?? null,
+    1,
     id,
     U,
   ];
@@ -141,6 +142,7 @@ export async function updateMeasurement(id: number, data: CreateBodyMeasurement)
 }
 
 export async function deleteMeasurement(id: number): Promise<void> {
+  await logDeletionIfSynced('body_measurements', id);
   await run('DELETE FROM body_measurements WHERE id = ? AND user_id = ?', [id, U]);
 }
 

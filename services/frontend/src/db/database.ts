@@ -82,6 +82,17 @@ async function runMigrations(conn: SQLiteDBConnection): Promise<void> {
   // ai_api_key added after initial release — the API key now lives in the DB
   // rather than the Preferences plugin (more reliable in the iOS WebView).
   await ensureColumn(conn, 'users', 'ai_api_key', 'TEXT');
+
+  // Sync layer bookkeeping — added after initial release. New columns only;
+  // the sync_deletions table is created directly by SCHEMA_SQL since it's a
+  // brand-new table (CREATE TABLE IF NOT EXISTS works retroactively for that).
+  await ensureColumn(conn, 'users', 'sync_server_url', 'TEXT');
+  await ensureColumn(conn, 'users', 'sync_last_synced_at', 'TEXT');
+  for (const table of ['exercises', 'workout_sessions', 'body_measurements']) {
+    await ensureColumn(conn, table, 'remote_id', 'INTEGER');
+    await ensureColumn(conn, table, 'remote_updated_at', 'TEXT');
+    await ensureColumn(conn, table, 'dirty', 'INTEGER NOT NULL DEFAULT 1');
+  }
 }
 
 /** Guarantee the single local user row exists. */
@@ -140,4 +151,33 @@ export async function tx(fn: (db: SQLiteDBConnection) => Promise<void>): Promise
 /** Convert a SQLite 0/1 integer column to a boolean. */
 export function toBool(v: unknown): boolean {
   return v === 1 || v === '1' || v === true;
+}
+
+/**
+ * Record a sync tombstone for a single row about to be hard-deleted, but only
+ * if the server already knows about it (remote_id set). Call this BEFORE the
+ * DELETE. Rows that were never synced need no bookkeeping — there's nothing
+ * for the server to delete.
+ */
+export async function logDeletionIfSynced(table: string, localId: number): Promise<void> {
+  const row = await one<{ remote_id: number | null }>(`SELECT remote_id FROM ${table} WHERE id = ?`, [localId]);
+  if (row?.remote_id != null) {
+    await run('INSERT INTO sync_deletions (table_name, remote_id) VALUES (?, ?)', [table, row.remote_id]);
+  }
+}
+
+/**
+ * Bulk variant of logDeletionIfSynced for "delete many at once" operations
+ * (clear all exercises, wipe account). Call this BEFORE the bulk DELETE.
+ */
+export async function logDeletionsForUserRows(table: string, userId: number, extraWhere = ''): Promise<void> {
+  const rows = await all<{ remote_id: number | null }>(
+    `SELECT remote_id FROM ${table} WHERE user_id = ? ${extraWhere}`,
+    [userId],
+  );
+  for (const r of rows) {
+    if (r.remote_id != null) {
+      await run('INSERT INTO sync_deletions (table_name, remote_id) VALUES (?, ?)', [table, r.remote_id]);
+    }
+  }
 }
