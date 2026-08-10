@@ -101,6 +101,8 @@ export interface AICoachHealthResponse {
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+  /** Data URLs (data:image/jpeg;base64,...) attached by the user, if any. */
+  images?: string[];
 }
 
 export interface Conversation {

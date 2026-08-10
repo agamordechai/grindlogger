@@ -1,11 +1,33 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, MessageSquarePlus, History, Trash2, X, ChevronLeft } from 'lucide-react';
+import { Send, MessageSquarePlus, History, Trash2, X, ChevronLeft, ImagePlus } from 'lucide-react';
 import { chatWithCoach, listConversations, getConversation, saveConversation, deleteConversation } from '../../api/client';
 import { ChatMessage } from './ChatMessage';
 import type { ChatMessage as ChatMessageType, ConversationSummary, ActionPerformed } from '../../types/aiCoach';
 
 interface ChatMessageWithActions extends ChatMessageType {
   actions?: ActionPerformed[];
+}
+
+const MAX_IMAGES_PER_MESSAGE = 4;
+const MAX_IMAGE_DIMENSION = 1568; // Anthropic's recommended max — larger images are downscaled, not rejected.
+
+/** Downscale + re-encode an image file to a compact JPEG data URL before attaching it. */
+async function fileToResizedDataUrl(file: File): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  let { width, height } = bitmap;
+  if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
+    const scale = MAX_IMAGE_DIMENSION / Math.max(width, height);
+    width = Math.round(width * scale);
+    height = Math.round(height * scale);
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas not supported');
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+  return canvas.toDataURL('image/jpeg', 0.85);
 }
 
 const WELCOME_MESSAGE: ChatMessageWithActions = {
@@ -35,8 +57,11 @@ export function ChatView() {
   const [showHistory, setShowHistory] = useState(false);
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [pendingImages, setPendingImages] = useState<string[]>([]);
+  const [imageError, setImageError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const imageInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -64,22 +89,47 @@ export function ChatView() {
     };
   }, []);
 
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = ''; // allow re-selecting the same file later
+    if (!files.length) return;
+    setImageError(null);
+
+    const room = MAX_IMAGES_PER_MESSAGE - pendingImages.length;
+    if (room <= 0) {
+      setImageError(`You can attach up to ${MAX_IMAGES_PER_MESSAGE} images per message.`);
+      return;
+    }
+    try {
+      const resized = await Promise.all(files.slice(0, room).map(fileToResizedDataUrl));
+      setPendingImages(prev => [...prev, ...resized]);
+    } catch {
+      setImageError('Could not read that image.');
+    }
+  };
+
+  const handleRemoveImage = (idx: number) => {
+    setPendingImages(prev => prev.filter((_, i) => i !== idx));
+  };
+
   const handleSend = async () => {
-    if (!input.trim() || loading) return;
+    if ((!input.trim() && pendingImages.length === 0) || loading) return;
 
     const userMessage = input.trim();
+    const images = pendingImages;
     setInput('');
+    setPendingImages([]);
 
     // Capture history before adding the new user message — skip the welcome message
     const history = messages
       .filter((_, i) => i > 0)
-      .map(({ role, content }) => ({ role, content }));
+      .map(({ role, content, images: imgs }) => ({ role, content, images: imgs }));
 
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setMessages(prev => [...prev, { role: 'user', content: userMessage, images: images.length ? images : undefined }]);
     setLoading(true);
 
     try {
-      const response = await chatWithCoach(userMessage, includeContext, history);
+      const response = await chatWithCoach(userMessage, includeContext, history, images.length ? images : undefined);
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: response.response,
@@ -229,7 +279,7 @@ export function ChatView() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto space-y-4 p-4">
         {messages.map((msg, idx) => (
-          <ChatMessage key={idx} role={msg.role} content={msg.content} index={idx} actions={msg.actions} />
+          <ChatMessage key={idx} role={msg.role} content={msg.content} index={idx} actions={msg.actions} images={msg.images} />
         ))}
         {loading && (
           <div className="flex gap-2.5">
@@ -293,7 +343,40 @@ export function ChatView() {
             History
           </button>
         </div>
+        {imageError && <p className="text-xs text-danger">{imageError}</p>}
+        {pendingImages.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {pendingImages.map((src, idx) => (
+              <div key={idx} className="relative w-14 h-14 rounded-lg overflow-hidden border border-border shrink-0">
+                <img src={src} alt="" className="w-full h-full object-cover" />
+                <button
+                  onClick={() => handleRemoveImage(idx)}
+                  className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-void/70 text-chalk flex items-center justify-center"
+                  aria-label="Remove image"
+                >
+                  <X size={10} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="flex gap-2">
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={handleImageSelect}
+          />
+          <button
+            className="text-steel hover:text-chalk transition-colors self-end px-2 py-2"
+            onClick={() => imageInputRef.current?.click()}
+            disabled={loading || pendingImages.length >= MAX_IMAGES_PER_MESSAGE}
+            aria-label="Attach image"
+          >
+            <ImagePlus size={18} />
+          </button>
           <textarea
             value={input}
             onChange={e => setInput(e.target.value)}
@@ -306,7 +389,7 @@ export function ChatView() {
           <button
             className="btn btn-ember self-end px-3"
             onClick={handleSend}
-            disabled={!input.trim() || loading}
+            disabled={(!input.trim() && pendingImages.length === 0) || loading}
           >
             <Send size={16} />
           </button>
