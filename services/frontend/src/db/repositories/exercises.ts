@@ -14,6 +14,7 @@ import type {
 } from '../../types/exercise';
 import { all, one, run, tx, toBool } from '../database';
 import { LOCAL_USER_ID } from '../schema';
+import { autoLogExercise } from './sessions';
 
 const U = LOCAL_USER_ID;
 
@@ -135,6 +136,14 @@ export async function updateExercise(id: number, data: UpdateExerciseRequest): P
   // fetches by id without the archived filter after update.
   const row = await one<ExerciseRow>('SELECT * FROM exercises WHERE id = ? AND user_id = ?', [id, U]);
   if (!row) throw new Error('Exercise not found');
+
+  // Editing weight/sets/reps auto-logs the change into today's session,
+  // matching the old backend's PATCH /exercises/{id} behavior.
+  const statsChanged = data.sets !== undefined || data.reps !== undefined || 'weight' in data;
+  if (statsChanged) {
+    await autoLogExercise(row.name, row.workout_day, row.sets, row.reps, row.weight);
+  }
+
   return mapExercise(row);
 }
 

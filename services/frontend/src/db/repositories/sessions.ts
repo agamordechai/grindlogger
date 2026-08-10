@@ -172,6 +172,58 @@ async function upsertExercise(sessionId: number, ex: CreateSessionExercise): Pro
   if (ex.sets && ex.sets.length) await saveSetDetails(sxId, ex.sets);
 }
 
+/**
+ * Auto-log an exercise stat change into today's session. Mirrors the old
+ * backend's session_repository.auto_log_exercise: finds or creates today's
+ * session for this workout_day, then upserts the exercise entry so repeated
+ * edits update the same row instead of creating duplicates.
+ */
+export async function autoLogExercise(
+  exerciseName: string,
+  workoutDay: string,
+  sets: number,
+  reps: number,
+  weight: number | null,
+): Promise<void> {
+  const today = todayISO();
+
+  let session = await one<{ id: number }>(
+    'SELECT id FROM workout_sessions WHERE user_id = ? AND workout_date = ? AND workout_day = ?',
+    [U, today, workoutDay],
+  );
+  let sessionId: number;
+  if (session) {
+    sessionId = session.id;
+  } else {
+    const res = await run(
+      'INSERT INTO workout_sessions (user_id, workout_date, workout_day) VALUES (?, ?, ?)',
+      [U, today, workoutDay],
+    );
+    sessionId = res.lastId!;
+  }
+
+  const existing = await one<{ id: number }>(
+    'SELECT id FROM session_exercises WHERE session_id = ? AND lower(exercise_name) = lower(?)',
+    [sessionId, exerciseName],
+  );
+
+  if (existing) {
+    await run(
+      'UPDATE session_exercises SET sets_completed = ?, reps_completed = ?, weight_used = ? WHERE id = ?',
+      [sets, reps, weight, existing.id],
+    );
+  } else {
+    const countRow = await one<{ n: number }>(
+      'SELECT COUNT(*) AS n FROM session_exercises WHERE session_id = ?',
+      [sessionId],
+    );
+    await run(
+      'INSERT INTO session_exercises (session_id, exercise_name, sets_completed, reps_completed, weight_used, "order") VALUES (?, ?, ?, ?, ?, ?)',
+      [sessionId, exerciseName, sets, reps, weight, countRow?.n ?? 0],
+    );
+  }
+}
+
 // ---------- public API ----------
 
 export async function createSession(data: CreateWorkoutSession): Promise<WorkoutSession> {
