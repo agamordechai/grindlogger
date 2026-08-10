@@ -98,10 +98,10 @@ export default function MeasurementsPage() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-ember to-ember-dark flex items-center justify-center">
-              <Ruler size={18} className="text-white" />
+            <div className="w-9 h-9 [clip-path:var(--clip-tag)] bg-gradient-to-br from-ember to-ember-dark flex items-center justify-center [filter:drop-shadow(2px_2px_0_#000)]">
+              <Ruler size={18} className="text-void" />
             </div>
-            <h1 className="text-2xl font-bold text-chalk">Measurements</h1>
+            <h1 className="font-display text-3xl uppercase tracking-wide text-chalk">Measurements</h1>
           </div>
           <p className="text-steel text-sm">Track your body measurements over time</p>
         </div>
@@ -130,7 +130,7 @@ export default function MeasurementsPage() {
                   {val} <span className="text-sm font-normal text-steel">{unit}</span>
                 </p>
                 {delta != null && (
-                  <p className={`text-xs flex items-center gap-0.5 mt-0.5 ${delta < 0 ? 'text-green-400' : delta > 0 ? 'text-red-400' : 'text-steel'}`}>
+                  <p className={`text-xs flex items-center gap-0.5 mt-0.5 ${delta < 0 ? 'text-success' : delta > 0 ? 'text-danger' : 'text-steel'}`}>
                     {delta > 0 ? <TrendingUp size={12} /> : delta < 0 ? <TrendingDown size={12} /> : null}
                     {delta > 0 ? '+' : ''}{delta} {unit}
                   </p>
@@ -150,7 +150,7 @@ export default function MeasurementsPage() {
           <select
             value={chartMetric}
             onChange={e => setChartMetric(e.target.value as MeasurementMetric)}
-            className="appearance-none bg-surface-2 text-chalk text-xs font-medium pl-3 pr-8 py-2 rounded-xl border border-ember/60 focus:outline-none focus:ring-1 focus:ring-ember/50 cursor-pointer"
+            className="appearance-none bg-surface-2 text-chalk text-xs font-bold uppercase tracking-wide pl-3 pr-8 py-2 [clip-path:var(--clip-tag)] border border-ember/60 focus:outline-none focus:ring-1 focus:ring-arc/50 cursor-pointer"
           >
             {MEASUREMENT_METRICS.map(m => (
               <option key={m.value} value={m.value}>{m.label}</option>
@@ -163,31 +163,31 @@ export default function MeasurementsPage() {
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-              <XAxis dataKey="date" tick={{ fill: '#888', fontSize: 11 }} />
+              <XAxis dataKey="date" tick={{ fill: '#9C948A', fontSize: 11 }} />
               <YAxis
                 domain={['auto', 'auto']}
-                tick={{ fill: '#888', fontSize: 11 }}
+                tick={{ fill: '#9C948A', fontSize: 11 }}
                 width={45}
               />
               <Tooltip
                 wrapperStyle={{ opacity: 1 }}
                 contentStyle={{
-                  background: '#1C1917',
-                  border: '1px solid rgba(87,83,78,0.4)',
-                  borderRadius: '8px',
+                  background: 'var(--color-surface-1)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '0',
                   fontSize: '12px',
                   opacity: 1,
                 }}
-                labelStyle={{ color: '#aaa' }}
+                labelStyle={{ color: 'var(--color-chalk)' }}
               />
               <Line
                 type="monotone"
                 dataKey="value"
                 name={currentMetricLabel}
-                stroke="#f97316"
+                stroke="#FF6B1A"
                 strokeWidth={2}
-                dot={{ r: 3, fill: '#f97316' }}
-                activeDot={{ r: 5 }}
+                dot={{ r: 3, fill: '#FF6B1A' }}
+                activeDot={{ r: 5, fill: '#FF3D00' }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -240,7 +240,7 @@ export default function MeasurementsPage() {
                   <button
                     onClick={e => { e.stopPropagation(); onDelete(m.id); }}
                     disabled={deletingId === m.id}
-                    className="p-1.5 rounded-lg text-steel hover:text-red-400 hover:bg-surface-2 transition-colors"
+                    className="p-1.5 rounded-lg text-steel hover:text-danger hover:bg-surface-2 transition-colors"
                   >
                     <Trash2 size={14} />
                   </button>

@@ -47,12 +47,12 @@ export function EmptyState({ onSeed, onCreateClick }: EmptyStateProps) {
       animate={{ opacity: 1, y: 0 }}
       className="card text-center py-16"
     >
-      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-ember to-ember-dark flex items-center justify-center mx-auto mb-6 shadow-lg shadow-ember/20">
-        <Flame size={28} className="text-white" />
+      <div className="w-16 h-16 [clip-path:var(--clip-shard)] bg-gradient-to-br from-ember to-ember-dark flex items-center justify-center mx-auto mb-6 [filter:drop-shadow(3px_3px_0_#000)]">
+        <Flame size={28} className="text-void" />
       </div>
-      <h2 className="text-xl font-bold text-chalk mb-2">Welcome to the Forge</h2>
+      <h2 className="font-display text-3xl uppercase tracking-wide text-chalk mb-2">No Loadout Detected</h2>
       <p className="text-steel text-sm mb-8 max-w-sm mx-auto">
-        Pick a sample training split to get started, or build your own from scratch.
+        Pick a starter split to deploy, or build your own from scratch.
       </p>
 
       <div className="flex flex-col sm:flex-row items-stretch justify-center gap-3 mb-8 max-w-2xl mx-auto px-4">
@@ -62,13 +62,13 @@ export function EmptyState({ onSeed, onCreateClick }: EmptyStateProps) {
             <button
               key={split.id}
               onClick={() => setSelected(split.id)}
-              className={`flex-1 rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer ${
+              className={`flex-1 [clip-path:var(--clip-notch)] border-2 p-4 text-left transition-all duration-200 cursor-pointer ${
                 isSelected
-                  ? 'border-ember bg-ember/10 shadow-md shadow-ember/20'
-                  : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/8'
+                  ? 'border-ember bg-ember/10'
+                  : 'border-border bg-surface-1 hover:border-arc/50'
               }`}
             >
-              <div className={`text-sm font-semibold mb-1 ${isSelected ? 'text-ember' : 'text-chalk'}`}>
+              <div className={`text-sm font-display uppercase tracking-wide mb-1 ${isSelected ? 'text-ember' : 'text-chalk'}`}>
                 {split.label}
               </div>
               <div className="text-xs text-steel mb-3">{split.subtitle}</div>

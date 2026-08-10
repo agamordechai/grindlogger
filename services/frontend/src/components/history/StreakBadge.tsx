@@ -16,10 +16,10 @@ export function StreakBadge({ streak, loading }: StreakBadgeProps) {
   if (loading || !streak) {
     return (
       <div className="card p-4 flex items-center gap-3 animate-pulse">
-        <div className="w-10 h-10 rounded-xl bg-surface-2" />
+        <div className="w-10 h-10 [clip-path:var(--clip-tag)] bg-surface-2" />
         <div className="space-y-2 flex-1">
-          <div className="h-4 w-20 bg-surface-2 rounded" />
-          <div className="h-3 w-32 bg-surface-2 rounded" />
+          <div className="h-4 w-20 bg-surface-2" />
+          <div className="h-3 w-32 bg-surface-2" />
         </div>
       </div>
     );
@@ -36,22 +36,22 @@ export function StreakBadge({ streak, loading }: StreakBadgeProps) {
     <div className="card p-4">
       <div className="flex items-center gap-4">
         {/* Icon */}
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-          this_week > 0 ? 'bg-gradient-to-br from-ember to-ember-dark' : 'bg-surface-2'
+        <div className={`w-12 h-12 [clip-path:var(--clip-tag)] flex items-center justify-center ${
+          this_week > 0 ? 'bg-gradient-to-br from-ember to-ember-dark [filter:drop-shadow(2px_2px_0_#000)]' : 'bg-surface-2'
         }`}>
-          <TrendingUp size={24} className={this_week > 0 ? 'text-white' : 'text-steel'} />
+          <TrendingUp size={24} className={this_week > 0 ? 'text-void' : 'text-steel'} />
         </div>
 
         {/* Numbers */}
         <div className="flex-1">
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-chalk font-mono">{this_week}</span>
-            <span className="text-sm text-steel">this week</span>
+            <span className="text-3xl font-mono font-bold text-chalk leading-none">{this_week}</span>
+            <span className="text-xs text-steel uppercase tracking-widest">this week</span>
           </div>
-          <div className="flex items-center gap-4 mt-0.5 text-xs text-steel">
+          <div className="flex items-center gap-4 mt-1 text-xs text-steel">
             <span>Total: <span className="font-mono text-chalk">{total_workouts}</span> workouts</span>
             {weekly_trend.length >= 2 && (
-              <span className={trendUp ? 'text-green-400' : 'text-steel'}>
+              <span className={trendUp ? 'text-success' : 'text-steel'}>
                 {trendUp ? '↑' : '↓'} vs last week
               </span>
             )}
@@ -72,9 +72,9 @@ export function StreakBadge({ streak, loading }: StreakBadgeProps) {
               <div key={week.week_start} className="flex-1 flex flex-col items-center gap-1.5">
                 <span className="text-[11px] font-mono text-chalk">{week.workouts}</span>
                 <div
-                  className={`w-full rounded-md transition-all duration-500 ${
+                  className={`w-full transition-all duration-500 ${
                     isThisWeek
-                      ? 'bg-gradient-to-t from-ember to-amber-500'
+                      ? 'bg-gradient-to-t from-ember to-hazard'
                       : week.workouts > 0
                         ? 'bg-surface-3'
                         : 'bg-surface-2'

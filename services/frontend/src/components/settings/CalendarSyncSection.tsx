@@ -112,7 +112,7 @@ export function CalendarSyncSection() {
         <div className="space-y-3">
           {/* Connection status */}
           <div className="flex items-center gap-2 bg-surface-2 rounded-xl px-3 py-2.5">
-            <Check size={14} className="text-green-400" />
+            <Check size={14} className="text-success" />
             <span className="text-sm text-chalk flex-1">Connected to Google Calendar</span>
             <GlowButton variant="danger" size="sm" onClick={handleDisconnect}>
               Disconnect

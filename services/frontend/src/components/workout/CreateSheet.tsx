@@ -40,8 +40,8 @@ export function CreateSheet({ open, onClose, onSubmit, onDelete, exercises = [],
   const librarySuggestions = useMemo(() => searchLibrary(name), [name]);
 
   const nameStatus = getNameStatus && name.trim().length >= 2 ? getNameStatus(name.trim()) : null;
-  const borderClass = nameStatus === 'new' ? 'border-emerald-500' : nameStatus === 'archived' ? 'border-amber-500' : nameStatus === 'active' ? 'border-red-500' : '';
-  const dotClass = nameStatus === 'new' ? 'bg-emerald-500' : nameStatus === 'archived' ? 'bg-amber-500' : nameStatus === 'active' ? 'bg-red-500' : '';
+  const borderClass = nameStatus === 'new' ? 'border-success' : nameStatus === 'archived' ? 'border-hazard' : nameStatus === 'active' ? 'border-danger' : '';
+  const dotClass = nameStatus === 'new' ? 'bg-success' : nameStatus === 'archived' ? 'bg-hazard' : nameStatus === 'active' ? 'bg-danger' : '';
   const statusText = nameStatus === 'new' ? 'New exercise' : nameStatus === 'archived' ? 'Exists in archive' : nameStatus === 'active' ? 'Already in your routine' : '';
 
   useEffect(() => {
@@ -164,7 +164,7 @@ export function CreateSheet({ open, onClose, onSubmit, onDelete, exercises = [],
     <Modal open={open} onClose={onClose} title="Add Exercise" description="Create a new exercise for your routine">
       <form onSubmit={handleSubmit} className="space-y-4">
         {pendingDeleteId !== null && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-hazard/10 border border-hazard/20 text-hazard text-xs">
             <Archive size={13} />
             Filling from archived exercise — submitting will remove it from archive
             <button type="button" onClick={() => { setPendingDeleteId(null); reset(); }} className="ml-auto text-steel hover:text-chalk">✕</button>
@@ -212,7 +212,7 @@ export function CreateSheet({ open, onClose, onSubmit, onDelete, exercises = [],
                         disabled={saving}
                         className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-2 transition-colors"
                       >
-                        <Archive size={14} className="text-amber-500 shrink-0" />
+                        <Archive size={14} className="text-hazard shrink-0" />
                         <div className="flex-1 min-w-0">
                           <span className="text-sm text-chalk">{s.name}</span>
                           <span className="text-xs text-steel ml-2 font-mono">
@@ -263,7 +263,7 @@ export function CreateSheet({ open, onClose, onSubmit, onDelete, exercises = [],
 
         <label className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border cursor-pointer transition-all ${
           perSide
-            ? 'bg-violet-500/10 border-violet-500/30 text-violet-400'
+            ? 'bg-epic/10 border-epic/30 text-epic'
             : 'bg-surface-2 border-border text-steel hover:border-steel/40'
         }`}>
           <input
@@ -272,7 +272,7 @@ export function CreateSheet({ open, onClose, onSubmit, onDelete, exercises = [],
             onChange={e => setPerSide(e.target.checked)}
             className="sr-only"
           />
-          <span className={`w-3 h-3 rounded-sm border-2 flex items-center justify-center shrink-0 transition-colors ${perSide ? 'bg-violet-500 border-violet-500' : 'border-steel/50'}`}>
+          <span className={`w-3 h-3 rounded-sm border-2 flex items-center justify-center shrink-0 transition-colors ${perSide ? 'bg-epic border-epic' : 'border-steel/50'}`}>
             {perSide && <svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
           </span>
           Per side <span className="text-steel/50">(unilateral — doubles volume)</span>

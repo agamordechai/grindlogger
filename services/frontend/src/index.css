@@ -1,54 +1,71 @@
 @import "tailwindcss";
 
-/* ─── Forge Design System ─── */
+/* ─────────────────────────────────────────────────────────────
+   VAULT HUD — Borderlands × Persona 3 design system
+   Cel-shaded ink panels · loot-rarity colors · shattered shard
+   geometry · electric-blue kinetic motion. Dark only.
+   ───────────────────────────────────────────────────────────── */
 
 @theme {
-  /* Background & Surfaces */
-  --color-background: #0C0A09;
-  --color-surface-1: #1C1917;
-  --color-surface-2: #292524;
-  --color-surface-3: #44403C;
-  --color-border: rgba(87, 83, 78, 0.4);
+  /* Background & surfaces (warm gunmetal) */
+  --color-background: #0A0908;   /* void — app background */
+  --color-void:       #0A0908;
+  --color-surface-1:  #16120E;   /* gun-1 — card fill */
+  --color-surface-2:  #211A13;   /* gun-2 — raised */
+  --color-surface-3:  #3A2E22;   /* gun-3 — hover / inner edge */
+  --color-border:     rgba(245, 241, 232, 0.14);
+  --color-ink:        #000000;   /* comic outlines */
 
-  /* Core palette */
-  --color-ember: #F97316;
-  --color-ember-dark: #EA580C;
-  --color-flame: #EF4444;
-  --color-steel: #94A3B8;
-  --color-chalk: #FAFAF9;
+  /* Core palette — Borderlands orange lead, Persona blue accent */
+  --color-ember:      #FF6B1A;   /* HERO orange */
+  --color-ember-dark: #FF3D00;   /* orange-red — gradient tail + impact */
+  --color-ember-hot:  #FF3D00;
+  --color-hazard:     #FFD400;   /* acid yellow — warning stripes */
+  --color-arc:        #14C8FF;   /* Persona electric blue — accent / shard / focus */
+  --color-flame:      #FF3B30;   /* danger red */
+  --color-steel:      #9C948A;   /* muted warm-gray text */
+  --color-chalk:      #F5F1E8;   /* bone — primary text */
+  --color-bone:       #F5F1E8;
 
-  /* Day colors */
-  --color-day-a: #F97316;
-  --color-day-b: #3B82F6;
-  --color-day-c: #10B981;
-  --color-day-d: #8B5CF6;
-  --color-day-e: #EC4899;
-  --color-day-f: #F59E0B;
-  --color-day-g: #06B6D4;
-  --color-day-daily: #94A3B8;
+  /* Loot-rarity ladder — day colors + chart series */
+  --color-common:     #D9D5CE;
+  --color-uncommon:   #3DE84F;
+  --color-rare:       #2FA8FF;
+  --color-epic:       #B24BF3;
+  --color-legendary:  #FF7A00;
+  --color-seraph:     #00E5D0;
+
+  /* Day colors (mapped onto the rarity ladder) */
+  --color-day-a: #FF7A00;  /* legendary */
+  --color-day-b: #2FA8FF;  /* rare */
+  --color-day-c: #3DE84F;  /* uncommon */
+  --color-day-d: #B24BF3;  /* epic */
+  --color-day-e: #FF3D8A;  /* magenta */
+  --color-day-f: #FFD400;  /* hazard */
+  --color-day-g: #00E5D0;  /* seraph */
+  --color-day-daily: #9C948A;
 
   /* Semantic */
-  --color-success: #22C55E;
-  --color-danger: #EF4444;
-  --color-warning: #EAB308;
+  --color-success: #3DE84F;
+  --color-danger:  #FF3B30;
+  --color-warning: #FFD400;
 
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* Typography */
+  --font-display: 'Anton', 'Chakra Petch', system-ui, sans-serif;
+  --font-sans: 'Chakra Petch', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
 }
 
-/* ─── Light Theme ─── */
-
-[data-theme="light"] {
-  --color-background: #FAFAF9;
-  --color-surface-1: #FFFFFF;
-  --color-surface-2: #F5F5F4;
-  --color-surface-3: #E7E5E4;
-  --color-border: rgba(168, 162, 158, 0.4);
-  --color-steel: #57534E;
-  --color-chalk: #1C1917;
+/* ─── Non-theme design tokens ─── */
+:root {
+  /* Angular clip silhouettes (shared so panels read as one system) */
+  --clip-notch: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+  --clip-shard: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
+  --clip-btn: polygon(9px 0, 100% 0, calc(100% - 9px) 100%, 0 100%);
+  --clip-tag: polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px);
 }
 
 /* ─── Base ─── */
-
 * {
   box-sizing: border-box;
 }
@@ -65,50 +82,77 @@ body {
   color: var(--color-chalk);
   min-height: 100dvh;
   font-size: 14px;
+  /* faint ambient grain so the void doesn't read as flat black */
+  background-image:
+    radial-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1.4px);
+  background-size: 4px 4px;
 }
 
 #root {
   min-height: 100dvh;
 }
 
+::selection {
+  background: var(--color-ember);
+  color: var(--color-void);
+}
+
 /* ─── Scrollbar ─── */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(87, 83, 78, 0.5);
-  border-radius: 3px;
+  background: var(--color-surface-3);
+  border: 2px solid var(--color-background);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(87, 83, 78, 0.8);
-}
-[data-theme="light"] ::-webkit-scrollbar-thumb {
-  background: rgba(168, 162, 158, 0.5);
-}
-[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
-  background: rgba(168, 162, 158, 0.8);
+  background: var(--color-ember);
 }
 
-/* ─── Card ─── */
+/* ─────────────────────────────────────────────────────────────
+   TEXTURE UTILITIES (CSS-only ink / halftone / hazard)
+   ───────────────────────────────────────────────────────────── */
+@utility halftone {
+  background-image: radial-gradient(rgba(0, 0, 0, 0.4) 1px, transparent 1.4px);
+  background-size: 6px 6px;
+}
+@utility hatch {
+  background-image: repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.28) 0 1px, transparent 1px 6px);
+}
+@utility scanlines {
+  background-image: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.22) 0 1px, transparent 1px 3px);
+}
+@utility hazard {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--color-hazard) 0 14px,
+    var(--color-void) 14px 28px
+  );
+}
+
+/* ─── Card (angular ink panel) ─── */
 @utility card {
-  background: var(--color-surface-1);
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
+  position: relative;
+  background-color: var(--color-surface-1);
+  background-image: radial-gradient(rgba(0, 0, 0, 0.25) 1px, transparent 1.4px);
+  background-size: 6px 6px;
+  border: 1.5px solid var(--color-border);
+  clip-path: var(--clip-notch);
   padding: 16px;
-  transition: all 0.2s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease, filter 0.15s ease;
 }
 
 /* ─── Input ─── */
 @utility input {
   width: 100%;
   padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface-1);
+  border: 1.5px solid var(--color-border);
+  clip-path: var(--clip-tag);
+  background: var(--color-void);
   color: var(--color-chalk);
   font-size: 14px;
   font-family: var(--font-sans);
@@ -116,8 +160,8 @@ body {
   transition: border-color 0.15s, box-shadow 0.15s;
   min-height: 2.25rem;
   &:focus {
-    border-color: var(--color-ember);
-    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+    border-color: var(--color-arc);
+    box-shadow: 0 0 0 2px rgba(20, 200, 255, 0.35);
   }
   &::placeholder {
     color: var(--color-steel);
@@ -131,7 +175,7 @@ body {
 
 select.input {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2314C8FF' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
   padding-right: 36px;
@@ -142,117 +186,204 @@ select.input option {
   color: var(--color-chalk);
 }
 
-/* ─── Button base ─── */
+/* ─── Button base (angled parallelogram, stencil caps) ─── */
 @utility btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 20px;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 600;
+  padding: 10px 22px;
+  clip-path: var(--clip-btn);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   border: none;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: transform 0.1s ease, filter 0.15s ease, background-color 0.15s ease, color 0.15s ease;
   white-space: nowrap;
-  min-height: 2.25rem;
+  min-height: 2.35rem;
   &:disabled {
-    opacity: 0.5;
+    opacity: 0.45;
     cursor: not-allowed;
   }
 }
 
 @utility btn-ember {
   background: linear-gradient(135deg, var(--color-ember), var(--color-ember-dark));
-  color: white;
-  box-shadow: 0 0 20px rgba(249, 115, 22, 0.25);
+  color: var(--color-void);
+  filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.65));
   &:hover:not(:disabled) {
-    box-shadow: 0 0 30px rgba(249, 115, 22, 0.4);
+    filter: drop-shadow(0 0 14px rgba(255, 107, 26, 0.55)) drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.65));
     transform: translateY(-1px);
   }
-  &:active:not(:disabled) { transform: translateY(0) scale(0.98); }
+  &:active:not(:disabled) {
+    transform: translateY(1px) scale(0.98);
+    filter: drop-shadow(1px 1px 0 rgba(0, 0, 0, 0.65));
+  }
 }
 
 @utility btn-secondary {
   background: var(--color-surface-2);
   color: var(--color-chalk);
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
   &:hover:not(:disabled) {
     background: var(--color-surface-3);
+    border-color: var(--color-arc);
   }
+  &:active:not(:disabled) { transform: scale(0.98); }
 }
 
 @utility btn-ghost {
   background: transparent;
   color: var(--color-steel);
-  padding: 8px 12px;
+  padding: 8px 14px;
   &:hover:not(:disabled) {
     color: var(--color-chalk);
-    background: rgba(87, 83, 78, 0.2);
+    background: rgba(245, 241, 232, 0.08);
   }
 }
 
 @utility btn-danger {
-  background: rgba(239, 68, 68, 0.15);
-  color: var(--color-danger);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  &:hover:not(:disabled) {
-    background: rgba(239, 68, 68, 0.25);
-  }
+  background: var(--color-flame);
+  color: var(--color-void);
+  filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.65));
+  &:hover:not(:disabled) { filter: drop-shadow(0 0 12px rgba(255, 59, 48, 0.5)) drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.65)); }
+  &:active:not(:disabled) { transform: scale(0.98); }
 }
 
 @utility btn-warning {
-  background: rgba(234, 179, 8, 0.15);
-  color: var(--color-warning);
-  border: 1px solid rgba(234, 179, 8, 0.3);
-  &:hover:not(:disabled) {
-    background: rgba(234, 179, 8, 0.25);
-  }
+  background: var(--color-hazard);
+  color: var(--color-void);
+  filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.65));
+  &:hover:not(:disabled) { filter: drop-shadow(0 0 12px rgba(255, 212, 0, 0.5)) drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.65)); }
+  &:active:not(:disabled) { transform: scale(0.98); }
 }
 
 @utility btn-sm {
-  padding: 6px 12px;
-  font-size: 13px;
-  min-height: 1.75rem;
+  padding: 6px 14px;
+  font-size: 12px;
+  min-height: 1.85rem;
 }
 
-/* ─── Animations ─── */
+/* ─── Rarity tag (loot corner label) ─── */
+@utility tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  clip-path: var(--clip-tag);
+  padding: 3px 9px;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+/* ─── Safe area (mobile bottom nav) ─── */
+@utility safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   KINETIC MOTION — keyframes
+   ───────────────────────────────────────────────────────────── */
+@keyframes slash-in {
+  from { clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); }
+  to   { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
+}
+
+@keyframes glitch {
+  0%, 100% { transform: translate(0); text-shadow: none; }
+  20% { transform: translate(-2px, 1px); text-shadow: 2px 0 var(--color-arc), -2px 0 var(--color-flame); }
+  40% { transform: translate(2px, -1px); text-shadow: -2px 0 var(--color-arc), 2px 0 var(--color-ember); }
+  60% { transform: translate(-1px, 0); text-shadow: 1px 0 var(--color-arc); }
+  80% { transform: translate(1px, 1px); text-shadow: none; }
+}
+
+@keyframes impact-shake {
+  0%, 100% { transform: translate(0) rotate(0); }
+  20% { transform: translate(-4px, 2px) rotate(-0.6deg); }
+  40% { transform: translate(4px, -2px) rotate(0.6deg); }
+  60% { transform: translate(-3px, 1px) rotate(-0.4deg); }
+  80% { transform: translate(2px, -1px) rotate(0.3deg); }
+}
+
+@keyframes hazard-scroll {
+  from { background-position: 0 0; }
+  to   { background-position: 40px 0; }
+}
+
+@keyframes shard-drift {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  50%  { transform: translate(2%, -2.5%) rotate(3deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+@keyframes scanline {
+  from { transform: translateY(-100%); }
+  to   { transform: translateY(100vh); }
+}
+
+/* Retained loading animations (skeleton / chat / logo) */
 @keyframes typing {
   0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
   30% { opacity: 1; transform: translateY(-3px); }
 }
-
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
-
 @keyframes ember-pulse {
   0%, 100% { opacity: 0.6; }
   50% { opacity: 1; }
 }
-
 @keyframes gradient-mesh {
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
 }
 
+/* ─── Animation utility classes ─── */
+.animate-slash-in {
+  animation: slash-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.animate-glitch {
+  animation: glitch 0.35s steps(2, end) both;
+}
+.animate-impact {
+  animation: impact-shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+.animate-shard-drift {
+  animation: shard-drift 14s ease-in-out infinite;
+}
+.animate-hazard-scroll {
+  animation: hazard-scroll 1s linear infinite;
+}
 .animate-typing {
   animation: typing 1.2s ease-in-out infinite;
 }
-
 .animate-shimmer {
   background: linear-gradient(90deg, var(--color-surface-1) 25%, var(--color-surface-2) 50%, var(--color-surface-1) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
-
 .animate-ember-pulse {
   animation: ember-pulse 2s ease-in-out infinite;
 }
-
 .animate-gradient-mesh {
   background-size: 400% 400%;
   animation: gradient-mesh 8s ease infinite;
+}
+
+/* ─── Reduced motion (quality floor) ─── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

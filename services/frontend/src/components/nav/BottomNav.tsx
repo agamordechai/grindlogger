@@ -27,12 +27,12 @@ export function BottomNav() {
                   {isActive && (
                     <motion.div
                       layoutId="bottom-nav-dot"
-                      className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-ember"
-                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                      className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-7 h-[3px] bg-ember [clip-path:var(--clip-btn)] [filter:drop-shadow(0_0_5px_rgba(255,107,26,0.7))]"
+                      transition={{ type: 'spring', stiffness: 500, damping: 32 }}
                     />
                   )}
                 </div>
-                <span className={`text-[10px] font-medium ${isActive ? 'text-ember' : 'text-steel'}`}>
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${isActive ? 'text-ember' : 'text-steel'}`}>
                   {label}
                 </span>
               </>

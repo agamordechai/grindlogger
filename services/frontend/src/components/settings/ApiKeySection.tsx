@@ -115,7 +115,7 @@ export function ApiKeySection() {
       </div>
 
       {error && (
-        <p className="text-xs text-red-400 mb-2">{error}</p>
+        <p className="text-xs text-danger mb-2">{error}</p>
       )}
 
       {status?.has_key ? (

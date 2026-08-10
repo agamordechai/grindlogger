@@ -62,7 +62,7 @@ export default function OAuthCallback({ provider }: OAuthCallbackProps) {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-ember to-ember-dark flex items-center justify-center shadow-lg shadow-ember/20 animate-ember-pulse">
+        <div className="w-12 h-12 [clip-path:var(--clip-shard)] bg-gradient-to-br from-ember to-ember-dark flex items-center justify-center [filter:drop-shadow(3px_3px_0_#000)] animate-ember-pulse">
           <Flame size={20} className="text-white" />
         </div>
         <p className="text-steel text-sm">Signing you in…</p>

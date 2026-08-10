@@ -16,21 +16,21 @@ const CARDS: { view: CoachView; title: string; description: string; icon: typeof
     title: 'Workout Generator',
     description: 'Generate custom workout plans based on your equipment and goals.',
     icon: Zap,
-    gradient: 'from-blue-500/20 to-cyan-500/20',
+    gradient: 'from-arc/20 to-arc/20',
   },
   {
     view: 'progress',
     title: 'Progress Analysis',
     description: 'AI-powered insights on training balance and improvements.',
     icon: BarChart3,
-    gradient: 'from-emerald-500/20 to-green-500/20',
+    gradient: 'from-success/20 to-success/20',
   },
   {
     view: 'overload',
     title: 'Overload Suggestions',
     description: 'AI recommendations for when to increase weight or volume.',
     icon: TrendingUp,
-    gradient: 'from-purple-500/20 to-violet-500/20',
+    gradient: 'from-epic/20 to-epic/20',
   },
 ];
 
@@ -42,8 +42,8 @@ export function CoachLanding({ onNavigate }: CoachLandingProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-chalk">AI Coach</h1>
-        <p className="text-steel text-sm mt-1">Your AI-powered training lab</p>
+        <h1 className="font-display text-3xl uppercase tracking-wide text-chalk">AI Coach</h1>
+        <p className="text-steel text-sm mt-1 uppercase tracking-widest">Your AI-powered training lab</p>
       </div>
 
       <div className="grid gap-4">
@@ -58,11 +58,11 @@ export function CoachLanding({ onNavigate }: CoachLandingProps) {
             onClick={() => onNavigate(view)}
             className="card hover:border-ember/30 text-left flex items-center gap-4 p-5"
           >
-            <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${gradient} border border-border flex items-center justify-center shrink-0`}>
+            <div className={`w-14 h-14 [clip-path:var(--clip-shard)] bg-gradient-to-br ${gradient} border-2 border-border flex items-center justify-center shrink-0`}>
               <Icon size={24} className="text-chalk" />
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="text-sm font-bold text-chalk">{title}</h3>
+              <h3 className="text-sm font-display uppercase tracking-wide text-chalk">{title}</h3>
               <p className="text-xs text-steel mt-0.5">{description}</p>
             </div>
           </motion.button>

@@ -39,7 +39,7 @@ export function ChatMessage({ role, content, index, actions }: ChatMessageProps)
           <Bot size={16} className="text-ember" />
         </div>
       ) : (
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-ember to-ember-dark flex items-center justify-center text-white text-xs font-bold shrink-0">
+        <div className="w-8 h-8 [clip-path:var(--clip-tag)] bg-gradient-to-br from-ember to-ember-dark flex items-center justify-center text-void text-xs font-bold shrink-0">
           You
         </div>
       )}
@@ -55,7 +55,7 @@ export function ChatMessage({ role, content, index, actions }: ChatMessageProps)
               return (
                 <span
                   key={i}
-                  className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"
+                  className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-success/15 text-success border border-success/20"
                 >
                   <Icon size={12} />
                   {ACTION_LABELS[action.action] ?? action.action}

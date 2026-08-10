@@ -181,7 +181,7 @@ export function RestTimerButton() {
         onClick={() => setOpen(prev => !prev)}
         className={`relative flex items-center gap-1.5 h-8 rounded-full px-2 transition-colors ${
           running && paused
-            ? 'bg-amber-500/15 text-amber-500'
+            ? 'bg-hazard/15 text-hazard'
             : running
               ? 'bg-ember/15 text-ember'
               : finished
@@ -276,18 +276,18 @@ export function RestTimerButton() {
                             strokeLinecap="round"
                             strokeDasharray={circumference}
                             strokeDashoffset={strokeOffset}
-                            className={finished ? 'text-success' : paused ? 'text-amber-500' : 'text-ember'}
+                            className={finished ? 'text-success' : paused ? 'text-hazard' : 'text-ember'}
                           />
                         )}
                       </svg>
                       <div className="flex flex-col items-center">
                         <span className={`text-2xl font-bold font-mono ${
-                          finished ? 'text-success' : paused ? 'text-amber-500' : running ? 'text-chalk' : 'text-steel'
+                          finished ? 'text-success' : paused ? 'text-hazard' : running ? 'text-chalk' : 'text-steel'
                         }`}>
                           {finished ? '0:00' : running ? formatTime(remaining) : '0:00'}
                         </span>
                         {paused && (
-                          <span className="text-[10px] text-amber-500 font-semibold uppercase">Paused</span>
+                          <span className="text-[10px] text-hazard font-semibold uppercase">Paused</span>
                         )}
                         {isSequenceRunning && running && !paused && (
                           <span className="text-[10px] text-steel font-medium">

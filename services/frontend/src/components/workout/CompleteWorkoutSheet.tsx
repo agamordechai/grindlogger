@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Plus, Trophy, Link, Trash2 } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { GlowButton } from '../ui/GlowButton';
@@ -47,6 +48,7 @@ export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, de
   const [notes, setNotes] = useState('');
   const [duration, setDuration] = useState<number | ''>('');
   const [saving, setSaving] = useState(false);
+  const [celebrate, setCelebrate] = useState(false);
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [selectedDay, setSelectedDay] = useState('');
 
@@ -196,6 +198,12 @@ export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, de
         duration_minutes: duration || null,
         exercises: sessionExercises,
       });
+      // ALL-OUT — celebrate a freshly logged workout before closing
+      if (!editSession && selected.length > 0) {
+        setCelebrate(true);
+        await new Promise(r => setTimeout(r, 1150));
+        setCelebrate(false);
+      }
       onClose();
     } finally {
       setSaving(false);
@@ -206,6 +214,35 @@ export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, de
   const allSelected = entries.length > 0 && entries.every(e => e.selected);
 
   return (
+    <>
+    <AnimatePresence>
+      {celebrate && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[300] flex items-center justify-center overflow-hidden pointer-events-none"
+        >
+          <motion.div
+            className="absolute inset-0 bg-ember"
+            initial={{ opacity: 0.75 }}
+            animate={{ opacity: 0 }}
+            transition={{ duration: 0.55 }}
+          />
+          <div className="absolute inset-0 hazard opacity-15" />
+          <motion.div
+            initial={{ scale: 0.4, rotate: -10, opacity: 0 }}
+            animate={{ scale: 1, rotate: -4, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 13 }}
+            className="relative animate-impact"
+          >
+            <span className="font-display text-6xl sm:text-8xl uppercase tracking-tight text-chalk [-webkit-text-stroke:3px_#000] [filter:drop-shadow(5px_5px_0_var(--color-ember))]">
+              All Out!
+            </span>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
     <Modal open={open} onClose={onClose} title={editSession ? 'Edit Workout' : 'Log Workout'} description={editSession ? 'Update this workout session' : 'Record a completed workout session'}>
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Day selector */}
@@ -260,17 +297,17 @@ export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, de
             <div key={i}>
               {isFirstInSuperset && supersetCount > 1 && (
                 <div className="flex items-center gap-1.5 mb-1">
-                  <Link size={10} className="text-violet-400" />
-                  <span className="text-[10px] font-semibold text-violet-400 uppercase tracking-wider">
+                  <Link size={10} className="text-epic" />
+                  <span className="text-[10px] font-bold text-epic uppercase tracking-wider">
                     Superset
                   </span>
                 </div>
               )}
             <div
-              className={`rounded-xl border p-3 space-y-2 transition-colors ${
+              className={`[clip-path:var(--clip-notch)] border-2 p-3 space-y-2 transition-colors ${
                 entry.selected
                   ? entry.superset_group != null
-                    ? 'border-violet-500/50 bg-violet-500/5'
+                    ? 'border-epic/50 bg-epic/5'
                     : 'border-ember/50 bg-surface-2/80'
                   : 'border-border bg-surface-2/30 opacity-60'
               }`}
@@ -331,7 +368,7 @@ export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, de
                         type="button"
                         onClick={() => removeSet(i, j)}
                         disabled={entry.sets.length <= 1}
-                        className="w-5 h-5 flex items-center justify-center text-steel hover:text-red-400 disabled:opacity-20 disabled:hover:text-steel transition-colors"
+                        className="w-5 h-5 flex items-center justify-center text-steel hover:text-danger disabled:opacity-20 disabled:hover:text-steel transition-colors"
                       >
                         <Trash2 size={11} />
                       </button>
@@ -350,7 +387,7 @@ export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, de
 
                   {/* 1RM row */}
                   <div className="flex items-center gap-2 pt-1 border-t border-border/30">
-                    <Trophy size={12} className="text-amber-500 shrink-0" />
+                    <Trophy size={12} className="text-hazard shrink-0" />
                     <label className="text-[11px] text-steel shrink-0">1RM ({unit})</label>
                     <input
                       type="number"
@@ -407,5 +444,6 @@ export function CompleteWorkoutSheet({ open, onClose, onSubmit, allExercises, de
         </GlowButton>
       </form>
     </Modal>
+    </>
   );
 }
