@@ -22,9 +22,10 @@ interface ChatMessageProps {
   content: string;
   index: number;
   actions?: ActionPerformed[];
+  images?: string[];
 }
 
-export function ChatMessage({ role, content, index, actions }: ChatMessageProps) {
+export function ChatMessage({ role, content, index, actions, images }: ChatMessageProps) {
   const isAssistant = role === 'assistant';
 
   return (
@@ -48,6 +49,18 @@ export function ChatMessage({ role, content, index, actions }: ChatMessageProps)
           ? 'bg-surface-2 text-chalk border border-border'
           : 'bg-gradient-to-br from-ember to-ember-dark text-white'
       }`}>
+        {images && images.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {images.map((src, i) => (
+              <img
+                key={i}
+                src={src}
+                alt=""
+                className="w-20 h-20 rounded-lg object-cover border border-border/50"
+              />
+            ))}
+          </div>
+        )}
         {actions && actions.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-2">
             {actions.map((action, i) => {

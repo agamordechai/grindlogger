@@ -293,10 +293,39 @@ async function executeTool(
 
 // ---------- chat ----------
 
+const IMAGE_MEDIA_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+
+/** Parse a `data:image/jpeg;base64,...` URL into an Anthropic image content block. */
+function dataUrlToImageBlock(dataUrl: string): Anthropic.ImageBlockParam | null {
+  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) return null;
+  const [, mediaType, data] = match;
+  if (!IMAGE_MEDIA_TYPES.has(mediaType)) return null;
+  return {
+    type: 'image',
+    source: { type: 'base64', media_type: mediaType as Anthropic.Base64ImageSource['media_type'], data },
+  };
+}
+
+/** Build message content: a plain string when there are no images (cheaper/simpler), else a content-block array. */
+function buildMessageContent(text: string, images?: string[]): Anthropic.MessageParam['content'] {
+  if (!images || images.length === 0) return text;
+  const blocks: Anthropic.ContentBlockParam[] = [];
+  for (const img of images) {
+    const block = dataUrlToImageBlock(img);
+    if (block) blocks.push(block);
+  }
+  // Anthropic rejects empty text blocks — only add one if there's a caption,
+  // otherwise let a nudge stand in so the message isn't image-only-with-nothing-to-say.
+  blocks.push({ type: 'text', text: text.trim() || 'What do you see in this image?' });
+  return blocks;
+}
+
 export async function chatWithCoach(
   message: string,
   includeWorkoutContext = true,
   history?: ChatMessage[],
+  images?: string[],
 ): Promise<ChatResponse> {
   const creds = await resolveCredentials();
   const client = makeClient(creds);
@@ -316,8 +345,10 @@ export async function chatWithCoach(
   const contextUsed = !!(ctx && ctx.exercises.length > 0);
 
   const messages: Anthropic.MessageParam[] = [
-    ...(history ?? []).map((m) => ({ role: m.role, content: m.content }) as Anthropic.MessageParam),
-    { role: 'user', content: message },
+    ...(history ?? []).map(
+      (m) => ({ role: m.role, content: buildMessageContent(m.content, m.images) }) as Anthropic.MessageParam,
+    ),
+    { role: 'user', content: buildMessageContent(message, images) },
   ];
   const actions: ActionPerformed[] = [];
 
