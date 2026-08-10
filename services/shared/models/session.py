@@ -83,6 +83,7 @@ class WorkoutSessionResponse(BaseModel):
     notes: str | None
     duration_minutes: int | None
     created_at: datetime
+    updated_at: datetime
     exercises: list[SessionExerciseResponse]
 
     model_config = {"from_attributes": True}

@@ -48,6 +48,7 @@ class BodyMeasurementResponse(BaseModel):
     calf_cm: float | None
     notes: str | None
     created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}
 

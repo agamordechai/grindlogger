@@ -4,6 +4,8 @@ These models are used across API, AI Coach, and Worker services to ensure
 consistent data representation and validation.
 """
 
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 
@@ -73,6 +75,7 @@ class ExerciseResponse(ExerciseBase):
     superset_group: int | None = Field(
         default=None, description="Group ID for superset/circuit grouping (null = standalone)"
     )
+    updated_at: datetime = Field(description="Last modification timestamp (for sync last-write-wins)")
 
     model_config = {"from_attributes": True}
 
