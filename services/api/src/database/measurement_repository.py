@@ -6,6 +6,8 @@ All queries scoped by user_id.
 
 from __future__ import annotations
 
+import datetime as dt
+
 from sqlmodel import Session, select
 
 from services.api.src.database.db_models import BodyMeasurementTable
@@ -53,6 +55,7 @@ def _to_response(row: BodyMeasurementTable) -> BodyMeasurementResponse:
         calf_cm=row.calf_cm,
         notes=row.notes,
         created_at=row.created_at,
+        updated_at=row.updated_at,
     )
 
 
@@ -121,6 +124,7 @@ class BodyMeasurementRepository:
         row.forearm_cm = data.forearm_cm
         row.calf_cm = data.calf_cm
         row.notes = data.notes
+        row.updated_at = dt.datetime.now(dt.UTC)
 
         self.session.commit()
         self.session.refresh(row)

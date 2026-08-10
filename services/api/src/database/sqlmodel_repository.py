@@ -6,6 +6,8 @@ All queries are scoped to a specific user via user_id.
 
 from __future__ import annotations
 
+import datetime as dt
+
 from sqlalchemy import func
 from sqlmodel import Session, select
 
@@ -207,6 +209,7 @@ class ExerciseRepository:
         if per_side is not None:
             exercise.per_side = per_side
 
+        exercise.updated_at = dt.datetime.now(dt.UTC)
         self.session.add(exercise)
         self.session.commit()
         self.session.refresh(exercise)

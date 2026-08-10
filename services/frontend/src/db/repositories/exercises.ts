@@ -12,8 +12,9 @@ import type {
   ExerciseNameStatus,
   ArchivedExerciseSuggestion,
 } from '../../types/exercise';
-import { all, one, run, tx, toBool } from '../database';
+import { all, one, run, tx, toBool, logDeletionIfSynced, logDeletionsForUserRows } from '../database';
 import { LOCAL_USER_ID } from '../schema';
+import { autoLogExercise } from './sessions';
 
 const U = LOCAL_USER_ID;
 
@@ -128,6 +129,7 @@ export async function updateExercise(id: number, data: UpdateExerciseRequest): P
   if (data.per_side !== undefined) push('per_side', data.per_side ? 1 : 0);
 
   if (sets.length) {
+    push('dirty', 1);
     vals.push(id, U);
     await run(`UPDATE exercises SET ${sets.join(', ')} WHERE id = ? AND user_id = ?`, vals);
   }
@@ -135,14 +137,24 @@ export async function updateExercise(id: number, data: UpdateExerciseRequest): P
   // fetches by id without the archived filter after update.
   const row = await one<ExerciseRow>('SELECT * FROM exercises WHERE id = ? AND user_id = ?', [id, U]);
   if (!row) throw new Error('Exercise not found');
+
+  // Editing weight/sets/reps auto-logs the change into today's session,
+  // matching the old backend's PATCH /exercises/{id} behavior.
+  const statsChanged = data.sets !== undefined || data.reps !== undefined || 'weight' in data;
+  if (statsChanged) {
+    await autoLogExercise(row.name, row.workout_day, row.sets, row.reps, row.weight);
+  }
+
   return mapExercise(row);
 }
 
 export async function deleteExercise(id: number): Promise<void> {
+  await logDeletionIfSynced('exercises', id);
   await run('DELETE FROM exercises WHERE id = ? AND user_id = ? AND archived = 0', [id, U]);
 }
 
 export async function clearExercises(): Promise<{ deleted: number }> {
+  await logDeletionsForUserRows('exercises', U, 'AND archived = 0');
   const res = await run('DELETE FROM exercises WHERE user_id = ? AND archived = 0', [U]);
   return { deleted: res.changes };
 }
@@ -150,7 +162,7 @@ export async function clearExercises(): Promise<{ deleted: number }> {
 export async function reorderExercises(items: { id: number; sort_order: number }[]): Promise<void> {
   await tx(async (db) => {
     for (const it of items) {
-      await db.run('UPDATE exercises SET sort_order = ? WHERE id = ? AND user_id = ?', [
+      await db.run('UPDATE exercises SET sort_order = ?, dirty = 1 WHERE id = ? AND user_id = ?', [
         it.sort_order,
         it.id,
         U,
@@ -167,7 +179,7 @@ export async function createSuperset(exerciseIds: number[]): Promise<{ superset_
   const groupId = (maxRow?.m ?? 0) + 1;
   await tx(async (db) => {
     for (const id of exerciseIds) {
-      await db.run('UPDATE exercises SET superset_group = ? WHERE id = ? AND user_id = ?', [
+      await db.run('UPDATE exercises SET superset_group = ?, dirty = 1 WHERE id = ? AND user_id = ?', [
         groupId,
         id,
         U,
@@ -190,7 +202,7 @@ export async function removeSuperset(exerciseIds: number[]): Promise<void> {
 
   await tx(async (db) => {
     for (const id of exerciseIds) {
-      await db.run('UPDATE exercises SET superset_group = NULL WHERE id = ? AND user_id = ?', [id, U]);
+      await db.run('UPDATE exercises SET superset_group = NULL, dirty = 1 WHERE id = ? AND user_id = ?', [id, U]);
     }
   });
 
@@ -201,7 +213,7 @@ export async function removeSuperset(exerciseIds: number[]): Promise<void> {
       [U, gid],
     );
     if (remaining.length === 1) {
-      await run('UPDATE exercises SET superset_group = NULL WHERE id = ? AND user_id = ?', [
+      await run('UPDATE exercises SET superset_group = NULL, dirty = 1 WHERE id = ? AND user_id = ?', [
         remaining[0].id,
         U,
       ]);
@@ -210,7 +222,7 @@ export async function removeSuperset(exerciseIds: number[]): Promise<void> {
 }
 
 export async function archiveExercise(id: number): Promise<void> {
-  await run('UPDATE exercises SET archived = 1 WHERE id = ? AND user_id = ? AND archived = 0', [id, U]);
+  await run('UPDATE exercises SET archived = 1, dirty = 1 WHERE id = ? AND user_id = ? AND archived = 0', [id, U]);
 }
 
 export async function restoreExercise(id: number, workout_day?: string): Promise<Exercise> {
@@ -222,11 +234,16 @@ export async function restoreExercise(id: number, workout_day?: string): Promise
   const targetDay = workout_day !== undefined ? workout_day : ex.workout_day;
 
   // Delete active duplicates with the same name + target day.
+  const dupe = await one<{ id: number }>(
+    'SELECT id FROM exercises WHERE user_id = ? AND archived = 0 AND lower(name) = lower(?) AND workout_day = ?',
+    [U, ex.name, targetDay],
+  );
+  if (dupe) await logDeletionIfSynced('exercises', dupe.id);
   await run(
     'DELETE FROM exercises WHERE user_id = ? AND archived = 0 AND lower(name) = lower(?) AND workout_day = ?',
     [U, ex.name, targetDay],
   );
-  await run('UPDATE exercises SET workout_day = ?, archived = 0 WHERE id = ? AND user_id = ?', [
+  await run('UPDATE exercises SET workout_day = ?, archived = 0, dirty = 1 WHERE id = ? AND user_id = ?', [
     targetDay,
     id,
     U,
@@ -241,6 +258,7 @@ export async function listArchivedExercises(): Promise<Exercise[]> {
 }
 
 export async function permanentDeleteExercise(id: number): Promise<void> {
+  await logDeletionIfSynced('exercises', id);
   await run('DELETE FROM exercises WHERE id = ? AND user_id = ? AND archived = 1', [id, U]);
 }
 

@@ -88,6 +88,7 @@ class BodyMeasurementTable(SQLModel, table=True):
     calf_cm: float | None = Field(default=None, ge=0)
     notes: str | None = Field(default=None, max_length=500)
     created_at: dt.datetime = Field(default_factory=lambda: dt.datetime.now(dt.UTC))
+    updated_at: dt.datetime = Field(default_factory=lambda: dt.datetime.now(dt.UTC))
 
 
 class ExerciseTable(SQLModel, table=True):
@@ -120,6 +121,7 @@ class ExerciseTable(SQLModel, table=True):
     sort_order: int = Field(default=0, ge=0)
     superset_group: int | None = Field(default=None)
     per_side: bool = Field(default=False)
+    updated_at: dt.datetime = Field(default_factory=lambda: dt.datetime.now(dt.UTC))
 
 
 class WorkoutSessionTable(SQLModel, table=True):
@@ -134,6 +136,7 @@ class WorkoutSessionTable(SQLModel, table=True):
     notes: str | None = Field(default=None, max_length=1000)
     duration_minutes: int | None = Field(default=None, ge=0)
     created_at: dt.datetime = Field(default_factory=lambda: dt.datetime.now(dt.UTC))
+    updated_at: dt.datetime = Field(default_factory=lambda: dt.datetime.now(dt.UTC))
     google_calendar_event_id: str | None = Field(default=None, max_length=1024)
 
 

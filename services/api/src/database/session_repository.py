@@ -6,6 +6,7 @@ Provides CRUD for logged workout sessions and derived analytics
 
 from __future__ import annotations
 
+import datetime as dt
 from datetime import date, timedelta
 
 from sqlalchemy import func
@@ -145,6 +146,8 @@ class WorkoutSessionRepository:
             self.session.add(db_session)
             self.session.flush()
 
+        db_session.updated_at = dt.datetime.now(dt.UTC)
+
         # Upsert exercises (with per-set details)
         for ex in data.exercises:
             self._upsert_exercise(db_session.id, ex)
@@ -167,6 +170,7 @@ class WorkoutSessionRepository:
             notes=db_session.notes,
             duration_minutes=db_session.duration_minutes,
             created_at=db_session.created_at,
+            updated_at=db_session.updated_at,
             exercises=[self._build_exercise_response(ex) for ex in all_exercises],
         )
 
@@ -228,6 +232,7 @@ class WorkoutSessionRepository:
             )
             self.session.add(db_ex)
 
+        db_session.updated_at = dt.datetime.now(dt.UTC)
         self.session.commit()
 
     def update_session(
@@ -247,6 +252,7 @@ class WorkoutSessionRepository:
         db_session.workout_day = data.workout_day
         db_session.notes = data.notes
         db_session.duration_minutes = data.duration_minutes
+        db_session.updated_at = dt.datetime.now(dt.UTC)
 
         # Delete old exercises (CASCADE deletes set_details)
         old_ex_stmt = select(SessionExerciseTable).where(SessionExerciseTable.session_id == session_id)
@@ -297,6 +303,7 @@ class WorkoutSessionRepository:
             notes=db_session.notes,
             duration_minutes=db_session.duration_minutes,
             created_at=db_session.created_at,
+            updated_at=db_session.updated_at,
             exercises=[self._build_exercise_response(ex) for ex in db_exercises],
         )
 
@@ -324,6 +331,7 @@ class WorkoutSessionRepository:
             notes=db_session.notes,
             duration_minutes=db_session.duration_minutes,
             created_at=db_session.created_at,
+            updated_at=db_session.updated_at,
             exercises=[self._build_exercise_response(ex) for ex in exercises],
         )
 

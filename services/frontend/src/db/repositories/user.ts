@@ -4,7 +4,7 @@
  */
 
 import type { User } from '../../types/auth';
-import { all, one, run, toBool } from '../database';
+import { all, one, run, toBool, logDeletionsForUserRows } from '../database';
 import { LOCAL_USER_ID } from '../schema';
 
 const U = LOCAL_USER_ID;
@@ -57,6 +57,11 @@ export async function getCycleLength(): Promise<number> {
 
 /** Wipe all workout data (local equivalent of "delete account"). */
 export async function deleteAccount(): Promise<void> {
+  // Tell the sync engine to propagate the wipe to the server, if configured.
+  await logDeletionsForUserRows('exercises', U);
+  await logDeletionsForUserRows('workout_sessions', U);
+  await logDeletionsForUserRows('body_measurements', U);
+
   for (const t of [
     'set_details',
     'session_exercises',

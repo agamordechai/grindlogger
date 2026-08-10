@@ -296,7 +296,7 @@ def read_exercises(
         "page": page,
         "page_size": page_size,
         "total": total,
-        "items": [item.model_dump() for item in items],
+        "items": [item.model_dump(mode="json") for item in items],
     }
     response = JSONResponse(
         content=payload,

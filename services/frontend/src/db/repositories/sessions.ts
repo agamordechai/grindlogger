@@ -17,7 +17,7 @@ import type {
   ExerciseProgress,
   ProgressPoint,
 } from '../../types/session';
-import { all, one, run } from '../database';
+import { all, one, run, logDeletionIfSynced } from '../database';
 import { LOCAL_USER_ID } from '../schema';
 
 const U = LOCAL_USER_ID;
@@ -172,6 +172,59 @@ async function upsertExercise(sessionId: number, ex: CreateSessionExercise): Pro
   if (ex.sets && ex.sets.length) await saveSetDetails(sxId, ex.sets);
 }
 
+/**
+ * Auto-log an exercise stat change into today's session. Mirrors the old
+ * backend's session_repository.auto_log_exercise: finds or creates today's
+ * session for this workout_day, then upserts the exercise entry so repeated
+ * edits update the same row instead of creating duplicates.
+ */
+export async function autoLogExercise(
+  exerciseName: string,
+  workoutDay: string,
+  sets: number,
+  reps: number,
+  weight: number | null,
+): Promise<void> {
+  const today = todayISO();
+
+  let session = await one<{ id: number }>(
+    'SELECT id FROM workout_sessions WHERE user_id = ? AND workout_date = ? AND workout_day = ?',
+    [U, today, workoutDay],
+  );
+  let sessionId: number;
+  if (session) {
+    sessionId = session.id;
+    await run('UPDATE workout_sessions SET dirty = 1 WHERE id = ?', [sessionId]);
+  } else {
+    const res = await run(
+      'INSERT INTO workout_sessions (user_id, workout_date, workout_day) VALUES (?, ?, ?)',
+      [U, today, workoutDay],
+    );
+    sessionId = res.lastId!;
+  }
+
+  const existing = await one<{ id: number }>(
+    'SELECT id FROM session_exercises WHERE session_id = ? AND lower(exercise_name) = lower(?)',
+    [sessionId, exerciseName],
+  );
+
+  if (existing) {
+    await run(
+      'UPDATE session_exercises SET sets_completed = ?, reps_completed = ?, weight_used = ? WHERE id = ?',
+      [sets, reps, weight, existing.id],
+    );
+  } else {
+    const countRow = await one<{ n: number }>(
+      'SELECT COUNT(*) AS n FROM session_exercises WHERE session_id = ?',
+      [sessionId],
+    );
+    await run(
+      'INSERT INTO session_exercises (session_id, exercise_name, sets_completed, reps_completed, weight_used, "order") VALUES (?, ?, ?, ?, ?, ?)',
+      [sessionId, exerciseName, sets, reps, weight, countRow?.n ?? 0],
+    );
+  }
+}
+
 // ---------- public API ----------
 
 export async function createSession(data: CreateWorkoutSession): Promise<WorkoutSession> {
@@ -193,6 +246,9 @@ export async function createSession(data: CreateWorkoutSession): Promise<Workout
         sessionId,
       ]);
     }
+    // Any create call that merges into an existing session (even just adding
+    // exercises with no notes/duration change) still needs to mark it dirty.
+    await run('UPDATE workout_sessions SET dirty = 1 WHERE id = ?', [sessionId]);
   } else {
     const res = await run(
       'INSERT INTO workout_sessions (user_id, workout_date, workout_day, notes, duration_minutes) VALUES (?, ?, ?, ?, ?)',
@@ -218,7 +274,7 @@ export async function updateSession(sessionId: number, data: CreateWorkoutSessio
   if (!s) throw new Error('Session not found');
 
   await run(
-    'UPDATE workout_sessions SET workout_date = ?, workout_day = ?, notes = ?, duration_minutes = ? WHERE id = ?',
+    'UPDATE workout_sessions SET workout_date = ?, workout_day = ?, notes = ?, duration_minutes = ?, dirty = 1 WHERE id = ?',
     [data.date, data.workout_day, data.notes ?? null, data.duration_minutes ?? null, sessionId],
   );
 
@@ -259,6 +315,7 @@ export async function deleteSession(sessionId: number): Promise<void> {
     U,
   ]);
   if (!s) return;
+  await logDeletionIfSynced('workout_sessions', sessionId);
   const exRows = await all<{ id: number }>('SELECT id FROM session_exercises WHERE session_id = ?', [
     sessionId,
   ]);
