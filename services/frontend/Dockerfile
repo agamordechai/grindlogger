@@ -25,8 +25,8 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build the app
-RUN npm run build
+# Build the multi-user website (VITE_TARGET=web via --mode web; the native app is built with `npm run build`)
+RUN npm run build:web
 
 # Production stage
 FROM nginx:alpine

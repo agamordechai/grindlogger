@@ -64,6 +64,27 @@ class UserTable(SQLModel, table=True):
     # Workout cycle configuration
     cycle_length: int = Field(default=7, ge=1, le=26)
 
+    # Display preferences (synced between app and web)
+    units: str | None = Field(default=None, max_length=10)  # "metric" | "imperial"; None until chosen
+    profile_updated_at: dt.datetime | None = Field(default=None)  # None until the profile is first edited
+
+    # Email verification / credential changes
+    email_verified: bool = Field(default=False)
+    password_changed_at: dt.datetime | None = Field(default=None)
+
+
+class EmailTokenTable(SQLModel, table=True):
+    """Single-use email token (address verification or password reset). Only the hash is stored."""
+
+    __tablename__ = "email_tokens"
+
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    purpose: str = Field(max_length=20)  # "verify" | "reset"
+    token_hash: str = Field(unique=True, index=True, max_length=64)
+    expires_at: dt.datetime
+    used_at: dt.datetime | None = Field(default=None)
+
 
 class BodyMeasurementTable(SQLModel, table=True):
     """Body measurement entry — tracks weight, body fat %, and tape measurements over time."""

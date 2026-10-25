@@ -1,16 +1,28 @@
-import { defineConfig } from 'vite'
+import { fileURLToPath } from 'node:url'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  // VITE_TARGET=web builds the multi-user website; anything else is the local-first native app.
+  const env = { ...loadEnv(mode, process.cwd(), 'VITE_'), ...process.env }
+  const isWeb = env.VITE_TARGET === 'web'
+
+  return {
+  resolve: {
+    alias: {
+      // The API implementation behind src/api/client.ts (see src/api/contract.ts)
+      '@api-impl': fileURLToPath(new URL(`./src/api/${isWeb ? 'remote' : 'local'}.ts`, import.meta.url)),
+    },
+  },
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
       // The native app manages its own bundle (and OTA updates); do not
-      // auto-register a service worker. The web manifest is still emitted.
-      injectRegister: false,
+      // auto-register a service worker there. The website registers one as before.
+      injectRegister: isWeb ? 'auto' : false,
       devOptions: { enabled: false },
       includeAssets: ['favicon.svg', 'favicon-48.png', 'favicon-192.png', 'favicon-512.png'],
       manifest: {
@@ -90,5 +102,6 @@ export default defineConfig({
       },
     },
   },
+  }
 })
 

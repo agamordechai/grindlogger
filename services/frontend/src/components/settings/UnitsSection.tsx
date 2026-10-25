@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Ruler } from 'lucide-react';
 import { getWeightUnit, setWeightUnit, type WeightUnit } from '../../hooks/useUnits';
+import { useAuth } from '../../contexts/AuthContext';
 
 export function UnitsSection() {
+  const { updateProfile } = useAuth();
   const [unit, setUnit] = useState<WeightUnit>(getWeightUnit);
 
   useEffect(() => {
@@ -14,6 +16,8 @@ export function UnitsSection() {
   const handleChange = (u: WeightUnit) => {
     setWeightUnit(u);
     setUnit(u);
+    // Keep the choice on the account (synced between the app and the website).
+    void updateProfile({ units: u === 'lbs' ? 'imperial' : 'metric' }).catch(() => undefined);
   };
 
   return (

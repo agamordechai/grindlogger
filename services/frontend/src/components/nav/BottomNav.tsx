@@ -1,8 +1,10 @@
 import { NavLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, CalendarDays, Ruler, Bot } from 'lucide-react';
+import { Home, CalendarDays, Ruler, Bot, Shield } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { IS_WEB } from '../../target';
 
-const tabs = [
+const BASE_TABS = [
   { to: '/', label: 'Home', icon: Home },
   { to: '/history', label: 'History', icon: CalendarDays },
   { to: '/measurements', label: 'Body', icon: Ruler },
@@ -10,6 +12,9 @@ const tabs = [
 ];
 
 export function BottomNav() {
+  const { user } = useAuth();
+  const tabs = IS_WEB && user?.role === 'admin' ? [...BASE_TABS, { to: '/admin', label: 'Admin', icon: Shield }] : BASE_TABS;
+
   return (
     <nav className="lg:hidden fixed bottom-0 inset-x-0 z-50 border-t border-border bg-background/80 backdrop-blur-xl h-16 safe-area-bottom">
       <div className="flex items-center justify-around h-full px-4">

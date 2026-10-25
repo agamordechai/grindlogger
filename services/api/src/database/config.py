@@ -154,6 +154,14 @@ class AppSettings(BaseSettings):
     reddit_client_id: str = Field(default="", description="Reddit OAuth App Client ID")
     reddit_client_secret: str = Field(default="", description="Reddit OAuth App Secret")
 
+    # Outgoing email (Gmail SMTP with an app password)
+    smtp_host: str = Field(default="smtp.gmail.com", description="SMTP server host")
+    smtp_port: int = Field(default=587, description="SMTP server port (STARTTLS)")
+    smtp_user: str = Field(default="", description="SMTP username (the Gmail address)")
+    smtp_password: str = Field(default="", description="SMTP password (a Gmail app password)")
+    smtp_from: str = Field(default="", description="From address; defaults to smtp_user")
+    public_url: str = Field(default="http://localhost:3000", description="Public site URL used in emailed links")
+
     # Auto-admin configuration
     admin_emails: str = Field(
         default="", description="Comma-separated list of emails that should be auto-promoted to admin on login"

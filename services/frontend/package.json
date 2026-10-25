@@ -6,7 +6,10 @@
     "scripts": {
         "dev": "vite",
         "build": "tsc -b && vite build",
+        "build:web": "tsc -b && tsc -p tsconfig.web.json && vite build --mode web",
+        "dev:web": "vite --mode web",
         "preview": "vite preview",
+        "test": "vitest run",
         "lint": "eslint .",
         "ios:add": "npx cap add ios",
         "ios:sync": "npm run build && npx cap sync ios",
@@ -41,8 +44,10 @@
     },
     "devDependencies": {
         "@tailwindcss/postcss": "^4.2.0",
+        "@types/node": "^20.19.43",
         "@types/react": "^18.3.3",
         "@types/react-dom": "^18.3.0",
+        "@types/sql.js": "^1.4.11",
         "@typescript-eslint/eslint-plugin": "^8.56.0",
         "@typescript-eslint/parser": "^8.56.0",
         "@vitejs/plugin-react": "^5.1.4",
@@ -55,6 +60,7 @@
         "tailwindcss": "^4.1.18",
         "typescript": "^5.5.3",
         "vite": "^5.4.2",
-        "vite-plugin-pwa": "^1.2.0"
+        "vite-plugin-pwa": "^1.2.0",
+        "vitest": "^2.1.9"
     }
 }

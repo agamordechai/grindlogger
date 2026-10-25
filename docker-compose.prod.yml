@@ -23,6 +23,10 @@ services:
       - APP_LOG_LEVEL=WARNING
       - APP_CORS_ORIGINS=https://${DOMAIN_NAME:-localhost}
       - APP_ADMIN_EMAILS=${ADMIN_EMAILS:-}
+      - APP_SMTP_USER=${SMTP_USER:-}
+      - APP_SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - APP_SMTP_FROM=${SMTP_FROM:-}
+      - APP_PUBLIC_URL=https://${DOMAIN_NAME:-localhost}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-workout}:${POSTGRES_PASSWORD:-workout123}@db:5432/${POSTGRES_DB:-workout_tracker}
       - API_HOST=0.0.0.0
       - API_PORT=8000

@@ -1,7 +1,8 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Flame, Home, CalendarDays, Ruler, Bot, Settings } from 'lucide-react';
+import { Flame, Home, CalendarDays, Ruler, Bot, Settings, Shield, LogOut } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { IS_WEB } from '../../target';
 import { useState, useRef, useEffect } from 'react';
 import { RestTimerButton } from '../timer/RestTimerButton';
 
@@ -13,7 +14,7 @@ const BASE_NAV_ITEMS = [
 ];
 
 export function TopBar() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -30,7 +31,8 @@ export function TopBar() {
     }
   }, [menuOpen]);
 
-  const navItems = BASE_NAV_ITEMS;
+  const navItems =
+    IS_WEB && user?.role === 'admin' ? [...BASE_NAV_ITEMS, { to: '/admin', label: 'Admin', icon: Shield }] : BASE_NAV_ITEMS;
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
@@ -120,6 +122,17 @@ export function TopBar() {
                     </button>
                   </div>
 
+                  {IS_WEB && (
+                    <div className="border-t border-border py-1">
+                      <button
+                        onClick={() => { logout(); setMenuOpen(false); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-danger hover:bg-surface-2 transition-colors"
+                      >
+                        <LogOut size={16} />
+                        Sign out
+                      </button>
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>

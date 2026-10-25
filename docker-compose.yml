@@ -87,6 +87,12 @@ services:
       # Auto-admin emails (comma-separated)
       - APP_ADMIN_EMAILS=${ADMIN_EMAILS:-}
 
+      # Outgoing email (Gmail SMTP with an app password) and the site URL used in emailed links
+      - APP_SMTP_USER=${SMTP_USER:-}
+      - APP_SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - APP_SMTP_FROM=${SMTP_FROM:-}
+      - APP_PUBLIC_URL=${PUBLIC_URL:-http://localhost:3000}
+
       # Python configuration
       - PYTHONUNBUFFERED=1
 

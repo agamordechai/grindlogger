@@ -7,7 +7,7 @@ after verifying the Google token.
 import os
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Annotated
+from typing import Annotated, Literal
 
 import bcrypt
 import httpx
@@ -105,6 +105,25 @@ class RefreshRequest(BaseModel):
     """Token refresh request model."""
 
     refresh_token: str = Field(..., description="Refresh token")
+
+
+class TokenRequest(BaseModel):
+    """Request carrying a single-use email token."""
+
+    token: str = Field(..., min_length=10, max_length=200)
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Start a password reset for an email address."""
+
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    """Finish a password reset."""
+
+    token: str = Field(..., min_length=10, max_length=200)
+    password: str = Field(..., min_length=8, max_length=128, description="New password (min 8 characters)")
 
 
 class RegisterRequest(BaseModel):
@@ -205,7 +224,8 @@ class UpdateProfileRequest(BaseModel):
     """Profile update request model."""
 
     name: str | None = Field(None, min_length=1, max_length=255, description="Display name")
-    cycle_length: int | None = Field(None, ge=1, le=14, description="Workout cycle length in days (1-14)")
+    cycle_length: int | None = Field(None, ge=1, le=26, description="Workout cycle length in days (1-26)")
+    units: Literal["metric", "imperial"] | None = Field(None, description="Preferred measurement units")
 
 
 class UserResponse(BaseModel):
@@ -217,6 +237,9 @@ class UserResponse(BaseModel):
     picture_url: str | None = None
     role: str
     cycle_length: int = 7
+    units: str | None = None
+    profile_updated_at: datetime | None = None
+    email_verified: bool = True
 
 
 class AdminUserResponse(BaseModel):
@@ -504,7 +527,7 @@ def create_refresh_token(user_id: int, secret_key: str = SECRET_KEY) -> str:
         Encoded JWT refresh token string
     """
     expire = datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
-    to_encode = {"sub": str(user_id), "type": "refresh", "exp": expire}
+    to_encode = {"sub": str(user_id), "type": "refresh", "exp": expire, "iat": int(datetime.now(UTC).timestamp())}
     return jwt.encode(to_encode, secret_key, algorithm=ALGORITHM)
 
 

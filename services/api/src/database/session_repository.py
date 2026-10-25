@@ -357,6 +357,20 @@ class WorkoutSessionRepository:
         self.session.commit()
         return True
 
+    def list_session_index(self, user_id: int) -> list[tuple[int, date, str, dt.datetime]]:
+        """All of a user's sessions as (id, date, workout_day, updated_at), newest first (used by sync)."""
+        rows = self.session.exec(
+            select(
+                WorkoutSessionTable.id,
+                WorkoutSessionTable.workout_date,
+                WorkoutSessionTable.workout_day,
+                WorkoutSessionTable.updated_at,
+            )
+            .where(WorkoutSessionTable.user_id == user_id)
+            .order_by(WorkoutSessionTable.workout_date.desc(), WorkoutSessionTable.id.desc())
+        ).all()
+        return [(r.id, r.workout_date, r.workout_day, r.updated_at) for r in rows]
+
     def list_sessions_by_month(self, user_id: int, year: int, month: int) -> list[WorkoutSessionSummary]:
         """List session summaries for a calendar month."""
         start = date(year, month, 1)

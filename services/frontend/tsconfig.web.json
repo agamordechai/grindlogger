@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@api-impl": ["./src/api/remote.ts"]
+    }
+  },
+  "include": ["src"]
+}

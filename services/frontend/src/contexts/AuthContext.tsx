@@ -1,10 +1,15 @@
 /**
- * Authentication context providing Google Sign-In state management.
+ * Authentication context.
+ *
+ * Website (VITE_TARGET=web): social / email sign-in against the backend, session tokens in localStorage.
+ * Native app: a single local user, no sign-in (see src/target.ts).
  */
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { googleLogin, githubLogin, discordLogin, redditLogin, loginEmail, registerEmail, getCurrentUser, updateProfile as updateProfileApi, deleteAccount as deleteAccountApi } from '../api/client';
-import type { User } from '../types/auth';
+import type { User, ProfileUpdate } from '../types/auth';
+import { getWeightUnit, setWeightUnit } from '../hooks/useUnits';
+import { IS_WEB } from '../target';
 
 interface AuthContextType {
   user: User | null;
@@ -17,7 +22,7 @@ interface AuthContextType {
   loginWithEmail: (email: string, password: string) => Promise<void>;
   register: (email: string, name: string, password: string) => Promise<void>;
   logout: () => void;
-  updateProfile: (data: { name?: string; cycle_length?: number }) => Promise<void>;
+  updateProfile: (data: ProfileUpdate) => Promise<void>;
   deleteAccount: () => Promise<void>;
 }
 
@@ -33,14 +38,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-  // On mount, load the single local user. This is an offline, on-device app:
-  // there is exactly one user and no remote authentication.
+  // Native app: load the single local user (offline, no authentication).
+  // Website: validate the stored session token, if any.
   useEffect(() => {
+    if (IS_WEB && !localStorage.getItem('access_token')) {
+      setLoading(false);
+      return;
+    }
+
     getCurrentUser()
       .then(setUser)
-      .catch(() => setUser(null))
+      .catch(() => {
+        if (IS_WEB) {
+          // Token is invalid or expired, clear it
+          logout();
+        } else {
+          setUser(null);
+        }
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [logout]);
 
   const storeTokensAndLoadUser = useCallback(async (tokens: { access_token: string; refresh_token: string | null }) => {
     localStorage.setItem('access_token', tokens.access_token);
@@ -81,18 +98,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await storeTokensAndLoadUser(tokens);
   }, [storeTokensAndLoadUser]);
 
-  const updateProfile = useCallback(async (data: { name?: string; cycle_length?: number }) => {
+  const updateProfile = useCallback(async (data: ProfileUpdate) => {
     const updatedUser = await updateProfileApi(data);
     setUser(updatedUser);
   }, []);
 
+  // The account's unit preference wins over this browser's / device's last choice.
+  useEffect(() => {
+    if (!user?.units) return;
+    const wanted = user.units === 'imperial' ? 'lbs' : 'kg';
+    if (getWeightUnit() !== wanted) setWeightUnit(wanted);
+  }, [user?.units]);
+
+  // The sync engine changed the local profile (native app): reload it.
+  useEffect(() => {
+    if (IS_WEB) return;
+    const reload = () => void getCurrentUser().then(setUser).catch(() => undefined);
+    window.addEventListener('profile-synced', reload);
+    return () => window.removeEventListener('profile-synced', reload);
+  }, []);
+
   const deleteAccount = useCallback(async () => {
+    await deleteAccountApi();
+    if (IS_WEB) {
+      logout();
+      return;
+    }
     // On-device "reset": wipe all local data, then reload the fresh local user
     // (there is always a single local user — we never sign out to a login screen).
-    await deleteAccountApi();
     const refreshed = await getCurrentUser();
     setUser(refreshed);
-  }, []);
+  }, [logout]);
 
   return (
     <AuthContext.Provider

@@ -4,10 +4,12 @@
  * design rationale (full-list-diff avoids needing server-side tombstones or a
  * `?since=` API; conflicts resolve last-write-wins by updated_at).
  *
- * Scope (v1): exercise archive/reorder/superset state stays local-only —
- * only the core editable fields (name/sets/reps/weight/workout_day/notes/
- * per_side) sync, matching what PATCH /exercises/{id} actually accepts.
- * Conversations and the user profile are not synced.
+ * Synced: exercises (including archived state, order and supersets), workout
+ * sessions, body measurements, and the profile (name, cycle length, units).
+ * Not synced: AI coach conversations and the on-device AI key.
+ *
+ * Connecting for the first time goes through firstConnect.ts, which links
+ * existing rows before the first round so nothing is duplicated.
  */
 
 import { all, one, run } from '../db/database';
@@ -17,11 +19,10 @@ import { apiGet, apiSend, apiDelete, is404, setAccessToken } from './client';
 import { getSyncConfig, setLastSyncedAt } from './tokenStore';
 
 const U = LOCAL_USER_ID;
-const SESSION_LOOKBACK_MONTHS = 24;
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-interface RemoteExercise {
+export interface RemoteExercise {
   id: number;
   name: string;
   sets: number;
@@ -62,7 +63,21 @@ interface RemoteSession {
   exercises: RemoteSessionExercise[];
 }
 
-interface RemoteMeasurement {
+export interface RemoteSessionIndexItem {
+  id: number;
+  date: string;
+  workout_day: string;
+  updated_at: string;
+}
+
+export interface RemoteProfile {
+  name: string;
+  cycle_length: number;
+  units: 'metric' | 'imperial' | null;
+  profile_updated_at: string | null;
+}
+
+export interface RemoteMeasurement {
   id: number;
   date: string;
   weight_kg: number | null;
@@ -86,7 +101,24 @@ interface RemoteMeasurement {
 
 async function pushExercises(serverUrl: string): Promise<void> {
   const dirty = await all<any>('SELECT * FROM exercises WHERE user_id = ? AND dirty = 1', [U]);
+  if (dirty.length === 0) return;
+
+  // Superset groups created (or fully rewritten) on this device have only dirty members, so the server has
+  // never seen their id. Group ids are allocated by the server, so these are recreated through
+  // POST /exercises/superset once all members exist remotely (pass 2). A group with a clean member keeps the
+  // id it was pulled with and is pushed as-is.
+  const pendingGroups = new Map<number, number[]>(); // local group id -> local exercise ids
+  const groupIds = new Set(dirty.filter((r) => r.superset_group != null).map((r) => r.superset_group as number));
+  for (const g of groupIds) {
+    const members = await all<{ id: number; dirty: number }>(
+      'SELECT id, dirty FROM exercises WHERE user_id = ? AND superset_group = ?',
+      [U, g],
+    );
+    if (members.every((m) => m.dirty === 1)) pendingGroups.set(g, members.map((m) => m.id));
+  }
+
   for (const row of dirty) {
+    const inPendingGroup = row.superset_group != null && pendingGroups.has(row.superset_group);
     const body = {
       name: row.name,
       sets: row.sets,
@@ -95,30 +127,51 @@ async function pushExercises(serverUrl: string): Promise<void> {
       workout_day: row.workout_day,
       notes: row.notes,
       per_side: !!row.per_side,
+      archived: !!row.archived,
+      sort_order: row.sort_order,
+      superset_group: inPendingGroup ? null : row.superset_group,
     };
-    try {
-      if (row.remote_id == null) {
-        const created = await apiSend<RemoteExercise>(serverUrl, 'POST', '/exercises', body);
-        await run('UPDATE exercises SET remote_id = ?, remote_updated_at = ?, dirty = 0 WHERE id = ?', [
-          created.id,
-          created.updated_at,
-          row.id,
-        ]);
-      } else {
-        const updated = await apiSend<RemoteExercise>(serverUrl, 'PATCH', `/exercises/${row.remote_id}`, body);
-        await run('UPDATE exercises SET remote_updated_at = ?, dirty = 0 WHERE id = ?', [
-          updated.updated_at,
-          row.id,
-        ]);
+    // Rows in a pending group stay dirty until pass 2 has regrouped them.
+    const settledDirty = inPendingGroup ? 1 : 0;
+    const store = async (r: RemoteExercise) =>
+      run('UPDATE exercises SET remote_id = ?, remote_updated_at = ?, dirty = ? WHERE id = ?', [
+        r.id,
+        r.updated_at,
+        settledDirty,
+        row.id,
+      ]);
+
+    if (row.remote_id != null) {
+      try {
+        // auto_log=false: a sync push must not make the server log a workout session for the edit.
+        await store(await apiSend<RemoteExercise>(serverUrl, 'PATCH', `/exercises/${row.remote_id}?auto_log=false`, body));
+        continue;
+      } catch (e) {
+        if (!is404(e)) throw e;
+        // Deleted on the server while edited here: keep the edit and recreate the row.
       }
-    } catch (e) {
-      if (is404(e)) {
-        await run('UPDATE exercises SET remote_id = NULL, remote_updated_at = NULL, dirty = 0 WHERE id = ?', [
-          row.id,
-        ]);
-      } else {
-        throw e;
-      }
+    }
+    await store(await apiSend<RemoteExercise>(serverUrl, 'POST', '/exercises', body));
+  }
+
+  for (const [, localIds] of pendingGroups) {
+    const placeholders = localIds.map(() => '?').join(', ');
+    const members = await all<{ id: number; remote_id: number | null }>(
+      `SELECT id, remote_id FROM exercises WHERE id IN (${placeholders})`,
+      localIds,
+    );
+    const remoteIds = members.map((m) => m.remote_id).filter((id): id is number => id != null);
+    if (remoteIds.length >= 2 && remoteIds.length === members.length) {
+      const created = await apiSend<{ superset_group: number }>(serverUrl, 'POST', '/exercises/superset', {
+        exercise_ids: remoteIds,
+      });
+      await run(`UPDATE exercises SET superset_group = ?, dirty = 0 WHERE id IN (${placeholders})`, [
+        created.superset_group,
+        ...localIds,
+      ]);
+    } else {
+      // A group of fewer than two exercises is not a superset.
+      await run(`UPDATE exercises SET superset_group = NULL, dirty = 0 WHERE id IN (${placeholders})`, localIds);
     }
   }
 }
@@ -244,6 +297,40 @@ async function pushMeasurements(serverUrl: string): Promise<void> {
   }
 }
 
+async function pushProfile(serverUrl: string): Promise<void> {
+  const row = await one<{ name: string; cycle_length: number; units: string | null; profile_dirty: number }>(
+    'SELECT name, cycle_length, units, profile_dirty FROM users WHERE id = ?',
+    [U],
+  );
+  if (!row || row.profile_dirty !== 1) return;
+
+  const body: Record<string, unknown> = { name: row.name, cycle_length: row.cycle_length };
+  if (row.units === 'metric' || row.units === 'imperial') body.units = row.units;
+  const me = await apiSend<RemoteProfile>(serverUrl, 'PATCH', '/auth/me', body);
+  await run('UPDATE users SET profile_dirty = 0, profile_remote_updated_at = ? WHERE id = ?', [
+    me.profile_updated_at,
+    U,
+  ]);
+}
+
+/** Take the server's profile unless this device has unsent profile edits. Returns true if it changed. */
+async function pullProfile(serverUrl: string): Promise<boolean> {
+  const me = await apiGet<RemoteProfile>(serverUrl, '/auth/me');
+  const row = await one<{ profile_dirty: number; profile_remote_updated_at: string | null; units: string | null }>(
+    'SELECT profile_dirty, profile_remote_updated_at, units FROM users WHERE id = ?',
+    [U],
+  );
+  if (!row || row.profile_dirty === 1 || row.profile_remote_updated_at === me.profile_updated_at) return false;
+
+  // The account has no unit preference yet but this device does: keep it and send it up on the next round.
+  const unitsToPush = me.units == null && row.units != null;
+  await run(
+    'UPDATE users SET name = ?, cycle_length = ?, units = ?, profile_remote_updated_at = ?, profile_dirty = ? WHERE id = ?',
+    [me.name, me.cycle_length, me.units ?? row.units, me.profile_updated_at, unitsToPush ? 1 : 0, U],
+  );
+  return true;
+}
+
 async function pushDeletions(serverUrl: string): Promise<void> {
   const pending = await all<{ table_name: string; remote_id: number }>('SELECT * FROM sync_deletions', []);
   const endpointFor: Record<string, string> = {
@@ -261,13 +348,13 @@ async function pushDeletions(serverUrl: string): Promise<void> {
 
 // ---------- pull ----------
 
-async function fetchAllRemoteExercises(serverUrl: string): Promise<RemoteExercise[]> {
+export async function fetchAllRemoteExercises(serverUrl: string): Promise<RemoteExercise[]> {
   const items: RemoteExercise[] = [];
   let page = 1;
   for (;;) {
     const resp = await apiGet<{ items: RemoteExercise[]; total: number }>(
       serverUrl,
-      `/exercises?page=${page}&page_size=200`,
+      `/exercises?page=${page}&page_size=200&include_archived=true`,
     );
     items.push(...resp.items);
     if (items.length >= resp.total || resp.items.length === 0) break;
@@ -290,7 +377,7 @@ async function pullExercises(serverUrl: string): Promise<void> {
     if (!local) {
       await run(
         `INSERT INTO exercises (name, sets, reps, weight, workout_day, notes, user_id, archived, sort_order, superset_group, per_side, remote_id, remote_updated_at, dirty)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, 0)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
         [
           remote.name,
           remote.sets,
@@ -299,6 +386,7 @@ async function pullExercises(serverUrl: string): Promise<void> {
           remote.workout_day,
           remote.notes,
           U,
+          remote.archived ? 1 : 0,
           remote.sort_order,
           remote.superset_group,
           remote.per_side ? 1 : 0,
@@ -307,10 +395,22 @@ async function pullExercises(serverUrl: string): Promise<void> {
         ],
       );
     } else if (local.dirty === 0 && local.remote_updated_at !== remote.updated_at) {
-      // Only the core PATCH-able fields — archive/reorder/superset state stays local-only (v1 scope).
       await run(
-        `UPDATE exercises SET name = ?, sets = ?, reps = ?, weight = ?, workout_day = ?, notes = ?, per_side = ?, remote_updated_at = ?, dirty = 0 WHERE id = ?`,
-        [remote.name, remote.sets, remote.reps, remote.weight, remote.workout_day, remote.notes, remote.per_side ? 1 : 0, remote.updated_at, local.id],
+        `UPDATE exercises SET name = ?, sets = ?, reps = ?, weight = ?, workout_day = ?, notes = ?, per_side = ?, archived = ?, sort_order = ?, superset_group = ?, remote_updated_at = ?, dirty = 0 WHERE id = ?`,
+        [
+          remote.name,
+          remote.sets,
+          remote.reps,
+          remote.weight,
+          remote.workout_day,
+          remote.notes,
+          remote.per_side ? 1 : 0,
+          remote.archived ? 1 : 0,
+          remote.sort_order,
+          remote.superset_group,
+          remote.updated_at,
+          local.id,
+        ],
       );
     }
   }
@@ -322,18 +422,8 @@ async function pullExercises(serverUrl: string): Promise<void> {
   }
 }
 
-async function fetchRemoteSessionSummaries(serverUrl: string): Promise<{ id: number }[]> {
-  const out: { id: number }[] = [];
-  const now = new Date();
-  for (let i = 0; i < SESSION_LOOKBACK_MONTHS; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const items = await apiGet<{ id: number }[]>(
-      serverUrl,
-      `/sessions/calendar?year=${d.getFullYear()}&month=${d.getMonth() + 1}`,
-    );
-    out.push(...items);
-  }
-  return out;
+export function fetchRemoteSessionIndex(serverUrl: string): Promise<RemoteSessionIndexItem[]> {
+  return apiGet<RemoteSessionIndexItem[]>(serverUrl, '/sessions/index');
 }
 
 async function insertLocalSessionFromRemote(full: RemoteSession): Promise<void> {
@@ -380,26 +470,23 @@ async function deleteLocalSessionCascade(localId: number): Promise<void> {
 }
 
 async function pullSessions(serverUrl: string): Promise<void> {
-  const summaries = await fetchRemoteSessionSummaries(serverUrl);
+  const index = await fetchRemoteSessionIndex(serverUrl);
   const localRows = await all<{ id: number; remote_id: number | null; dirty: number; remote_updated_at: string | null }>(
     'SELECT id, remote_id, dirty, remote_updated_at FROM workout_sessions WHERE user_id = ?',
     [U],
   );
   const localByRemoteId = new Map(localRows.filter((r) => r.remote_id != null).map((r) => [r.remote_id as number, r]));
-  const remoteIds = new Set(summaries.map((s) => s.id));
+  const remoteIds = new Set(index.map((s) => s.id));
 
-  // The calendar summary doesn't carry updated_at, so we fetch full detail for
-  // every remote session to decide. Acceptable at personal-fitness-log scale.
-  for (const summary of summaries) {
-    const local = localByRemoteId.get(summary.id);
+  // The index carries updated_at, so full detail is fetched only for sessions that are new or changed.
+  for (const item of index) {
+    const local = localByRemoteId.get(item.id);
     if (!local) {
-      const full = await apiGet<RemoteSession>(serverUrl, `/sessions/${summary.id}`);
+      const full = await apiGet<RemoteSession>(serverUrl, `/sessions/${item.id}`);
       await insertLocalSessionFromRemote(full);
-    } else if (local.dirty === 0) {
-      const full = await apiGet<RemoteSession>(serverUrl, `/sessions/${summary.id}`);
-      if (local.remote_updated_at !== full.updated_at) {
-        await overwriteLocalSessionFromRemote(local.id, full);
-      }
+    } else if (local.dirty === 0 && local.remote_updated_at !== item.updated_at) {
+      const full = await apiGet<RemoteSession>(serverUrl, `/sessions/${item.id}`);
+      await overwriteLocalSessionFromRemote(local.id, full);
     }
   }
 
@@ -410,8 +497,12 @@ async function pullSessions(serverUrl: string): Promise<void> {
   }
 }
 
+export function fetchRemoteMeasurements(serverUrl: string): Promise<RemoteMeasurement[]> {
+  return apiGet<RemoteMeasurement[]>(serverUrl, '/measurements');
+}
+
 async function pullMeasurements(serverUrl: string): Promise<void> {
-  const remoteItems = await apiGet<RemoteMeasurement[]>(serverUrl, '/measurements');
+  const remoteItems = await fetchRemoteMeasurements(serverUrl);
   const localRows = await all<{ id: number; remote_id: number | null; dirty: number; remote_updated_at: string | null }>(
     'SELECT id, remote_id, dirty, remote_updated_at FROM body_measurements WHERE user_id = ?',
     [U],
@@ -453,6 +544,13 @@ async function pullMeasurements(serverUrl: string): Promise<void> {
 
 // ---------- orchestration ----------
 
+/** Tell the UI that local data may have changed so open screens can refetch. */
+function notifySynced(profileChanged: boolean): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event('data-synced'));
+  if (profileChanged) window.dispatchEvent(new Event('profile-synced'));
+}
+
 let syncing = false;
 
 export interface SyncResult {
@@ -472,17 +570,20 @@ export async function runSync(): Promise<SyncResult> {
     if (!token) return { ok: false, error: 'not-configured' };
     setAccessToken(token);
 
+    await pushProfile(serverUrl);
     await pushExercises(serverUrl);
     await pushSessions(serverUrl);
     await pushMeasurements(serverUrl);
     await pushDeletions(serverUrl);
 
+    const profileChanged = await pullProfile(serverUrl);
     await pullExercises(serverUrl);
     await pullMeasurements(serverUrl);
     await pullSessions(serverUrl);
 
     const now = new Date().toISOString();
     await setLastSyncedAt(now);
+    notifySynced(profileChanged);
     return { ok: true };
   } catch (e) {
     console.warn('[sync] round failed:', e);

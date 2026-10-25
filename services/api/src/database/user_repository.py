@@ -3,7 +3,15 @@
 from sqlalchemy import func
 from sqlmodel import Session, select
 
-from services.api.src.database.db_models import ExerciseTable, UserTable
+from services.api.src.database.db_models import (
+    BodyMeasurementTable,
+    EmailTokenTable,
+    ExerciseTable,
+    SessionExerciseTable,
+    SetDetailTable,
+    UserTable,
+    WorkoutSessionTable,
+)
 
 
 class UserRepository:
@@ -77,6 +85,7 @@ class UserRepository:
             email=email,
             name=name,
             picture_url=picture_url,
+            email_verified=True,
         )
         self.session.add(user)
         self.session.commit()
@@ -120,6 +129,7 @@ class UserRepository:
             # Link Google credentials to the existing account
             by_email.google_id = google_id
             self.update_profile(by_email, email=email, name=name, picture_url=picture_url)
+            self.mark_oauth_verified(by_email)
             # Auto-promote to admin if in admin_emails list
             if admin_emails and email.lower() in admin_emails and by_email.role != "admin":
                 by_email.role = "admin"
@@ -162,13 +172,14 @@ class UserRepository:
         if by_email:
             by_email.github_id = github_id
             self.update_profile(by_email, name=name, picture_url=picture_url)
+            self.mark_oauth_verified(by_email)
             if admin_emails and email.lower() in admin_emails and by_email.role != "admin":
                 by_email.role = "admin"
                 self.session.add(by_email)
                 self.session.commit()
             return by_email, False
 
-        user = UserTable(github_id=github_id, email=email, name=name, picture_url=picture_url)
+        user = UserTable(github_id=github_id, email=email, name=name, picture_url=picture_url, email_verified=True)
         self.session.add(user)
         self.session.commit()
         self.session.refresh(user)
@@ -200,13 +211,14 @@ class UserRepository:
         if by_email:
             by_email.discord_id = discord_id
             self.update_profile(by_email, name=name, picture_url=picture_url)
+            self.mark_oauth_verified(by_email)
             if admin_emails and email.lower() in admin_emails and by_email.role != "admin":
                 by_email.role = "admin"
                 self.session.add(by_email)
                 self.session.commit()
             return by_email, False
 
-        user = UserTable(discord_id=discord_id, email=email, name=name, picture_url=picture_url)
+        user = UserTable(discord_id=discord_id, email=email, name=name, picture_url=picture_url, email_verified=True)
         self.session.add(user)
         self.session.commit()
         self.session.refresh(user)
@@ -235,7 +247,7 @@ class UserRepository:
             return existing, False
 
         # Reddit emails are synthetic placeholders — don't link by email
-        user = UserTable(reddit_id=reddit_id, email=email, name=name, picture_url=picture_url)
+        user = UserTable(reddit_id=reddit_id, email=email, name=name, picture_url=picture_url, email_verified=True)
         self.session.add(user)
         self.session.commit()
         self.session.refresh(user)
@@ -244,6 +256,19 @@ class UserRepository:
             self.session.add(user)
             self.session.commit()
         return user, True
+
+    def mark_oauth_verified(self, user: UserTable) -> None:
+        """Record that a provider vouched for this account's email.
+
+        If the account was created with an unverified email/password, the password is cleared:
+        whoever registered it never proved they own the address (pre-registration takeover).
+        """
+        if not user.email_verified and user.password_hash is not None:
+            user.password_hash = None
+        user.email_verified = True
+        self.session.add(user)
+        self.session.commit()
+        self.session.refresh(user)
 
     def get_by_email(self, email: str) -> UserTable | None:
         """Find a user by email address (case-insensitive).
@@ -345,10 +370,31 @@ class UserRepository:
         if not user:
             return False
 
-        # Delete all exercises belonging to this user
-        exercises = self.session.exec(select(ExerciseTable).where(ExerciseTable.user_id == user_id)).all()
-        for exercise in exercises:
-            self.session.delete(exercise)
+        # Delete everything the user owns, children first (sets -> session exercises -> sessions)
+        session_ids = self.session.exec(
+            select(WorkoutSessionTable.id).where(WorkoutSessionTable.user_id == user_id)
+        ).all()
+        if session_ids:
+            session_exercise_ids = self.session.exec(
+                select(SessionExerciseTable.id).where(SessionExerciseTable.session_id.in_(session_ids))  # type: ignore[attr-defined]
+            ).all()
+            if session_exercise_ids:
+                for row in self.session.exec(
+                    select(SetDetailTable).where(SetDetailTable.session_exercise_id.in_(session_exercise_ids))  # type: ignore[attr-defined]
+                ).all():
+                    self.session.delete(row)
+            for row in self.session.exec(
+                select(SessionExerciseTable).where(SessionExerciseTable.session_id.in_(session_ids))  # type: ignore[attr-defined]
+            ).all():
+                self.session.delete(row)
+            for row in self.session.exec(
+                select(WorkoutSessionTable).where(WorkoutSessionTable.user_id == user_id)
+            ).all():
+                self.session.delete(row)
+        for model in (BodyMeasurementTable, EmailTokenTable, ExerciseTable):
+            for row in self.session.exec(select(model).where(model.user_id == user_id)).all():  # type: ignore[attr-defined]
+                self.session.delete(row)
+        self.session.flush()
 
         self.session.delete(user)
         self.session.commit()

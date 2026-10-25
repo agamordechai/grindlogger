@@ -4,6 +4,7 @@ import { Flame } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { validateEmail } from '../../utils/emailValidation';
 import axios from 'axios';
+import ForgotPasswordPage from './ForgotPasswordPage';
 
 declare global {
   interface Window {
@@ -117,6 +118,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
   const googleButtonRef = useRef<HTMLDivElement>(null);
   const loginRef = useRef(login);
 
@@ -203,6 +205,8 @@ export default function LoginPage() {
     }
   };
 
+  if (showForgot) return <ForgotPasswordPage onBack={() => setShowForgot(false)} />;
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center relative overflow-hidden px-4">
       {/* Shard / hazard hero background */}
@@ -287,6 +291,13 @@ export default function LoginPage() {
                 ? (isRegister ? 'Creating account...' : 'Signing in...')
                 : (isRegister ? 'Create account' : 'Sign in')}
             </button>
+            {!isRegister && (
+              <p className="text-center text-xs">
+                <button type="button" onClick={() => setShowForgot(true)} className="text-steel hover:text-ember hover:underline">
+                  Forgot password?
+                </button>
+              </p>
+            )}
           </form>
 
           {/* Toggle */}
