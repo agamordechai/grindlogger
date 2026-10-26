@@ -89,6 +89,11 @@ async function runMigrations(conn: SQLiteDBConnection): Promise<void> {
   await ensureColumn(conn, 'users', 'sync_server_url', 'TEXT');
   await ensureColumn(conn, 'users', 'sync_refresh_token', 'TEXT');
   await ensureColumn(conn, 'users', 'sync_last_synced_at', 'TEXT');
+  // Profile sync (name / cycle length / units). `units` stays NULL until the user picks one, so an
+  // untouched profile never overwrites the account's preference; profile_dirty marks local edits.
+  await ensureColumn(conn, 'users', 'units', 'TEXT');
+  await ensureColumn(conn, 'users', 'profile_dirty', 'INTEGER NOT NULL DEFAULT 0');
+  await ensureColumn(conn, 'users', 'profile_remote_updated_at', 'TEXT');
   for (const table of ['exercises', 'workout_sessions', 'body_measurements']) {
     await ensureColumn(conn, table, 'remote_id', 'INTEGER');
     await ensureColumn(conn, table, 'remote_updated_at', 'TEXT');

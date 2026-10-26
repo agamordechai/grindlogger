@@ -1,0 +1,32 @@
+# Home-hosting overrides (self-hosted laptop + Cloudflare Tunnel) — use with:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.home.yml up -d --build
+#
+# - Cloudflare Tunnel replaces the nginx-proxy + Origin Certificate setup:
+#   cloudflared dials out to Cloudflare, so no port forwarding / static IP is needed
+# - Tunnel public hostname should point at http://frontend:80 (its nginx proxies /api and /ai-coach)
+# - Frontend is reachable locally on http://localhost:3000 for sanity checks
+# - Requires CLOUDFLARE_TUNNEL_TOKEN in .env
+
+services:
+  # TLS is terminated by Cloudflare; the AWS-era proxy is only started with --profile aws
+  nginx-proxy:
+    profiles: ["aws"]
+
+  # ai-coach and worker run again: the website cannot call Anthropic from the browser
+  # (the iOS app still uses its on-device coach and key).
+
+  frontend:
+    ports: !override
+      - "127.0.0.1:3000:80"
+
+  cloudflared:
+    image: cloudflare/cloudflared:2025.1.0
+    container_name: grindlogger-cloudflared
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - frontend
+    restart: unless-stopped
+    networks:
+      - grindlogger-net

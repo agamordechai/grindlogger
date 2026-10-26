@@ -45,9 +45,33 @@ export async function setLastSyncedAt(iso: string): Promise<void> {
   await run('UPDATE users SET sync_last_synced_at = ? WHERE id = ?', [iso, U]);
 }
 
+/**
+ * Forget every link between local rows and the server: remote ids and sync state are cleared and all rows
+ * are marked for upload, pending server deletions are dropped. Local data itself is untouched. Connecting
+ * (or reconnecting) always starts from here and re-matches rows against the server, so stale ids from an
+ * earlier connection (another account or server) can never delete or overwrite anything.
+ *
+ * `keepProfile` marks the local profile for upload (used when the local profile should overwrite the
+ * server's); otherwise the server's profile wins on the next sync.
+ */
+export async function resetLinkage(keepProfile = false): Promise<void> {
+  for (const table of ['exercises', 'workout_sessions', 'body_measurements']) {
+    await run(`UPDATE ${table} SET remote_id = NULL, remote_updated_at = NULL, dirty = 1`, []);
+  }
+  await run('DELETE FROM sync_deletions', []);
+  await run(
+    keepProfile
+      ? 'UPDATE users SET profile_remote_updated_at = NULL, profile_dirty = 1 WHERE id = ?'
+      : 'UPDATE users SET profile_remote_updated_at = NULL, profile_dirty = 0 WHERE id = ?',
+    [U],
+  );
+}
+
+/** Disconnect: drop the server + tokens and unlink all rows. The phone keeps all of its data. */
 export async function clearSync(): Promise<void> {
   await run(
     'UPDATE users SET sync_server_url = NULL, sync_refresh_token = NULL, sync_last_synced_at = NULL WHERE id = ?',
     [U],
   );
+  await resetLinkage();
 }

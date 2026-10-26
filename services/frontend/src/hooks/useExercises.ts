@@ -65,9 +65,12 @@ export function useExercises() {
     // Refresh immediately when the AI coach performs actions
     const onCoachAction = () => fetchExercises();
     window.addEventListener('coach-action', onCoachAction);
+    // ...and when a background sync has changed the local data (native app)
+    window.addEventListener('data-synced', onCoachAction);
     return () => {
       clearInterval(interval);
       window.removeEventListener('coach-action', onCoachAction);
+      window.removeEventListener('data-synced', onCoachAction);
     };
   }, [fetchExercises, isAuthenticated]);
 

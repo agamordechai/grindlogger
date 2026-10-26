@@ -15,9 +15,7 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column(
-        "exercises", sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now())
-    )
+    op.add_column("exercises", sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()))
     op.add_column(
         "workout_sessions", sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now())
     )

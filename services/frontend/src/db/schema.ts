@@ -34,6 +34,9 @@ CREATE TABLE IF NOT EXISTS users (
   sync_server_url TEXT,
   sync_refresh_token TEXT,
   sync_last_synced_at TEXT,
+  units TEXT,
+  profile_dirty INTEGER NOT NULL DEFAULT 0,
+  profile_remote_updated_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -127,6 +130,14 @@ CREATE INDEX IF NOT EXISTS ix_measurements_date ON body_measurements(measurement
 -- Records a remote-known row that was hard-deleted locally, so the sync
 -- engine knows to also DELETE it on the server. Populated only when the
 -- deleted row already had a remote_id (rows never synced need no entry).
+-- Pre-connect safety copies of the workout tables (see db/snapshot.ts).
+CREATE TABLE IF NOT EXISTS sync_snapshots (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  taken_at TEXT NOT NULL DEFAULT (datetime('now')),
+  reason TEXT NOT NULL,
+  data TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS sync_deletions (
   table_name TEXT NOT NULL,
   remote_id INTEGER NOT NULL,

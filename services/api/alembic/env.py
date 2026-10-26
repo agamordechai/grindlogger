@@ -37,6 +37,7 @@ config.set_main_option("sqlalchemy.url", database_url)
 # Use the same import path structure as the rest of the application
 from services.api.src.database.db_models import (  # noqa: F401
     BodyMeasurementTable,
+    EmailTokenTable,
     ExerciseTable,
     SetDetailTable,
     UserTable,

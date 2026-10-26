@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, MessageSquarePlus, History, Trash2, X, ChevronLeft, ImagePlus } from 'lucide-react';
 import { chatWithCoach, listConversations, getConversation, saveConversation, deleteConversation } from '../../api/client';
 import { ChatMessage } from './ChatMessage';
+import { IS_WEB } from '../../target';
 import type { ChatMessage as ChatMessageType, ConversationSummary, ActionPerformed } from '../../types/aiCoach';
 
 interface ChatMessageWithActions extends ChatMessageType {
@@ -361,22 +362,27 @@ export function ChatView() {
           </div>
         )}
         <div className="flex gap-2">
-          <input
-            ref={imageInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={handleImageSelect}
-          />
-          <button
-            className="text-steel hover:text-chalk transition-colors self-end px-2 py-2"
-            onClick={() => imageInputRef.current?.click()}
-            disabled={loading || pendingImages.length >= MAX_IMAGES_PER_MESSAGE}
-            aria-label="Attach image"
-          >
-            <ImagePlus size={18} />
-          </button>
+          {/* Image attachments are handled by the on-device coach; the server coach does not accept them yet. */}
+          {!IS_WEB && (
+            <>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleImageSelect}
+              />
+              <button
+                className="text-steel hover:text-chalk transition-colors self-end px-2 py-2"
+                onClick={() => imageInputRef.current?.click()}
+                disabled={loading || pendingImages.length >= MAX_IMAGES_PER_MESSAGE}
+                aria-label="Attach image"
+              >
+                <ImagePlus size={18} />
+              </button>
+            </>
+          )}
           <textarea
             value={input}
             onChange={e => setInput(e.target.value)}

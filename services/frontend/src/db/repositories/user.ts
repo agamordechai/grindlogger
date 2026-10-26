@@ -3,7 +3,7 @@
  * There is exactly one user (LOCAL_USER_ID); "login" is implicit.
  */
 
-import type { User } from '../../types/auth';
+import type { User, ProfileUpdate } from '../../types/auth';
 import { all, one, run, toBool, logDeletionsForUserRows } from '../database';
 import { LOCAL_USER_ID } from '../schema';
 
@@ -16,6 +16,7 @@ interface UserRow {
   picture_url: string | null;
   role: string;
   cycle_length: number;
+  units: string | null;
 }
 
 export async function getCurrentUser(): Promise<User> {
@@ -28,10 +29,11 @@ export async function getCurrentUser(): Promise<User> {
     picture_url: r.picture_url ?? null,
     role: r.role,
     cycle_length: r.cycle_length,
+    units: r.units === 'imperial' || r.units === 'metric' ? r.units : undefined,
   };
 }
 
-export async function updateProfile(data: { name?: string; cycle_length?: number }): Promise<User> {
+export async function updateProfile(data: ProfileUpdate): Promise<User> {
   const sets: string[] = [];
   const vals: unknown[] = [];
   if (data.name !== undefined) {
@@ -42,7 +44,12 @@ export async function updateProfile(data: { name?: string; cycle_length?: number
     sets.push('cycle_length = ?');
     vals.push(Math.max(1, Math.min(26, data.cycle_length)));
   }
+  if (data.units !== undefined) {
+    sets.push('units = ?');
+    vals.push(data.units);
+  }
   if (sets.length) {
+    sets.push('profile_dirty = 1'); // picked up by the next sync
     vals.push(U);
     await run(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`, vals);
   }
@@ -72,10 +79,10 @@ export async function deleteAccount(): Promise<void> {
   ]) {
     await run(`DELETE FROM ${t}`, []);
   }
-  await run('UPDATE users SET name = ?, cycle_length = 7, google_calendar_enabled = 0 WHERE id = ?', [
-    'Me',
-    U,
-  ]);
+  await run(
+    'UPDATE users SET name = ?, cycle_length = 7, google_calendar_enabled = 0, profile_dirty = 1 WHERE id = ?',
+    ['Me', U],
+  );
 }
 
 export { all, toBool };

@@ -56,6 +56,7 @@ class ExerciseRepository:
         page_size: int = 20,
         sort_by: str = "id",
         sort_order: str = "asc",
+        include_archived: bool = False,
     ) -> tuple[list[ExerciseResponse], int]:
         """Retrieve paginated and sorted exercises for a user.
 
@@ -65,23 +66,21 @@ class ExerciseRepository:
             page_size: Number of items per page
             sort_by: Column name to sort by
             sort_order: 'asc' or 'desc'
+            include_archived: Also return archived exercises (used by sync pulls)
 
         Returns:
             Tuple of exercises for the page and total count.
         """
-        total = (
-            self.session.execute(
-                select(func.count())
-                .select_from(ExerciseTable)
-                .where(ExerciseTable.user_id == user_id, ExerciseTable.archived == False)  # noqa: E712
-            ).scalar()
-            or 0
-        )
+        conditions = [ExerciseTable.user_id == user_id]
+        if not include_archived:
+            conditions.append(ExerciseTable.archived == False)  # noqa: E712
+
+        total = self.session.execute(select(func.count()).select_from(ExerciseTable).where(*conditions)).scalar() or 0
 
         if sort_by == "sort_order":
             statement = (
                 select(ExerciseTable)
-                .where(ExerciseTable.user_id == user_id, ExerciseTable.archived == False)  # noqa: E712
+                .where(*conditions)
                 .order_by(ExerciseTable.sort_order.asc(), ExerciseTable.id.asc())
                 .offset((page - 1) * page_size)
                 .limit(page_size)
@@ -90,11 +89,7 @@ class ExerciseRepository:
             column = getattr(ExerciseTable, sort_by)
             order = column.desc() if sort_order == "desc" else column.asc()
             statement = (
-                select(ExerciseTable)
-                .where(ExerciseTable.user_id == user_id, ExerciseTable.archived == False)  # noqa: E712
-                .order_by(order)
-                .offset((page - 1) * page_size)
-                .limit(page_size)
+                select(ExerciseTable).where(*conditions).order_by(order).offset((page - 1) * page_size).limit(page_size)
             )
         results = self.session.exec(statement).all()
         items = [ExerciseResponse.model_validate(ex.model_dump()) for ex in results]
@@ -129,6 +124,10 @@ class ExerciseRepository:
         weight: float | None = None,
         workout_day: str = "A",
         per_side: bool = False,
+        notes: str | None = None,
+        archived: bool = False,
+        sort_order: int = 0,
+        superset_group: int | None = None,
     ) -> ExerciseResponse:
         """Create a new exercise for a user.
 
@@ -151,6 +150,10 @@ class ExerciseRepository:
             workout_day=workout_day,
             user_id=user_id,
             per_side=per_side,
+            notes=notes,
+            archived=archived,
+            sort_order=sort_order,
+            superset_group=superset_group,
         )
         self.session.add(exercise)
         self.session.commit()
@@ -170,6 +173,10 @@ class ExerciseRepository:
         notes: str | None = None,
         update_notes: bool = False,
         per_side: bool | None = None,
+        archived: bool | None = None,
+        sort_order: int | None = None,
+        superset_group: int | None = None,
+        update_superset_group: bool = False,
     ) -> ExerciseResponse | None:
         """Update an existing exercise owned by a user.
 
@@ -208,9 +215,31 @@ class ExerciseRepository:
             exercise.notes = notes
         if per_side is not None:
             exercise.per_side = per_side
+        if archived is not None:
+            exercise.archived = archived
+        if sort_order is not None:
+            exercise.sort_order = sort_order
+        old_group = exercise.superset_group
+        if superset_group is not None or update_superset_group:
+            exercise.superset_group = superset_group
 
         exercise.updated_at = dt.datetime.now(dt.UTC)
         self.session.add(exercise)
+        self.session.flush()
+
+        # Leaving a superset: a group left with a single member is no longer a superset.
+        if old_group is not None and exercise.superset_group != old_group:
+            remaining = self.session.exec(
+                select(ExerciseTable).where(
+                    ExerciseTable.user_id == user_id,
+                    ExerciseTable.superset_group == old_group,
+                )
+            ).all()
+            if len(remaining) == 1:
+                remaining[0].superset_group = None
+                remaining[0].updated_at = dt.datetime.now(dt.UTC)
+                self.session.add(remaining[0])
+
         self.session.commit()
         self.session.refresh(exercise)
         return ExerciseResponse.model_validate(exercise.model_dump())
@@ -273,6 +302,7 @@ class ExerciseRepository:
         if not exercise:
             return False
         exercise.archived = True
+        exercise.updated_at = dt.datetime.now(dt.UTC)
         self.session.add(exercise)
         self.session.commit()
         return True
@@ -314,6 +344,7 @@ class ExerciseRepository:
 
         exercise.workout_day = target_day
         exercise.archived = False
+        exercise.updated_at = dt.datetime.now(dt.UTC)
         self.session.add(exercise)
         self.session.commit()
         self.session.refresh(exercise)
@@ -400,6 +431,7 @@ class ExerciseRepository:
                 if exercise.superset_group is not None:
                     old_groups.add(exercise.superset_group)
                 exercise.superset_group = group_id
+                exercise.updated_at = dt.datetime.now(dt.UTC)
                 self.session.add(exercise)
         self.session.flush()
 
@@ -414,6 +446,7 @@ class ExerciseRepository:
                 ).all()
                 if len(remaining) == 1:
                     remaining[0].superset_group = None
+                    remaining[0].updated_at = dt.datetime.now(dt.UTC)
                     self.session.add(remaining[0])
 
         self.session.commit()
@@ -440,6 +473,7 @@ class ExerciseRepository:
             exercise = self.session.exec(statement).first()
             if exercise:
                 exercise.sort_order = sort_order
+                exercise.updated_at = dt.datetime.now(dt.UTC)
                 self.session.add(exercise)
         self.session.commit()
 

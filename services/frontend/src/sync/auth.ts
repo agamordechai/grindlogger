@@ -1,13 +1,15 @@
 /**
- * Authentication against the (optional, future) redeployed backend.
+ * Authentication against the backend (the website's FastAPI server).
  *
- * One-time login exchanges email/password for a token pair; only the 7-day
- * refresh token is persisted (see tokenStore). Access tokens are short-lived
- * (30 min, services/api/src/auth.py) and are re-minted at the start of every
- * sync round via refreshAccessToken — no login UI ever reappears day to day.
+ * Connecting is two steps so nothing is persisted until the user has confirmed what will happen to their data:
+ *   1. signIn / signUp — exchange credentials for a token pair, returned in memory only.
+ *   2. persistSession — store the server URL + 7-day refresh token (see tokenStore).
+ * After that, access tokens (30 min, services/api/src/auth.py) are re-minted at the start of every sync round
+ * via refreshAccessToken — no login UI ever reappears day to day.
  */
 
 import { getSyncConfig, setServerAndToken, setRefreshToken } from './tokenStore';
+import { errorFromResponse } from './errors';
 
 interface TokenResponse {
   access_token: string;
@@ -16,31 +18,42 @@ interface TokenResponse {
   refresh_token: string;
 }
 
-function normalizeUrl(serverUrl: string): string {
-  return serverUrl.replace(/\/+$/, '');
+/** An authenticated connection that has not been saved yet. */
+export interface SyncSession {
+  serverUrl: string;
+  accessToken: string;
+  refreshToken: string;
 }
 
-async function parseError(res: Response): Promise<string> {
-  try {
-    const body = await res.json();
-    return body?.detail || `${res.status} ${res.statusText}`;
-  } catch {
-    return `${res.status} ${res.statusText}`;
-  }
+export function normalizeUrl(serverUrl: string): string {
+  return serverUrl.trim().replace(/\/+$/, '');
 }
 
-/** One-time login. Stores the server URL + refresh token; returns a fresh access token. */
-export async function login(serverUrl: string, email: string, password: string): Promise<string> {
+async function requestTokens(serverUrl: string, path: string, body: unknown): Promise<SyncSession> {
   const base = normalizeUrl(serverUrl);
-  const res = await fetch(`${base}/auth/login`, {
+  const res = await fetch(`${base}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(await parseError(res));
+  if (!res.ok) throw await errorFromResponse(res);
   const data = (await res.json()) as TokenResponse;
-  await setServerAndToken(base, data.refresh_token);
-  return data.access_token;
+  return { serverUrl: base, accessToken: data.access_token, refreshToken: data.refresh_token };
+}
+
+/** Sign in to an existing account. Nothing is stored. */
+export function signIn(serverUrl: string, email: string, password: string): Promise<SyncSession> {
+  return requestTokens(serverUrl, '/auth/login', { email, password });
+}
+
+/** Create an account (the server emails a verification link) and sign in. Nothing is stored. */
+export function signUp(serverUrl: string, email: string, name: string, password: string): Promise<SyncSession> {
+  return requestTokens(serverUrl, '/auth/register', { email, name, password });
+}
+
+/** Save the connection so background syncs can run. */
+export async function persistSession(session: SyncSession): Promise<void> {
+  await setServerAndToken(session.serverUrl, session.refreshToken);
 }
 
 /**
@@ -58,7 +71,7 @@ export async function refreshAccessToken(): Promise<string | null> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refresh_token: refreshToken }),
   });
-  if (!res.ok) throw new Error(await parseError(res));
+  if (!res.ok) throw await errorFromResponse(res);
   const data = (await res.json()) as TokenResponse;
   await setRefreshToken(data.refresh_token);
   return data.access_token;

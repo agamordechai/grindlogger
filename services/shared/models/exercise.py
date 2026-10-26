@@ -54,10 +54,13 @@ class ExerciseBase(BaseModel):
 class ExerciseCreate(ExerciseBase):
     """Exercise model for creating new exercises.
 
-    Inherits all fields from ExerciseBase without modifications.
+    The optional state fields let a sync client create an exercise that is already
+    archived, ordered or part of a superset.
     """
 
-    pass
+    archived: bool = Field(default=False, description="Create the exercise already archived")
+    sort_order: int = Field(default=0, ge=0, description="User-defined display order")
+    superset_group: int | None = Field(default=None, description="Group ID for superset/circuit grouping")
 
 
 class ExerciseResponse(ExerciseBase):
@@ -105,6 +108,9 @@ class ExerciseEditRequest(BaseModel):
     )
     notes: str | None = Field(default=None, max_length=500, description="Per-exercise notes")
     per_side: bool | None = Field(default=None, description="Whether reps are counted per side")
+    archived: bool | None = Field(default=None, description="Archive or restore the exercise (sync)")
+    sort_order: int | None = Field(default=None, ge=0, description="New display order (sync)")
+    superset_group: int | None = Field(default=None, description="New superset group (sync)")
 
 
 class PaginatedExerciseResponse(BaseModel):

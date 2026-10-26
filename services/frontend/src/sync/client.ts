@@ -5,20 +5,14 @@
  */
 
 import { refreshAccessToken } from './auth';
+import { ApiError, errorFromResponse } from './errors';
+
+export { ApiError } from './errors';
 
 let accessToken: string | null = null;
 
 export function setAccessToken(token: string | null): void {
   accessToken = token;
-}
-
-async function parseError(res: Response): Promise<string> {
-  try {
-    const body = await res.json();
-    return body?.detail || `${res.status} ${res.statusText}`;
-  } catch {
-    return `${res.status} ${res.statusText}`;
-  }
 }
 
 async function request(serverUrl: string, path: string, init: RequestInit = {}): Promise<Response> {
@@ -46,7 +40,7 @@ async function request(serverUrl: string, path: string, init: RequestInit = {}):
 
 export async function apiGet<T>(serverUrl: string, path: string): Promise<T> {
   const res = await request(serverUrl, path, { method: 'GET' });
-  if (!res.ok) throw new Error(await parseError(res));
+  if (!res.ok) throw await errorFromResponse(res);
   return res.json() as Promise<T>;
 }
 
@@ -57,7 +51,7 @@ export async function apiSend<T>(
   body: unknown,
 ): Promise<T> {
   const res = await request(serverUrl, path, { method, body: JSON.stringify(body) });
-  if (!res.ok) throw new Error(await parseError(res));
+  if (!res.ok) throw await errorFromResponse(res);
   return res.json() as Promise<T>;
 }
 
@@ -65,11 +59,11 @@ export async function apiSend<T>(
 export async function apiDelete(serverUrl: string, path: string): Promise<boolean> {
   const res = await request(serverUrl, path, { method: 'DELETE' });
   if (res.status === 404) return false;
-  if (!res.ok) throw new Error(await parseError(res));
+  if (!res.ok) throw await errorFromResponse(res);
   return true;
 }
 
 /** True if an error thrown by this module represents a 404 (row gone remotely). */
 export function is404(err: unknown): boolean {
-  return err instanceof Error && /^404\b/.test(err.message);
+  return err instanceof ApiError && err.status === 404;
 }

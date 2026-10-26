@@ -10,10 +10,11 @@ import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
+from datetime import date as date_type
 from io import StringIO
 from typing import Annotated, Literal
 
-from fastapi import Body, Depends, FastAPI, HTTPException, Query, Request, Response, status
+from fastapi import BackgroundTasks, Body, Depends, FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
@@ -33,6 +34,7 @@ from services.api.src.auth import (
     AIProviderStatusResponse,
     DiscordLoginRequest,
     EmailLoginRequest,
+    ForgotPasswordRequest,
     GitHubLoginRequest,
     GoogleCalendarConnectRequest,
     GoogleCalendarSettingsRequest,
@@ -41,7 +43,9 @@ from services.api.src.auth import (
     RedditLoginRequest,
     RefreshRequest,
     RegisterRequest,
+    ResetPasswordRequest,
     Token,
+    TokenRequest,
     UpdateProfileRequest,
     UserResponse,
     create_access_token,
@@ -74,16 +78,18 @@ from services.api.src.database.dependencies import (
     UserRepositoryDep,
 )
 from services.api.src.database.models import (
-    Exercise,
     ExerciseEditRequest,
     ExerciseReorderRequest,
     ExerciseResponse,
     HealthResponse,
 )
 from services.api.src.database.sqlmodel_repository import ExerciseRepository
+from services.api.src.database.user_repository import UserRepository
+from services.api.src.email_tokens import RESET_TTL, VERIFY_TTL, consume_token, create_token
 from services.api.src.etag import maybe_return_not_modified
+from services.api.src.mailer import send_password_reset_email, send_verification_email
 from services.api.src.ratelimit import get_rate_limit_key, get_ratelimit_settings, rate_limit_exceeded_handler
-from services.shared.models.exercise import ArchivedExerciseSuggestion, ExerciseNameStatus
+from services.shared.models.exercise import ArchivedExerciseSuggestion, ExerciseCreate, ExerciseNameStatus
 
 # Get application settings
 settings = get_settings()
@@ -262,6 +268,7 @@ def read_exercises(
     sort_by: str = Query("sort_order", description="Column to sort by"),
     sort_order: Literal["asc", "desc"] = Query("asc", description="Sort direction"),
     format: Literal["json", "csv"] = Query("json", description="Response format"),
+    include_archived: bool = Query(False, description="Also return archived exercises (used by sync)"),
 ) -> Response:
     """Get exercises with pagination, sorting, and optional CSV export.
 
@@ -271,7 +278,9 @@ def read_exercises(
     if sort_by not in _SORTABLE_COLUMNS:
         raise HTTPException(status_code=400, detail=f"sort_by must be one of: {sorted(_SORTABLE_COLUMNS)}")
 
-    items, total = repository.list_paginated(current_user.id, page, page_size, sort_by, sort_order)
+    items, total = repository.list_paginated(
+        current_user.id, page, page_size, sort_by, sort_order, include_archived=include_archived
+    )
 
     if format == "csv":
         buffer = StringIO()
@@ -422,7 +431,7 @@ def read_exercise(
 @limiter.limit("60/minute")  # User-level write limit
 def add_exercise(
     request: Request,
-    exercise: Exercise,
+    exercise: ExerciseCreate,
     repository: RepositoryDep,
     current_user: Annotated[UserTable, Depends(get_current_user)],
 ) -> ExerciseResponse:
@@ -442,6 +451,10 @@ def add_exercise(
         weight=exercise.weight,
         workout_day=exercise.workout_day,
         per_side=exercise.per_side,
+        notes=exercise.notes,
+        archived=exercise.archived,
+        sort_order=exercise.sort_order,
+        superset_group=exercise.superset_group,
     )
 
 
@@ -507,6 +520,7 @@ def edit_exercise_endpoint(
     repository: RepositoryDep,
     session_repo: SessionRepositoryDep,
     current_user: Annotated[UserTable, Depends(get_current_user)],
+    auto_log: bool = Query(True, description="Log a session entry when stats change (sync clients pass false)"),
 ) -> ExerciseResponse:
     """Update any attributes of a specific exercise.
 
@@ -525,7 +539,7 @@ def edit_exercise_endpoint(
     provided_fields = exercise_edit.model_dump(exclude_unset=True)
     update_weight_flag = "weight" in provided_fields
     update_notes_flag = "notes" in provided_fields
-    stats_changed = any(k in provided_fields for k in ("weight", "sets", "reps"))
+    stats_changed = auto_log and any(k in provided_fields for k in ("weight", "sets", "reps"))
 
     exercise = repository.update(
         exercise_id,
@@ -539,6 +553,10 @@ def edit_exercise_endpoint(
         notes=exercise_edit.notes,
         update_notes=update_notes_flag,
         per_side=exercise_edit.per_side,
+        archived=exercise_edit.archived,
+        sort_order=exercise_edit.sort_order,
+        superset_group=exercise_edit.superset_group,
+        update_superset_group="superset_group" in provided_fields,
     )
     if not exercise:
         raise HTTPException(status_code=404, detail="Exercise not found")
@@ -654,6 +672,29 @@ def create_workout_session(
             sync_session_to_calendar(current_user, session_row, exercises, db_session)
 
     return result
+
+
+class SessionIndexItem(BaseModel):
+    """Minimal session info for sync: enough to detect new, changed and deleted sessions."""
+
+    id: int
+    date: date_type
+    workout_day: str
+    updated_at: datetime
+
+
+@app.get("/sessions/index", response_model=list[SessionIndexItem], tags=["Sessions"])
+@limiter.limit("120/minute")
+def get_session_index(
+    request: Request,
+    session_repo: SessionRepositoryDep,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+) -> list[SessionIndexItem]:
+    """List every session (id, date, workout day, updated_at) without exercise details."""
+    return [
+        SessionIndexItem(id=i, date=d, workout_day=day, updated_at=updated)
+        for i, d, day, updated in session_repo.list_session_index(current_user.id)
+    ]
 
 
 @app.get("/sessions/calendar", response_model=list[WorkoutSessionSummary], tags=["Sessions"])
@@ -1053,6 +1094,7 @@ def register_email(
     request: Request,
     register_request: RegisterRequest,
     user_repo: UserRepositoryDep,
+    background_tasks: BackgroundTasks,
 ) -> Token:
     """Register a new user with email and password.
 
@@ -1067,26 +1109,21 @@ def register_email(
     """
     existing = user_repo.get_by_email(register_request.email)
     if existing:
-        if existing.password_hash is not None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Email already registered",
-            )
-        # Link password to existing Google-only account
-        existing.password_hash = hash_password(register_request.password)
-        user_repo.session.add(existing)
-        user_repo.session.commit()
-        user_repo.session.refresh(existing)
-        user = existing
-        logger.info(f"Linked email/password to existing Google account {user.email}")
-    else:
-        hashed = hash_password(register_request.password)
-        user = user_repo.create_email_user(
-            email=register_request.email,
-            name=register_request.name,
-            password_hash=hashed,
-        )
-        logger.info(f"New email user {user.email} registered")
+        # Never attach a password to an existing (social-login) account here: the caller has not proven
+        # they own the address. The owner can sign in with their provider or use "Forgot password".
+        detail = "Email already registered"
+        if existing.password_hash is None:
+            detail = "Email already registered with a social login. Sign in with that provider, or use Forgot password."
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
+
+    user = user_repo.create_email_user(
+        email=register_request.email,
+        name=register_request.name,
+        password_hash=hash_password(register_request.password),
+    )
+    logger.info(f"New email user {user.email} registered")
+    token = create_token(user_repo.session, user.id, "verify", VERIFY_TTL)
+    background_tasks.add_task(send_verification_email, user.email, user.name, token)
 
     access_token = create_access_token(
         data={"sub": str(user.id), "role": user.role},
@@ -1132,6 +1169,9 @@ def login_email(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
+
+    if user.disabled:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account disabled")
 
     access_token = create_access_token(
         data={"sub": str(user.id), "role": user.role},
@@ -1184,6 +1224,12 @@ def refresh_token(
     user = user_repo.get_by_id(user_id)
     if user is None:
         raise HTTPException(status_code=401, detail="User not found")
+    if user.disabled:
+        raise HTTPException(status_code=403, detail="Account disabled")
+    if user.password_changed_at is not None:
+        changed = user.password_changed_at.replace(tzinfo=UTC)
+        if payload.get("iat", 0) < int(changed.timestamp()):
+            raise HTTPException(status_code=401, detail="Refresh token revoked")
 
     access_token = create_access_token(
         data={"sub": str(user.id), "role": user.role}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -1196,6 +1242,89 @@ def refresh_token(
         expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         refresh_token=new_refresh,
     )
+
+
+def _user_response(user: UserTable) -> UserResponse:
+    """Build the public user payload."""
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        name=user.name,
+        picture_url=user.picture_url,
+        role=user.role,
+        cycle_length=user.cycle_length,
+        units=user.units,
+        # Clients compare this to detect profile changes; a never-edited profile reports its creation time.
+        profile_updated_at=user.profile_updated_at or user.created_at,
+        email_verified=user.email_verified,
+    )
+
+
+@app.post("/auth/verify-email", status_code=status.HTTP_204_NO_CONTENT, tags=["Authentication"])
+@limiter.limit(lambda: ratelimit_settings.auth_limit)
+def verify_email(
+    request: Request,
+    body: TokenRequest,
+    user_repo: UserRepositoryDep,
+) -> None:
+    """Confirm an email address using the emailed single-use token."""
+    user_id = consume_token(user_repo.session, body.token, "verify")
+    user = user_repo.get_by_id(user_id) if user_id is not None else None
+    if user is None:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification link")
+    user.email_verified = True
+    user_repo.session.add(user)
+    user_repo.session.commit()
+
+
+@app.post("/auth/resend-verification", status_code=status.HTTP_202_ACCEPTED, tags=["Authentication"])
+@limiter.limit("3/minute")
+def resend_verification(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    current_user: Annotated[UserTable, Depends(get_current_user)],
+    session: Session = Depends(get_session),
+) -> dict[str, str]:
+    """Send a fresh verification email to the signed-in user."""
+    if not current_user.email_verified:
+        token = create_token(session, current_user.id, "verify", VERIFY_TTL)
+        background_tasks.add_task(send_verification_email, current_user.email, current_user.name, token)
+    return {"detail": "If your email is not yet verified, a new link is on its way"}
+
+
+@app.post("/auth/forgot-password", status_code=status.HTTP_202_ACCEPTED, tags=["Authentication"])
+@limiter.limit("5/minute")
+def forgot_password(
+    request: Request,
+    body: ForgotPasswordRequest,
+    user_repo: UserRepositoryDep,
+    background_tasks: BackgroundTasks,
+) -> dict[str, str]:
+    """Email a password-reset link. Always answers the same way so addresses cannot be enumerated."""
+    user = user_repo.get_by_email(body.email)
+    if user is not None and not user.disabled:
+        token = create_token(user_repo.session, user.id, "reset", RESET_TTL)
+        background_tasks.add_task(send_password_reset_email, user.email, user.name, token)
+    return {"detail": "If that email is registered, a reset link is on its way"}
+
+
+@app.post("/auth/reset-password", status_code=status.HTTP_204_NO_CONTENT, tags=["Authentication"])
+@limiter.limit(lambda: ratelimit_settings.auth_limit)
+def reset_password(
+    request: Request,
+    body: ResetPasswordRequest,
+    user_repo: UserRepositoryDep,
+) -> None:
+    """Set a new password from an emailed token. Also revokes refresh tokens issued earlier."""
+    user_id = consume_token(user_repo.session, body.token, "reset")
+    user = user_repo.get_by_id(user_id) if user_id is not None else None
+    if user is None:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset link")
+    user.password_hash = hash_password(body.password)
+    user.password_changed_at = datetime.now(UTC)
+    user.email_verified = True  # reaching this proves control of the mailbox
+    user_repo.session.add(user)
+    user_repo.session.commit()
 
 
 @app.get("/auth/me", response_model=UserResponse, tags=["Authentication"])
@@ -1212,14 +1341,7 @@ async def get_me(
     Returns:
         Current user details.
     """
-    return UserResponse(
-        id=current_user.id,
-        email=current_user.email,
-        name=current_user.name,
-        picture_url=current_user.picture_url,
-        role=current_user.role,
-        cycle_length=current_user.cycle_length,
-    )
+    return _user_response(current_user)
 
 
 @app.patch("/auth/me", response_model=UserResponse, tags=["Authentication"])
@@ -1244,19 +1366,15 @@ async def update_me(
         current_user.name = update_data.name
     if update_data.cycle_length is not None:
         current_user.cycle_length = update_data.cycle_length
+    if update_data.units is not None:
+        current_user.units = update_data.units
+    current_user.profile_updated_at = datetime.now(UTC)
 
     session.add(current_user)
     session.commit()
     session.refresh(current_user)
 
-    return UserResponse(
-        id=current_user.id,
-        email=current_user.email,
-        name=current_user.name,
-        picture_url=current_user.picture_url,
-        role=current_user.role,
-        cycle_length=current_user.cycle_length,
-    )
+    return _user_response(current_user)
 
 
 @app.delete("/auth/me", status_code=status.HTTP_204_NO_CONTENT, tags=["Authentication"])
@@ -1276,9 +1394,7 @@ async def delete_me(
         repository: Exercise repository for deleting user exercises.
         session: Database session.
     """
-    repository.delete_all(current_user.id)
-    session.delete(current_user)
-    session.commit()
+    UserRepository(session).delete_by_id(current_user.id)
 
 
 # ============ Google Calendar Sync Endpoints ============

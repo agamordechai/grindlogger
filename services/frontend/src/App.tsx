@@ -2,6 +2,12 @@ import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useAuth } from './contexts/AuthContext';
+import { IS_WEB } from './target';
+import LoginPage from './components/auth/LoginPage';
+import OAuthCallback from './components/auth/OAuthCallback';
+import VerifyEmailPage from './components/auth/VerifyEmailPage';
+import ResetPasswordPage from './components/auth/ResetPasswordPage';
+import { VerifyEmailBanner } from './components/auth/VerifyEmailBanner';
 import { TopBar } from './components/nav/TopBar';
 import { BottomNav } from './components/nav/BottomNav';
 import { Skeleton } from './components/ui/Skeleton';
@@ -9,6 +15,7 @@ import { ScrollToTop } from './components/ui/ScrollToTop';
 import DashboardPage from './pages/DashboardPage';
 import CoachPage from './pages/CoachPage';
 import SettingsPage from './pages/SettingsPage';
+import AdminPage from './pages/AdminPage';
 import HistoryPage from './pages/HistoryPage';
 import MeasurementsPage from './pages/MeasurementsPage';
 
@@ -61,9 +68,21 @@ function usePersistRoute() {
 }
 
 export default function App() {
-  // Offline, on-device app: there is a single local user and no remote login.
-  // We only wait for the local DB/user to load, then render the app.
-  const { loading } = useAuth();
+  // Native app: a single local user and no remote login - we only wait for the local DB/user to load.
+  // Website: sign-in is required; the email links and OAuth redirects must render regardless of auth state.
+  const { loading, isAuthenticated } = useAuth();
+
+  if (IS_WEB) {
+    const path = window.location.pathname;
+    if (path === '/auth/verify') return <VerifyEmailPage />;
+    if (path === '/auth/reset') return <ResetPasswordPage />;
+    if (loading) return <LoadingScreen />;
+    if (path === '/auth/github/callback') return <OAuthCallback provider="github" />;
+    if (path === '/auth/discord/callback') return <OAuthCallback provider="discord" />;
+    if (path === '/auth/reddit/callback') return <OAuthCallback provider="reddit" />;
+    if (!isAuthenticated) return <LoginPage />;
+    return <AuthenticatedApp />;
+  }
 
   if (loading) return <LoadingScreen />;
 
@@ -76,6 +95,7 @@ function AuthenticatedApp() {
   return (
     <div className="min-h-screen bg-background">
       <TopBar />
+      {IS_WEB && <VerifyEmailBanner />}
       <main className="mx-auto max-w-6xl px-4 lg:px-6 py-6 pb-24 lg:pb-6">
         <AnimatePresence mode="wait">
           <Routes>
@@ -84,6 +104,7 @@ function AuthenticatedApp() {
             <Route path="measurements" element={<MeasurementsPage />} />
             <Route path="coach" element={<CoachPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            {IS_WEB && <Route path="admin" element={<AdminPage />} />}
           </Routes>
         </AnimatePresence>
       </main>
