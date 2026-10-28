@@ -3,8 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, Home, CalendarDays, Ruler, Bot, Settings, Shield, LogOut } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { IS_WEB } from '../../target';
-import { useState, useRef, useEffect } from 'react';
+import { lazy, Suspense, useState, useRef, useEffect } from 'react';
 import { RestTimerButton } from '../timer/RestTimerButton';
+
+// Native-only sign in / sign out item; null on the website so the chunk is never built.
+const AccountMenuItem = IS_WEB ? null : lazy(() => import('../../native/AccountMenuItem'));
 
 const BASE_NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: Home },
@@ -122,6 +125,11 @@ export function TopBar() {
                     </button>
                   </div>
 
+                  {AccountMenuItem && (
+                    <Suspense fallback={null}>
+                      <AccountMenuItem onDone={() => setMenuOpen(false)} />
+                    </Suspense>
+                  )}
                   {IS_WEB && (
                     <div className="border-t border-border py-1">
                       <button

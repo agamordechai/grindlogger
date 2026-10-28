@@ -5,8 +5,9 @@
  * `?since=` API; conflicts resolve last-write-wins by updated_at).
  *
  * Synced: exercises (including archived state, order and supersets), workout
- * sessions, body measurements, and the profile (name, cycle length, units).
- * Not synced: AI coach conversations and the on-device AI key.
+ * sessions, body measurements, the profile (name, cycle length, units; email and
+ * picture come from the account) and the AI coach settings (key, base URL, model).
+ * Not synced: AI coach conversations.
  *
  * Connecting for the first time goes through firstConnect.ts, which links
  * existing rows before the first round so nothing is duplicated.
@@ -71,6 +72,8 @@ export interface RemoteSessionIndexItem {
 }
 
 export interface RemoteProfile {
+  email: string;
+  picture_url: string | null;
   name: string;
   cycle_length: number;
   units: 'metric' | 'imperial' | null;
@@ -313,14 +316,27 @@ async function pushProfile(serverUrl: string): Promise<void> {
   ]);
 }
 
-/** Take the server's profile unless this device has unsent profile edits. Returns true if it changed. */
+/**
+ * Take the account's email and picture (they can only change on the server), and the rest of the server's
+ * profile unless this device has unsent profile edits. Returns true if anything changed.
+ */
 async function pullProfile(serverUrl: string): Promise<boolean> {
   const me = await apiGet<RemoteProfile>(serverUrl, '/auth/me');
-  const row = await one<{ profile_dirty: number; profile_remote_updated_at: string | null; units: string | null }>(
-    'SELECT profile_dirty, profile_remote_updated_at, units FROM users WHERE id = ?',
-    [U],
-  );
-  if (!row || row.profile_dirty === 1 || row.profile_remote_updated_at === me.profile_updated_at) return false;
+  const row = await one<{
+    profile_dirty: number;
+    profile_remote_updated_at: string | null;
+    units: string | null;
+    email: string;
+    picture_url: string | null;
+  }>('SELECT profile_dirty, profile_remote_updated_at, units, email, picture_url FROM users WHERE id = ?', [U]);
+  if (!row) return false;
+
+  let identityChanged = false;
+  if (me.email && (me.email !== row.email || (me.picture_url ?? null) !== row.picture_url)) {
+    await run('UPDATE users SET email = ?, picture_url = ? WHERE id = ?', [me.email, me.picture_url ?? null, U]);
+    identityChanged = true;
+  }
+  if (row.profile_dirty === 1 || row.profile_remote_updated_at === me.profile_updated_at) return identityChanged;
 
   // The account has no unit preference yet but this device does: keep it and send it up on the next round.
   const unitsToPush = me.units == null && row.units != null;
@@ -329,6 +345,73 @@ async function pullProfile(serverUrl: string): Promise<boolean> {
     [me.name, me.cycle_length, me.units ?? row.units, me.profile_updated_at, unitsToPush ? 1 : 0, U],
   );
   return true;
+}
+
+// ---------- AI coach settings ----------
+// The server keeps no timestamp for these, so the device remembers the server state it last saw
+// (ai_remote_state) and only takes the server's settings when they differ from it. Local edits set ai_dirty
+// and win on the next round.
+
+interface RemoteAIStatus {
+  has_key: boolean;
+  key_hint: string | null;
+  base_url: string | null;
+  model: string | null;
+}
+
+const NO_AI_PROVIDER: RemoteAIStatus = { has_key: false, key_hint: null, base_url: null, model: null };
+
+const aiState = (s: RemoteAIStatus): string =>
+  JSON.stringify([s.has_key, s.key_hint ?? null, s.base_url ?? null, s.model ?? null]);
+
+async function pushAIProvider(serverUrl: string): Promise<void> {
+  const row = await one<{
+    ai_dirty: number;
+    ai_api_key: string | null;
+    ai_base_url: string | null;
+    ai_model: string | null;
+  }>('SELECT ai_dirty, ai_api_key, ai_base_url, ai_model FROM users WHERE id = ?', [U]);
+  if (!row || row.ai_dirty !== 1) return;
+
+  let status = NO_AI_PROVIDER;
+  if (row.ai_api_key) {
+    status = await apiSend<RemoteAIStatus>(serverUrl, 'PUT', '/auth/ai-provider', {
+      api_key: row.ai_api_key,
+      base_url: row.ai_base_url,
+      model: row.ai_model,
+    });
+  } else {
+    await apiDelete(serverUrl, '/auth/ai-provider');
+  }
+  await run('UPDATE users SET ai_dirty = 0, ai_remote_state = ? WHERE id = ?', [aiState(status), U]);
+}
+
+async function pullAIProvider(serverUrl: string): Promise<void> {
+  const row = await one<{ ai_dirty: number; ai_remote_state: string | null }>(
+    'SELECT ai_dirty, ai_remote_state FROM users WHERE id = ?',
+    [U],
+  );
+  if (!row || row.ai_dirty === 1) return;
+
+  const status = await apiGet<RemoteAIStatus>(serverUrl, '/auth/ai-provider');
+  const state = aiState(status);
+  if (state === row.ai_remote_state) return;
+
+  if (status.has_key) {
+    const creds = await apiGet<{ api_key: string; base_url: string | null; model: string | null }>(
+      serverUrl,
+      '/auth/ai-provider/credentials',
+    );
+    await run('UPDATE users SET ai_api_key = ?, ai_base_url = ?, ai_model = ? WHERE id = ?', [
+      creds.api_key,
+      creds.base_url,
+      creds.model,
+      U,
+    ]);
+  } else {
+    await run('UPDATE users SET ai_api_key = NULL, ai_base_url = NULL, ai_model = NULL WHERE id = ?', [U]);
+  }
+  await run('UPDATE users SET ai_remote_state = ? WHERE id = ?', [state, U]);
 }
 
 async function pushDeletions(serverUrl: string): Promise<void> {
@@ -571,12 +654,14 @@ export async function runSync(): Promise<SyncResult> {
     setAccessToken(token);
 
     await pushProfile(serverUrl);
+    await pushAIProvider(serverUrl);
     await pushExercises(serverUrl);
     await pushSessions(serverUrl);
     await pushMeasurements(serverUrl);
     await pushDeletions(serverUrl);
 
     const profileChanged = await pullProfile(serverUrl);
+    await pullAIProvider(serverUrl);
     await pullExercises(serverUrl);
     await pullMeasurements(serverUrl);
     await pullSessions(serverUrl);

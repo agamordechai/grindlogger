@@ -9,6 +9,8 @@ interface ImportMetaEnv {
   readonly VITE_GITHUB_CLIENT_ID: string;
   readonly VITE_DISCORD_CLIENT_ID: string;
   readonly VITE_REDDIT_CLIENT_ID: string;
+  /** Native app: the sync server (defaults to https://grindlogger.com/api). */
+  readonly VITE_SYNC_SERVER_URL?: string;
 }
 
 interface ImportMeta {

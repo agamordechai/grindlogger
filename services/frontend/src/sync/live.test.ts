@@ -47,7 +47,7 @@ describe.skipIf(!LIVE)('live API', () => {
 
   it('connects, merges and keeps archive / order / superset / profile in sync with the real server', async () => {
     const email = `live-${Date.now()}@example.com`;
-    const session = await signUp(LIVE!, email, 'Live Tester', 'a-long-password');
+    const session = await signUp(email, 'Live Tester', 'a-long-password', LIVE!);
     token = session.accessToken;
     setAccessToken(token);
 
