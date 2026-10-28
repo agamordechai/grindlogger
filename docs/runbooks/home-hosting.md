@@ -99,7 +99,9 @@ Docker Desktop must be running first (`docker version` should show a Server sect
 - Register on the website, confirm the verification email arrives, sign in again, try *Forgot password*.
 
 ### 6. Connect the phone
-App → Settings → **Data Sync** → keep the server URL `https://grindlogger.com/api`, then **Sign in** or **Create account**.
+The app opens on a sign-in screen (it always syncs with `https://grindlogger.com/api`). **Sign in** with email + password or **Register**; *Continue without an account* keeps the app offline, and Settings → **Account & Sync** → **Sign in** brings the screen back. An account created with Google/GitHub/Discord/Reddit on the website has no password: use *Forgot password?* on the sign-in screen to set one (needs SMTP, step 3). Sign out is in the profile menu and in Settings.
+- Sync covers exercises, workouts, body measurements, the profile (name, cycle length, units; email and picture come from the account) and the AI coach settings (key, base URL, model).
+- A long history uploads in one go: when the server's rate limit kicks in (30 new workouts a minute), the app waits and continues.
 - Server empty and phone has data → everything uploads. Phone empty → everything downloads.
 - Both have data → a *Merge* screen shows counts (phone / server / both). Merge keeps everything; items on both sides keep the server's version. A copy of the phone's data is saved first and can be restored from the same screen ("Restore this phone's data from before connecting", which also disconnects).
 - *Disconnect* keeps the phone's data and forgets all links to the server; connecting again re-matches instead of duplicating.

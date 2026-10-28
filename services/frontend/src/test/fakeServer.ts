@@ -47,7 +47,16 @@ export class FakeServer {
   exercises = new Map<number, FakeExercise>();
   sessions = new Map<number, FakeSession>();
   measurements = new Map<number, FakeMeasurement>();
-  profile: { name: string; cycle_length: number; units: string | null; profile_updated_at: string | null } = {
+  profile: {
+    email: string;
+    picture_url: string | null;
+    name: string;
+    cycle_length: number;
+    units: string | null;
+    profile_updated_at: string | null;
+  } = {
+    email: 'me@example.com',
+    picture_url: null,
     name: 'Server Name',
     cycle_length: 7,
     units: null,
@@ -57,6 +66,10 @@ export class FakeServer {
   calls: string[] = [];
   /** Make the next request to a path fail with this status (once). */
   failOnce = new Map<string, number>();
+  /** The account's AI coach settings (null = none saved). */
+  aiProvider: { api_key: string; base_url: string | null; model: string | null } | null = null;
+  /** Answer this many requests to a path ("METHOD /path") with 429 before serving them. */
+  rateLimited = new Map<string, number>();
 
   private nextId = 1;
   private clock = 0;
@@ -159,6 +172,11 @@ export class FakeServer {
       this.failOnce.delete(failKey);
       return this.respond(forced, { detail: 'forced failure' });
     }
+    const limited = this.rateLimited.get(failKey) ?? 0;
+    if (limited > 0) {
+      this.rateLimited.set(failKey, limited - 1);
+      return this.respond(429, { detail: 'Rate limit exceeded. Try again in 60 seconds.', retry_after: 60 });
+    }
 
     const body: Json = init.body ? JSON.parse(init.body as string) : {};
     const q = full.searchParams;
@@ -172,6 +190,26 @@ export class FakeServer {
         this.profile = { ...this.profile, ...body, profile_updated_at: this.stamp() } as typeof this.profile;
       }
       return this.respond(200, this.profile);
+    }
+
+    // ---- AI provider (hint format as in services/api/src/api.py)
+    if (path === '/auth/ai-provider/credentials' && method === 'GET') {
+      if (!this.aiProvider) return this.respond(404, { detail: 'No AI provider configured' });
+      return this.respond(200, this.aiProvider);
+    }
+    if (path === '/auth/ai-provider') {
+      if (method === 'PUT') this.aiProvider = body as typeof this.aiProvider;
+      if (method === 'DELETE') {
+        this.aiProvider = null;
+        return this.respond(204);
+      }
+      const p = this.aiProvider;
+      return this.respond(200, {
+        has_key: !!p,
+        key_hint: p ? (p.api_key.length <= 12 ? '****' : `${p.api_key.slice(0, 7)}...${p.api_key.slice(-4)}`) : null,
+        base_url: p?.base_url ?? null,
+        model: p?.model ?? null,
+      });
     }
 
     // ---- exercises

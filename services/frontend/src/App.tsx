@@ -1,5 +1,5 @@
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
-import { useEffect, useRef } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useAuth } from './contexts/AuthContext';
 import { IS_WEB } from './target';
@@ -18,6 +18,9 @@ import SettingsPage from './pages/SettingsPage';
 import AdminPage from './pages/AdminPage';
 import HistoryPage from './pages/HistoryPage';
 import MeasurementsPage from './pages/MeasurementsPage';
+
+// Native-only sign-in gate; null on the website so the chunk is never built.
+const NativeGate = IS_WEB ? null : lazy(() => import('./native/NativeGate'));
 
 function LoadingScreen() {
   return (
@@ -68,7 +71,7 @@ function usePersistRoute() {
 }
 
 export default function App() {
-  // Native app: a single local user and no remote login - we only wait for the local DB/user to load.
+  // Native app: a single local user; signing in to the account (for sync) is offered on launch but optional.
   // Website: sign-in is required; the email links and OAuth redirects must render regardless of auth state.
   const { loading, isAuthenticated } = useAuth();
 
@@ -86,7 +89,15 @@ export default function App() {
 
   if (loading) return <LoadingScreen />;
 
-  return <AuthenticatedApp />;
+  return NativeGate ? (
+    <Suspense fallback={<LoadingScreen />}>
+      <NativeGate>
+        <AuthenticatedApp />
+      </NativeGate>
+    </Suspense>
+  ) : (
+    <AuthenticatedApp />
+  );
 }
 
 function AuthenticatedApp() {

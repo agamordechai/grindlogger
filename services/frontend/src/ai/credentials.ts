@@ -51,7 +51,8 @@ export async function saveProvider(data: {
   model?: string | null;
 }): Promise<AIProviderStatus> {
   if (data.api_key) await setKey(data.api_key);
-  await run('UPDATE users SET ai_base_url = ?, ai_model = ? WHERE id = ?', [
+  // ai_dirty: picked up by the next sync
+  await run('UPDATE users SET ai_base_url = ?, ai_model = ?, ai_dirty = 1 WHERE id = ?', [
     data.base_url ?? null,
     data.model ?? null,
     U,
@@ -61,7 +62,7 @@ export async function saveProvider(data: {
 
 export async function deleteProvider(): Promise<void> {
   await removeKey();
-  await run('UPDATE users SET ai_base_url = NULL, ai_model = NULL WHERE id = ?', [U]);
+  await run('UPDATE users SET ai_base_url = NULL, ai_model = NULL, ai_dirty = 1 WHERE id = ?', [U]);
 }
 
 /** Resolve the credentials the AI layer should use for a request. */

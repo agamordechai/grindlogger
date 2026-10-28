@@ -37,6 +37,9 @@ CREATE TABLE IF NOT EXISTS users (
   units TEXT,
   profile_dirty INTEGER NOT NULL DEFAULT 0,
   profile_remote_updated_at TEXT,
+  ai_dirty INTEGER NOT NULL DEFAULT 0,
+  ai_remote_state TEXT,
+  sign_in_skipped INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

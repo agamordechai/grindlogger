@@ -65,13 +65,32 @@ export async function resetLinkage(keepProfile = false): Promise<void> {
       : 'UPDATE users SET profile_remote_updated_at = NULL, profile_dirty = 0 WHERE id = ?',
     [U],
   );
+  // An AI key already on this device is uploaded; without one, the account's settings are downloaded.
+  await run(
+    'UPDATE users SET ai_remote_state = NULL, ai_dirty = CASE WHEN ai_api_key IS NULL THEN 0 ELSE 1 END WHERE id = ?',
+    [U],
+  );
 }
 
-/** Disconnect: drop the server + tokens and unlink all rows. The phone keeps all of its data. */
+/**
+ * Sign out: drop the server + tokens and unlink all rows. The phone keeps all of its data; the profile goes
+ * back to the local identity (the account's email and picture belong to the account).
+ */
 export async function clearSync(): Promise<void> {
   await run(
-    'UPDATE users SET sync_server_url = NULL, sync_refresh_token = NULL, sync_last_synced_at = NULL WHERE id = ?',
+    `UPDATE users SET sync_server_url = NULL, sync_refresh_token = NULL, sync_last_synced_at = NULL,
+       email = 'me@grindlogger.local', picture_url = NULL WHERE id = ?`,
     [U],
   );
   await resetLinkage();
+}
+
+/** Whether the user chose to use the app without an account (hides the sign-in screen). */
+export async function getSignInSkipped(): Promise<boolean> {
+  const row = await one<{ sign_in_skipped: number }>('SELECT sign_in_skipped FROM users WHERE id = ?', [U]);
+  return row?.sign_in_skipped === 1;
+}
+
+export async function setSignInSkipped(skipped: boolean): Promise<void> {
+  await run('UPDATE users SET sign_in_skipped = ? WHERE id = ?', [skipped ? 1 : 0, U]);
 }

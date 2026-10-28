@@ -6,7 +6,9 @@ import { all, one, resetDb, run } from '../test/fakeDb';
 import { BASE, FakeServer } from '../test/fakeServer';
 import { archiveExercise, createSuperset, reorderExercises } from '../db/repositories/exercises';
 import { runSync } from './engine';
-import { setServerAndToken } from './tokenStore';
+import { setSleep } from './client';
+import { clearSync, resetLinkage, setServerAndToken } from './tokenStore';
+import { saveProvider } from '../ai/credentials';
 
 interface ExerciseRow {
   id: number;
@@ -230,6 +232,87 @@ describe('profile sync', () => {
     server.profile = { ...server.profile, name: 'Alice W', profile_updated_at: '2030-01-01T00:00:00.000Z' };
     await runSync();
     expect((await one<{ name: string }>('SELECT name FROM users WHERE id = 1', []))?.name).toBe('Alice W');
+  });
+});
+
+describe('account identity', () => {
+  it('takes the account email and picture, even while local profile edits are pending, and drops them on sign-out', async () => {
+    server.profile = { ...server.profile, email: 'agam@example.com', picture_url: 'https://img.test/a.png' };
+    await run("UPDATE users SET name = 'Local', profile_dirty = 1 WHERE id = 1", []);
+    await runSync();
+    const u = await one<{ email: string; picture_url: string | null; name: string }>(
+      'SELECT email, picture_url, name FROM users WHERE id = 1',
+      [],
+    );
+    expect(u).toEqual({ email: 'agam@example.com', picture_url: 'https://img.test/a.png', name: 'Local' });
+
+    await clearSync();
+    expect(await one('SELECT email, picture_url FROM users WHERE id = 1', [])).toEqual({
+      email: 'me@grindlogger.local',
+      picture_url: null,
+    });
+  });
+});
+
+describe('AI coach settings sync', () => {
+  const localAI = () =>
+    one<{ ai_api_key: string | null; ai_model: string | null; ai_dirty: number }>(
+      'SELECT ai_api_key, ai_model, ai_dirty FROM users WHERE id = 1',
+      [],
+    );
+
+  it('uploads a key saved on the phone', async () => {
+    await saveProvider({ api_key: 'sk-ant-phone-key-1234', model: 'claude-x' });
+    await runSync();
+    expect(server.aiProvider).toEqual({ api_key: 'sk-ant-phone-key-1234', base_url: null, model: 'claude-x' });
+    expect((await localAI())?.ai_dirty).toBe(0);
+  });
+
+  it('downloads the account key, then follows changes and removal on the website', async () => {
+    server.aiProvider = { api_key: 'sk-ant-website-key-1', base_url: null, model: null };
+    await runSync();
+    expect(await localAI()).toEqual({ ai_api_key: 'sk-ant-website-key-1', ai_model: null, ai_dirty: 0 });
+
+    const before = server.calls.length;
+    await runSync();
+    expect(server.calls.slice(before)).not.toContain('GET /auth/ai-provider/credentials');
+
+    server.aiProvider = { api_key: 'sk-ant-website-key-2', base_url: null, model: 'claude-y' };
+    await runSync();
+    expect(await localAI()).toEqual({ ai_api_key: 'sk-ant-website-key-2', ai_model: 'claude-y', ai_dirty: 0 });
+
+    server.aiProvider = null;
+    await runSync();
+    expect((await localAI())?.ai_api_key).toBeNull();
+  });
+
+  it('keeps a key that was on the phone before connecting instead of clearing it', async () => {
+    await run("UPDATE users SET ai_api_key = 'sk-ant-offline-key-99', ai_dirty = 0 WHERE id = 1", []);
+    await resetLinkage(); // what connecting does
+    await runSync();
+    expect(server.aiProvider?.api_key).toBe('sk-ant-offline-key-99');
+    expect((await localAI())?.ai_api_key).toBe('sk-ant-offline-key-99');
+  });
+});
+
+describe('rate limits', () => {
+  it('waits out 429s and finishes the round instead of failing', async () => {
+    const waits: number[] = [];
+    setSleep(async (ms) => {
+      waits.push(ms);
+    });
+    try {
+      for (const d of ['2026-01-01', '2026-01-02', '2026-01-03']) {
+        await run('INSERT INTO workout_sessions (workout_date, workout_day) VALUES (?, ?)', [d, 'A']);
+      }
+      server.rateLimited.set('POST /sessions', 2);
+      expect((await runSync()).ok).toBe(true);
+      expect(server.sessions.size).toBe(3);
+      expect(waits).toEqual([60000, 60000]);
+      expect(await all('SELECT id FROM workout_sessions WHERE dirty = 1', [])).toHaveLength(0);
+    } finally {
+      setSleep((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+    }
   });
 });
 

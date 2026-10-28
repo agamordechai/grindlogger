@@ -63,18 +63,18 @@ async function persist(): Promise<void> {
   if (isWeb && sqlite) await sqlite.saveToStore(DB_NAME);
 }
 
-/** Add a column to a table if it isn't already present (idempotent). */
+/** Add a column to a table if it isn't already present (idempotent). Returns true if it was added. */
 async function ensureColumn(
   conn: SQLiteDBConnection,
   table: string,
   column: string,
   type: string,
-): Promise<void> {
+): Promise<boolean> {
   const res = await conn.query(`PRAGMA table_info(${table})`);
   const cols = (res.values ?? []).map((r: Record<string, unknown>) => r.name as string);
-  if (!cols.includes(column)) {
-    await conn.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
-  }
+  if (cols.includes(column)) return false;
+  await conn.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  return true;
 }
 
 /** Lightweight, idempotent schema migrations for pre-existing databases. */
@@ -94,6 +94,14 @@ async function runMigrations(conn: SQLiteDBConnection): Promise<void> {
   await ensureColumn(conn, 'users', 'units', 'TEXT');
   await ensureColumn(conn, 'users', 'profile_dirty', 'INTEGER NOT NULL DEFAULT 0');
   await ensureColumn(conn, 'users', 'profile_remote_updated_at', 'TEXT');
+  // AI coach settings sync. A key saved before this existed has never been uploaded, so it starts dirty
+  // (otherwise the first pull would see "no key on the server" and clear it).
+  if (await ensureColumn(conn, 'users', 'ai_dirty', 'INTEGER NOT NULL DEFAULT 0')) {
+    await conn.run('UPDATE users SET ai_dirty = 1 WHERE ai_api_key IS NOT NULL', []);
+  }
+  await ensureColumn(conn, 'users', 'ai_remote_state', 'TEXT');
+  // Set when the user chose "Continue without an account" on the sign-in screen.
+  await ensureColumn(conn, 'users', 'sign_in_skipped', 'INTEGER NOT NULL DEFAULT 0');
   for (const table of ['exercises', 'workout_sessions', 'body_measurements']) {
     await ensureColumn(conn, table, 'remote_id', 'INTEGER');
     await ensureColumn(conn, table, 'remote_updated_at', 'TEXT');
